@@ -1,0 +1,10 @@
+class Violation {
+  final String violationId;
+  final String driverId;
+  final String? licensePlate;
+  final String violationType;
+  final double fineAmount;
+  final int pointsDeducted;
+  final DateTime timestamp;
+  final String status;
+  final String? location;
