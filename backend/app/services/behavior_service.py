@@ -38,3 +38,29 @@ DRIFT_WINDOW_FRAMES = 30
 # Speed estimation (pixels per second to approximate km/h)
 PIXEL_TO_KMH_FACTOR = 0.5
 
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+class BehaviorType(str, Enum):
+    SUDDEN_STOP = 'sudden_stop'
+    HARSH_BRAKE = 'harsh_brake'
+    LANE_DRIFT = 'lane_drift'
+    WRONG_WAY = 'wrong_way'
+    ERRATIC_MOVEMENT = 'erratic_movement'
+
+
+class SeverityLevel(str, Enum):
+    LOW = 'low'
+    MEDIUM = 'medium'
+    HIGH = 'high'
+    CRITICAL = 'critical'
+
+
+# ============================================================================
+# DATA CLASSES
+# ============================================================================
+
+@dataclass
+class PositionRecord:
