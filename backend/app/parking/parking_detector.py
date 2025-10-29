@@ -72,3 +72,40 @@ class ParkingZone:
         # Use bounding box dimensions for the mask
         mask_w = x2 - x1
         mask_h = y2 - y1
+        
+        if mask_w <= 0 or mask_h <= 0:
+            return 0.0
+        
+        # Translate polygon to bbox coordinate space
+        translated_poly = [(p[0] - x1, p[1] - y1) for p in self.polygon]
+        poly_np = np.array(translated_poly, dtype=np.int32)
+        
+        # Create masks
+        zone_mask = np.zeros((mask_h, mask_w), dtype=np.uint8)
+        cv2.fillPoly(zone_mask, [poly_np], 255)
+        
+        bbox_mask = np.ones((mask_h, mask_w), dtype=np.uint8) * 255
+        
+        # Calculate intersection
+        intersection = cv2.bitwise_and(zone_mask, bbox_mask)
+        intersection_area = np.count_nonzero(intersection)
+        bbox_area = mask_w * mask_h
+        
+        return intersection_area / bbox_area if bbox_area > 0 else 0.0
+    
+    def to_dict(self) -> dict:
+        return {
+            "zone_id": self.zone_id,
+            "name": self.name,
+            "polygon": self.polygon,
+            "zone_type": self.zone_type.value,
+            "max_duration_sec": self.max_duration_sec,
+            "active": self.active,
+        }
+
+
+@dataclass
+class TrackedVehicle:
+    """
+    Tracks a vehicle's presence in a parking zone over time.
+    """
