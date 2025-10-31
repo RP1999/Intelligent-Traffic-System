@@ -109,3 +109,40 @@ class TrackedVehicle:
     """
     Tracks a vehicle's presence in a parking zone over time.
     """
+    track_id: int
+    zone_id: str
+    first_seen: float  # timestamp
+    last_seen: float   # timestamp
+    class_name: str = "vehicle"
+    license_plate: Optional[str] = None
+    centroid_history: List[Tuple[int, int]] = field(default_factory=list)
+    
+    @property
+    def dwell_time(self) -> float:
+        """Time spent in zone (seconds)."""
+        return self.last_seen - self.first_seen
+    
+    @property
+    def is_stationary(self) -> bool:
+        """Check if vehicle has been mostly stationary (not just passing through)."""
+        if len(self.centroid_history) < 3:
+            return True  # Not enough data, assume stationary
+        
+        # Calculate total movement
+        total_movement = 0.0
+        for i in range(1, len(self.centroid_history)):
+            prev = self.centroid_history[i - 1]
+            curr = self.centroid_history[i]
+            dist = np.sqrt((curr[0] - prev[0])**2 + (curr[1] - prev[1])**2)
+            total_movement += dist
+        
+        # If average movement per update is small, consider stationary
+        avg_movement = total_movement / (len(self.centroid_history) - 1)
+        return avg_movement < 20  # pixels - tune based on video resolution
+
+
+@dataclass
+class ParkingViolation:
+    """
+    Represents a parking violation event.
+    """
