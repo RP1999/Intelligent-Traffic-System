@@ -146,3 +146,40 @@ class ParkingViolation:
     """
     Represents a parking violation event.
     """
+    violation_id: str
+    track_id: int
+    zone_id: str
+    zone_name: str
+    zone_type: ZoneType
+    start_time: float
+    end_time: Optional[float] = None
+    duration_sec: float = 0.0
+    license_plate: Optional[str] = None
+    snapshot_path: Optional[str] = None
+    fine_amount: float = 0.0
+    status: str = "active"  # active, resolved, disputed
+    
+    def to_dict(self) -> dict:
+        return {
+            "violation_id": self.violation_id,
+            "track_id": self.track_id,
+            "zone_id": self.zone_id,
+            "zone_name": self.zone_name,
+            "zone_type": self.zone_type.value,
+            "start_time": datetime.fromtimestamp(self.start_time).isoformat(),
+            "end_time": datetime.fromtimestamp(self.end_time).isoformat() if self.end_time else None,
+            "duration_sec": round(self.duration_sec, 1),
+            "license_plate": self.license_plate,
+            "snapshot_path": self.snapshot_path,
+            "fine_amount": self.fine_amount,
+            "status": self.status,
+        }
+
+
+class ParkingDetector:
+    """
+    Main parking violation detector.
+    
+    Monitors defined zones for vehicles that exceed allowed parking duration.
+    """
+    
