@@ -20,3 +20,12 @@ class ViolationsProvider extends ChangeNotifier {
 
   // Filters
   String _searchQuery = '';
+  String? _statusFilter;
+  String? _typeFilter;
+  String? _dateFrom;
+  String? _dateTo;
+
+  // Selected violation for detail view
+  Violation? _selectedViolation;
+  LoadingState _detailState = LoadingState.initial;
+
