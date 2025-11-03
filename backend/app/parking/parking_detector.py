@@ -183,3 +183,40 @@ class ParkingDetector:
     Monitors defined zones for vehicles that exceed allowed parking duration.
     """
     
+    def __init__(
+        self,
+        zones: List[ParkingZone] = None,
+        min_overlap: float = 0.3,
+        violation_callback: Optional[callable] = None,
+    ):
+        """
+        Initialize parking detector.
+        
+        Args:
+            zones: List of parking zones to monitor
+            min_overlap: Minimum bbox overlap ratio to consider vehicle in zone
+            violation_callback: Optional callback when violation is detected
+        """
+        self.zones: Dict[str, ParkingZone] = {}
+        self.tracked_vehicles: Dict[str, TrackedVehicle] = {}  # key: "{track_id}_{zone_id}"
+        self.violations: Dict[str, ParkingViolation] = {}
+        self.min_overlap = min_overlap
+        self.violation_callback = violation_callback
+        self._violation_counter = 0
+        
+        if zones:
+            for zone in zones:
+                self.add_zone(zone)
+    
+    def add_zone(self, zone: ParkingZone) -> None:
+        """Add a parking zone to monitor."""
+        self.zones[zone.zone_id] = zone
+    
+    def remove_zone(self, zone_id: str) -> bool:
+        """Remove a parking zone."""
+        if zone_id in self.zones:
+            del self.zones[zone_id]
+            return True
+        return False
+    
+    def get_zones(self) -> List[ParkingZone]:
