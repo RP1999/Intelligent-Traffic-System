@@ -42,3 +42,14 @@ class SignalResponse(BaseModel):
 
 
 # =============================================================================
+# Endpoints - Single Signal (Legacy)
+# =============================================================================
+
+@router.get("/status", summary="Get signal status")
+async def get_signal_status():
+    """Get current traffic signal status (legacy single signal)."""
+    signal = get_signal()
+    status = signal.get_status()
+    print(f"[API] /signal/status -> State={status['state']}, Remaining={status['remaining_time']}s, Vehicles={status['vehicle_count']}")
+    return status
+
