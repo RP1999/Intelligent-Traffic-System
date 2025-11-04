@@ -9,3 +9,14 @@ import '../../../widgets/common/empty_state_widget.dart';
 import '../../../widgets/common/loading_widget.dart';
 import 'driver_detail_screen.dart';
 
+class DriversListScreen extends StatefulWidget {
+  const DriversListScreen({super.key});
+
+  @override
+  State<DriversListScreen> createState() => _DriversListScreenState();
+}
+
+class _DriversListScreenState extends State<DriversListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
