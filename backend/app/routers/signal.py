@@ -53,3 +53,15 @@ async def get_signal_status():
     print(f"[API] /signal/status -> State={status['state']}, Remaining={status['remaining_time']}s, Vehicles={status['vehicle_count']}")
     return status
 
+
+# =============================================================================
+# Endpoints - 4-WAY JUNCTION (NEW)
+# =============================================================================
+
+@router.get("/4way/status", summary="Get 4-way junction status")
+async def get_4way_status():
+    """
+    Get current status of all 4 lanes in the hybrid junction.
+    
+    - North: Real data from YOLO video detection
+    - South/East/West: Simulated data (random, updates every 10s)
