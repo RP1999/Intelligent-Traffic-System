@@ -220,3 +220,40 @@ class ParkingDetector:
         return False
     
     def get_zones(self) -> List[ParkingZone]:
+        """Get all parking zones."""
+        return list(self.zones.values())
+    
+    def _generate_violation_id(self) -> str:
+        """Generate unique violation ID."""
+        self._violation_counter += 1
+        return f"VIO-{int(time.time())}-{self._violation_counter:04d}"
+    
+    def process_detections(
+        self,
+        detections: List[Detection],
+        current_time: float = None,
+        frame: np.ndarray = None,
+        snapshot_dir: str = None,
+    ) -> List[ParkingViolation]:
+        """
+        Process detections and check for parking violations.
+        
+        Args:
+            detections: List of vehicle detections from YOLO
+            current_time: Current timestamp (default: time.time())
+            frame: Current video frame for snapshots
+            snapshot_dir: Directory to save violation snapshots
+            
+        Returns:
+            List of new violations detected in this frame
+        """
+        if current_time is None:
+            current_time = time.time()
+        
+        new_violations = []
+        active_keys = set()
+        
+        # Check each detection against each active zone
+        for detection in detections:
+            if detection.track_id is None or detection.track_id < 0:
+                continue  # Skip detections without valid track ID
