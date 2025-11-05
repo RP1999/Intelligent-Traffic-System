@@ -257,3 +257,40 @@ class ParkingDetector:
         for detection in detections:
             if detection.track_id is None or detection.track_id < 0:
                 continue  # Skip detections without valid track ID
+            
+            for zone_id, zone in self.zones.items():
+                if not zone.active:
+                    continue
+                
+                # Check if vehicle is in zone (by centroid or overlap)
+                in_zone = zone.contains_centroid(detection)
+                
+                if not in_zone:
+                    # Also check by overlap ratio for larger vehicles
+                    overlap = zone.get_overlap_ratio(detection.bbox)
+                    in_zone = overlap >= self.min_overlap
+                
+                if in_zone:
+                    key = f"{detection.track_id}_{zone_id}"
+                    active_keys.add(key)
+                    
+                    if key in self.tracked_vehicles:
+                        # Update existing tracking
+                        tracked = self.tracked_vehicles[key]
+                        tracked.last_seen = current_time
+                        tracked.centroid_history.append(detection.centroid)
+                        
+                        # Limit history size
+                        if len(tracked.centroid_history) > 30:
+                            tracked.centroid_history = tracked.centroid_history[-30:]
+                        
+                        # Check for violation
+                        if tracked.is_stationary and tracked.dwell_time > zone.max_duration_sec:
+                            violation_key = f"{detection.track_id}_{zone_id}"
+                            
+                            if violation_key not in self.violations:
+                                # Create new violation
+                                violation = ParkingViolation(
+                                    violation_id=self._generate_violation_id(),
+                                    track_id=detection.track_id,
+                                    zone_id=zone_id,
