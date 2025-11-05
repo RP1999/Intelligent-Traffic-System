@@ -12,3 +12,11 @@ class DashboardStats {
   DashboardStats({
     required this.violationsToday,
     required this.violationsThisWeek,
+    required this.averageRiskScore,
+    required this.currentTrafficLevel,
+    required this.activeJunctions,
+    required this.totalVehiclesToday,
+    required this.pendingFines,
+    required this.emergencyMode,
+  });
+
