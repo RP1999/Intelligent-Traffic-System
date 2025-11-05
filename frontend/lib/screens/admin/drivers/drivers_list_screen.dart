@@ -20,3 +20,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DriversProvider>().loadDrivers(refresh: true);
+    });
+    
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
