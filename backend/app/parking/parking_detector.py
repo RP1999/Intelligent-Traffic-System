@@ -294,3 +294,40 @@ class ParkingDetector:
                                     violation_id=self._generate_violation_id(),
                                     track_id=detection.track_id,
                                     zone_id=zone_id,
+                                    zone_name=zone.name,
+                                    zone_type=zone.zone_type,
+                                    start_time=tracked.first_seen,
+                                    duration_sec=tracked.dwell_time,
+                                    fine_amount=self._calculate_fine(zone.zone_type),
+                                )
+                                
+                                # Save snapshot if frame provided
+                                if frame is not None and snapshot_dir:
+                                    snapshot_path = self._save_snapshot(
+                                        frame, detection, zone, violation.violation_id, snapshot_dir
+                                    )
+                                    violation.snapshot_path = snapshot_path
+                                
+                                self.violations[violation_key] = violation
+                                new_violations.append(violation)
+                                
+                                if self.violation_callback:
+                                    self.violation_callback(violation)
+                            else:
+                                # Update existing violation duration
+                                self.violations[violation_key].duration_sec = tracked.dwell_time
+                    else:
+                        # Start tracking new vehicle in zone
+                        self.tracked_vehicles[key] = TrackedVehicle(
+                            track_id=detection.track_id,
+                            zone_id=zone_id,
+                            first_seen=current_time,
+                            last_seen=current_time,
+                            class_name=detection.class_name,
+                            centroid_history=[detection.centroid],
+                        )
+        
+        # Clean up vehicles that left zones
+        stale_keys = set(self.tracked_vehicles.keys()) - active_keys
+        stale_timeout = 2.0  # seconds before removing stale tracking
+        
