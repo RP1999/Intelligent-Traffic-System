@@ -65,3 +65,13 @@ async def get_4way_status():
     
     - North: Real data from YOLO video detection
     - South/East/West: Simulated data (random, updates every 10s)
+    """
+    controller = get_four_way_controller()
+    states = controller.get_status()
+    
+    # Log for debugging
+    north = states['lanes']['north']
+    print(f"[4WAY] Green={states['current_green'].upper()} | North: {north['vehicle_count']} vehicles | Remaining={states['green_remaining']}s | Emergency={states['emergency_mode']}")
+    
+    return states
+
