@@ -331,3 +331,4 @@ class ParkingDetector:
         stale_keys = set(self.tracked_vehicles.keys()) - active_keys
         stale_timeout = 2.0  # seconds before removing stale tracking
         
+ 
