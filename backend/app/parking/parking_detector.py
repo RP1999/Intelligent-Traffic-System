@@ -405,3 +405,40 @@ class ParkingDetector:
         Returns:
             Annotated frame
         """
+        annotated = frame.copy()
+        overlay = frame.copy()
+        
+        for zone in self.zones.values():
+            if not zone.active:
+                continue
+            
+            pts = np.array(zone.polygon, dtype=np.int32)
+            
+            # Semi-transparent fill
+            cv2.fillPoly(overlay, [pts], zone.color)
+            
+            # Solid outline
+            cv2.polylines(annotated, [pts], True, zone.color, 2)
+            
+            if show_labels:
+                # Find centroid for label placement
+                M = cv2.moments(pts)
+                if M["m00"] != 0:
+                    cx = int(M["m10"] / M["m00"])
+                    cy = int(M["m01"] / M["m00"])
+                    
+                    label = f"{zone.name}"
+                    (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                    cv2.rectangle(annotated, (cx - 5, cy - h - 5), (cx + w + 5, cy + 5), (0, 0, 0), -1)
+                    cv2.putText(
+                        annotated, label, (cx, cy),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1
+                    )
+        
+        # Blend overlay
+        alpha = 0.3
+        annotated = cv2.addWeighted(overlay, alpha, annotated, 1 - alpha, 0)
+        
+        return annotated
+    
+    def get_active_violations(self) -> List[ParkingViolation]:
