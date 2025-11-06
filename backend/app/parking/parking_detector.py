@@ -368,3 +368,40 @@ class ParkingDetector:
         
         # Draw zone and detection on frame
         annotated = frame.copy()
+        
+        # Draw zone polygon
+        pts = np.array(zone.polygon, dtype=np.int32)
+        cv2.polylines(annotated, [pts], True, zone.color, 2)
+        cv2.fillPoly(annotated, [pts], (*zone.color[:3], 50))  # Semi-transparent fill
+        
+        # Draw detection bbox
+        x1, y1, x2, y2 = detection.bbox
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 255), 3)
+        cv2.putText(
+            annotated,
+            f"VIOLATION: {zone.name}",
+            (x1, y1 - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 0, 255),
+            2,
+        )
+        
+        # Save
+        filename = f"{violation_id}.jpg"
+        filepath = str(Path(snapshot_dir) / filename)
+        cv2.imwrite(filepath, annotated)
+        
+        return filepath
+    
+    def draw_zones(self, frame: np.ndarray, show_labels: bool = True) -> np.ndarray:
+        """
+        Draw all parking zones on frame.
+        
+        Args:
+            frame: Input frame
+            show_labels: Whether to show zone labels
+            
+        Returns:
+            Annotated frame
+        """
