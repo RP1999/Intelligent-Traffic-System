@@ -331,4 +331,40 @@ class ParkingDetector:
         stale_keys = set(self.tracked_vehicles.keys()) - active_keys
         stale_timeout = 2.0  # seconds before removing stale tracking
         
- 
+         for key in stale_keys:
+            tracked = self.tracked_vehicles[key]
+            if current_time - tracked.last_seen > stale_timeout:
+                # Finalize any active violation
+                if key in self.violations:
+                    self.violations[key].end_time = tracked.last_seen
+                    self.violations[key].status = "resolved"
+                del self.tracked_vehicles[key]
+        
+        return new_violations
+    
+    def _calculate_fine(self, zone_type: ZoneType) -> float:
+        """Calculate fine amount based on zone type."""
+        fine_map = {
+            ZoneType.NO_PARKING: 50.0,
+            ZoneType.NO_STOPPING: 100.0,
+            ZoneType.LIMITED_PARKING: 30.0,
+            ZoneType.HANDICAP: 200.0,
+            ZoneType.LOADING: 75.0,
+        }
+        return fine_map.get(zone_type, 50.0)
+    
+    def _save_snapshot(
+        self,
+        frame: np.ndarray,
+        detection: Detection,
+        zone: ParkingZone,
+        violation_id: str,
+        snapshot_dir: str,
+    ) -> str:
+        """Save a snapshot of the violation."""
+        from pathlib import Path
+        
+        Path(snapshot_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Draw zone and detection on frame
+        annotated = frame.copy()
