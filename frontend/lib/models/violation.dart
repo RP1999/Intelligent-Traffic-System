@@ -8,3 +8,6 @@ class Violation {
   final DateTime timestamp;
   final String status;
   final String? location;
+  final String? snapshotPath;
+  final String? evidencePath;
+  final String? notes;
