@@ -75,3 +75,13 @@ async def get_4way_status():
     
     return states
 
+
+@router.post("/4way/update", summary="Update North lane vehicle count")
+async def update_4way_north(vehicle_count: int = Query(..., ge=0, le=100)):
+    """
+    Update the North lane vehicle count (from YOLO detection).
+    
+    This is called by the detection system to update the real traffic data.
+    """
+    controller = get_four_way_controller()
+    controller.update_north_count(vehicle_count)
