@@ -553,3 +553,40 @@ if __name__ == "__main__":
     
     from app.detection.yolo_detector import load_model, detect_and_track, draw_detections, VEHICLE_CLASSES
     
+    parser = argparse.ArgumentParser(description="Test parking detection on video")
+    parser.add_argument("video", help="Path to video file")
+    parser.add_argument("-n", "--num-frames", type=int, default=300, help="Number of frames to process")
+    parser.add_argument("-s", "--skip", type=int, default=3, help="Process every Nth frame")
+    parser.add_argument("--preview", action="store_true", help="Show preview window")
+    parser.add_argument("-o", "--output", help="Output video path")
+    args = parser.parse_args()
+    
+    # Load video
+    cap = cv2.VideoCapture(args.video)
+    if not cap.isOpened():
+        print(f"❌ Cannot open video: {args.video}")
+        sys.exit(1)
+    
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    
+    print(f"📹 Video: {width}x{height} @ {fps:.1f} FPS")
+    
+    # Create sample zones
+    zones = create_sample_zones(width, height)
+    print(f"🅿️ Loaded {len(zones)} parking zones")
+    
+    # Initialize detector
+    detector = ParkingDetector(
+        zones=zones,
+        violation_callback=lambda v: print(f"🚨 VIOLATION: {v.zone_name} - Track {v.track_id} ({v.duration_sec:.1f}s)")
+    )
+    
+    # Load YOLO model
+    model = load_model("yolov8n.pt")
+    
+    # Output video writer
+    out = None
+    if args.output:
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
