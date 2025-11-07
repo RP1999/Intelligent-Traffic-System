@@ -63,3 +63,55 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
         
         if (mounted) {
           setState(() {
+            _logs = logsData.map((l) => AuditLogEntry.fromJson(l)).toList();
+            _totalPages = response.data!['total_pages'] ?? 1;
+          });
+          debugPrint('[AuditLog] Successfully loaded ${_logs.length} logs, $_totalPages total pages');
+        }
+      } else {
+        debugPrint('[AuditLog] API error: ${response.error}');
+        if (mounted && response.error != null) {
+          _showError(response.error!);
+        }
+      }
+    } on UnauthorizedException {
+      debugPrint('[AuditLog] UnauthorizedException - redirecting to login');
+      _handleUnauthorized();
+    } catch (e) {
+      debugPrint('[AuditLog] Exception loading logs: $e');
+      if (mounted) {
+        _showError('Failed to load audit logs: $e');
+      }
+    } finally {
+      // CRITICAL: Always stop loading spinner, even on error
+      debugPrint('[AuditLog] _loadLogs() finally block - setting _isLoading = false');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // Sidebar
+          AdminSidebar(
+            selectedIndex: 3, // Audit Logs
+            onItemSelected: (index) => _handleNavigation(context, index),
+          ),
+          
+          // Main content
+          Expanded(
+            child: Container(
