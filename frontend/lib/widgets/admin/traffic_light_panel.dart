@@ -22,3 +22,13 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
   // Signal state from backend (all 4 junctions coordinated)
   TrafficLightState _currentState = TrafficLightState.green;
   String _currentGreenLane = 'north';
+  int _countdown = 45;
+  bool _isManualOverride = false;
+  bool _emergencyMode = false;
+  bool _isYellowPhase = false;
+  int _yellowRemaining = 0;
+  Map<String, dynamic> _laneData = {};
+  
+  // Junction name mappings (backend lanes -> frontend junction names)
+  static const Map<String, String> _laneToJunction = {
+    'north': 'Junction A (North)',
