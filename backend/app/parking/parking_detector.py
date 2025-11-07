@@ -516,3 +516,40 @@ def create_sample_zones(frame_width: int = 1280, frame_height: int = 720) -> Lis
                 (int(900 * sw), int(350 * sh)),
                 (int(1100 * sw), int(350 * sh)),
                 (int(1100 * sw), int(600 * sh)),
+                (int(900 * sw), int(600 * sh)),
+            ],
+            zone_type=ZoneType.NO_STOPPING,
+            max_duration_sec=0.0,  # No stopping at all
+            color=(0, 0, 200),  # Dark red
+        ),
+        ParkingZone(
+            zone_id="zone_3",
+            name="Loading Zone - Center",
+            polygon=[
+                (int(500 * sw), int(500 * sh)),
+                (int(700 * sw), int(500 * sh)),
+                (int(700 * sw), int(680 * sh)),
+                (int(500 * sw), int(680 * sh)),
+            ],
+            zone_type=ZoneType.LOADING,
+            max_duration_sec=30.0,  # 30 seconds for loading
+            color=(0, 165, 255),  # Orange
+        ),
+    ]
+    
+    return zones
+
+
+# =============================================================================
+# CLI for testing
+# =============================================================================
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+    from pathlib import Path
+    
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+    
+    from app.detection.yolo_detector import load_model, detect_and_track, draw_detections, VEHICLE_CLASSES
+    
