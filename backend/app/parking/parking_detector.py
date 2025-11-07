@@ -442,3 +442,40 @@ class ParkingDetector:
         return annotated
     
     def get_active_violations(self) -> List[ParkingViolation]:
+        """Get all active (unresolved) violations."""
+        return [v for v in self.violations.values() if v.status == "active"]
+    
+    def get_all_violations(self) -> List[ParkingViolation]:
+        """Get all violations."""
+        return list(self.violations.values())
+    
+    def get_zone_stats(self) -> Dict[str, Any]:
+        """Get statistics for all zones."""
+        stats = {}
+        for zone_id, zone in self.zones.items():
+            vehicles_in_zone = sum(
+                1 for tv in self.tracked_vehicles.values() if tv.zone_id == zone_id
+            )
+            violations_in_zone = sum(
+                1 for v in self.violations.values() if v.zone_id == zone_id
+            )
+            stats[zone_id] = {
+                "name": zone.name,
+                "type": zone.zone_type.value,
+                "vehicles_currently": vehicles_in_zone,
+                "total_violations": violations_in_zone,
+                "active": zone.active,
+            }
+        return stats
+    
+    def reset(self) -> None:
+        """Reset all tracking and violations (for new video/session)."""
+        self.tracked_vehicles.clear()
+        self.violations.clear()
+        self._violation_counter = 0
+
+
+# =============================================================================
+# Utility: Create sample zones for testing
+# =============================================================================
+
