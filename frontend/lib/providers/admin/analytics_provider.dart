@@ -29,3 +29,13 @@ class AnalyticsProvider extends ChangeNotifier {
   LoadingState get trendsState => _trendsState;
   LoadingState get hotspotsState => _hotspotsState;
   String? get errorMessage => _errorMessage;
+  DashboardStats? get stats => _stats;
+  ViolationTrendsResponse? get trends => _trends;
+  HotspotsResponse? get hotspots => _hotspots;
+  int get trendPeriod => _trendPeriod;
+
+  /// Load all analytics data
+  Future<void> loadAllAnalytics() async {
+    await Future.wait([
+      loadDashboardStats(),
+      loadViolationTrends(),
