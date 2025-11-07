@@ -36,3 +36,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil('/platform-router', (route) => false);
   }
 
+  Future<void> _loadStats() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    
+    try {
+      final response = await _apiClient.get(ApiEndpoints.adminStats);
+      if (!mounted) return;
+      
+      if (response.success && response.data != null) {
+        setState(() {
+          _stats = response.data;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } on UnauthorizedException {
+      _handleUnauthorized();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
