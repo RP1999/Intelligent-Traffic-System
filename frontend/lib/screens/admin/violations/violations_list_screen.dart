@@ -49,3 +49,57 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // Sidebar
+          AdminSidebar(
+            selectedIndex: 2, // Violations index
+            onItemSelected: (index) => _handleNavigation(index),
+          ),
+          
+          // Main content
+          Expanded(
+            child: Container(
+              color: AppColors.background,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  _buildFilters(),
+                  Expanded(child: _buildViolationsTable()),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNavigation(int index) {
+    switch (index) {
+      case 0:
+        Navigator.of(context).pushReplacementNamed('/admin/dashboard');
+        break;
+      case 1:
+        Navigator.of(context).pushReplacementNamed('/admin/zones');
+        break;
+      case 2:
+        // Already here
+        break;
+      case 3:
+        Navigator.of(context).pushReplacementNamed('/admin/drivers');
+        break;
+      case 4:
+        Navigator.of(context).pushReplacementNamed('/admin/analytics');
+        break;
+      case 5:
+        Navigator.of(context).pushReplacementNamed('/admin/logs');
+        break;
+      case 6:
+        Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+    }
+  }
+
