@@ -48,3 +48,61 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                     label: const Text('Verify', style: TextStyle(color: AppColors.success)),
                   ),
                   const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _dismissViolation(provider.selectedViolation!),
+                    icon: const Icon(Icons.cancel, color: AppColors.error),
+                    label: const Text('Dismiss', style: TextStyle(color: AppColors.error)),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      body: Consumer<ViolationsProvider>(
+        builder: (context, provider, _) {
+          if (provider.detailState == LoadingState.loading) {
+            return const LoadingWidget(message: 'Loading violation details...');
+          }
+
+          if (provider.detailState == LoadingState.error) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                  const SizedBox(height: 16),
+                  Text(
+                    provider.errorMessage ?? 'Failed to load violation',
+                    style: AppTypography.bodyLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => provider.loadViolationDetail(widget.violationId),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final violation = provider.selectedViolation;
+          if (violation == null) {
+            return const Center(child: Text('No violation data'));
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left side - Evidence Card
+                Expanded(
+                  flex: 3,
+                  child: _buildEvidenceCard(violation),
+                ),
+                const SizedBox(width: 24),
+                
+                // Right side - Fine Breakdown
+                Expanded(
