@@ -479,3 +479,40 @@ class ParkingDetector:
 # Utility: Create sample zones for testing
 # =============================================================================
 
+def create_sample_zones(frame_width: int = 1280, frame_height: int = 720) -> List[ParkingZone]:
+    """
+    Create sample parking zones for testing.
+    These are positioned for a typical traffic camera view.
+    
+    Args:
+        frame_width: Video frame width
+        frame_height: Video frame height
+        
+    Returns:
+        List of sample ParkingZone objects
+    """
+    # Scale factors
+    sw = frame_width / 1280
+    sh = frame_height / 720
+    
+    zones = [
+        ParkingZone(
+            zone_id="zone_1",
+            name="No Parking - Left Side",
+            polygon=[
+                (int(50 * sw), int(400 * sh)),
+                (int(200 * sw), int(400 * sh)),
+                (int(200 * sw), int(650 * sh)),
+                (int(50 * sw), int(650 * sh)),
+            ],
+            zone_type=ZoneType.NO_PARKING,
+            max_duration_sec=5.0,  # 5 seconds for demo
+            color=(0, 0, 255),  # Red
+        ),
+        ParkingZone(
+            zone_id="zone_2",
+            name="No Stopping - Right Side",
+            polygon=[
+                (int(900 * sw), int(350 * sh)),
+                (int(1100 * sw), int(350 * sh)),
+                (int(1100 * sw), int(600 * sh)),
