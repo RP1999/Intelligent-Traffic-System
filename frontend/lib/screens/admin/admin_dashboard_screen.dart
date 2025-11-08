@@ -23,3 +23,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoading = true;
   
   final ApiClient _apiClient = ApiClient();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  /// Handle unauthorized access - redirect to login
+  void _handleUnauthorized() {
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/platform-router', (route) => false);
+  }
+
+  Future<void> _loadStats() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    
+    try {
+      final response = await _apiClient.get(ApiEndpoints.adminStats);
+      if (!mounted) return;
+      
