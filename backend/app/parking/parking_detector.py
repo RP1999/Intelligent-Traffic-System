@@ -590,3 +590,40 @@ if __name__ == "__main__":
     out = None
     if args.output:
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(args.output, fourcc, fps / args.skip, (width, height))
+    
+    frame_idx = 0
+    processed = 0
+    start_time = time.time()
+    
+    print(f"\n🔄 Processing {args.num_frames} frames (skip={args.skip})...\n")
+    
+    try:
+        while processed < args.num_frames:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if frame_idx % args.skip == 0:
+                # Run detection
+                result = detect_and_track(
+                    model, frame, frame_id=frame_idx,
+                    classes=list(VEHICLE_CLASSES.keys())
+                )
+                
+                # Process for parking violations
+                current_time = frame_idx / fps  # Simulate video time
+                new_violations = detector.process_detections(
+                    result.detections,
+                    current_time=current_time,
+                    frame=frame,
+                    snapshot_dir="d:/Intelligent-Traffic-Management-System/data/snapshots"
+                )
+                
+                # Draw zones and detections
+                annotated = detector.draw_zones(frame)
+                annotated = draw_detections(annotated, result.detections)
+                
+                # Add stats overlay
+                active = len(detector.get_active_violations())
+                total = len(detector.get_all_violations())
