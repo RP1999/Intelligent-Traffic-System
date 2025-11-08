@@ -14,3 +14,19 @@ class ViolationDetailScreen extends StatefulWidget {
   const ViolationDetailScreen({
     super.key,
     required this.violationId,
+  });
+
+  @override
+  State<ViolationDetailScreen> createState() => _ViolationDetailScreenState();
+}
+
+class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ViolationsProvider>().loadViolationDetail(widget.violationId);
+    });
+  }
+
+  @override
