@@ -627,3 +627,42 @@ if __name__ == "__main__":
                 # Add stats overlay
                 active = len(detector.get_active_violations())
                 total = len(detector.get_all_violations())
+                cv2.putText(
+                    annotated,
+                    f"Frame: {frame_idx} | Vehicles: {len(result.detections)} | Active Violations: {active} | Total: {total}",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    2,
+                )
+                
+                if out:
+                    out.write(annotated)
+                
+                if args.preview:
+                    cv2.imshow("Parking Detection", annotated)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+                
+                processed += 1
+                
+                if processed % 50 == 0:
+                    elapsed = time.time() - start_time
+                    print(f"  Processed {processed} frames in {elapsed:.1f}s | Violations: {total}")
+            
+            frame_idx += 1
+    
+    finally:
+        cap.release()
+        if out:
+            out.release()
+        cv2.destroyAllWindows()
+    
+    elapsed = time.time() - start_time
+    print(f"\n✅ Done: {processed} frames in {elapsed:.1f}s ({processed/elapsed:.1f} FPS)")
+    print(f"📊 Total violations detected: {len(detector.get_all_violations())}")
+    
+    # Print violation details
+    for v in detector.get_all_violations():
+        print(f"   - {v.violation_id}: Zone '{v.zone_name}' | Track {v.track_id} | {v.duration_sec:.1f}s | ${v.fine_amount}")
