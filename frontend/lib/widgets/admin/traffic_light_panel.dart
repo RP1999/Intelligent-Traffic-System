@@ -32,3 +32,19 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
   // Junction name mappings (backend lanes -> frontend junction names)
   static const Map<String, String> _laneToJunction = {
     'north': 'Junction A (North)',
+    'south': 'Junction B (South)',
+    'east': 'Junction C (East)',
+    'west': 'Junction D (West)',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
