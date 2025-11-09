@@ -55,3 +55,16 @@ class FuzzyTrafficController:
         
         # Define membership functions for vehicle count (shifted lower for demo)
         # Low: mostly 0-4, Medium: 2-12, High: 8-30
+        self.vehicle_count['low'] = fuzz.trimf(self.vehicle_count.universe, [0, 0, 4])
+        self.vehicle_count['medium'] = fuzz.trimf(self.vehicle_count.universe, [2, 6, 12])
+        self.vehicle_count['high'] = fuzz.trimf(self.vehicle_count.universe, [8, 15, 30])
+        
+        # Define membership functions for green duration
+        self.green_duration['short'] = fuzz.trimf(self.green_duration.universe, 
+                                                   [self.min_green, self.min_green, 25])
+        self.green_duration['medium'] = fuzz.trimf(self.green_duration.universe, 
+                                                    [20, 35, 50])
+        self.green_duration['long'] = fuzz.trimf(self.green_duration.universe, 
+                                                  [40, self.max_green, self.max_green])
+        
+        # Define fuzzy rules
