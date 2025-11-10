@@ -68,3 +68,18 @@ class FuzzyTrafficController:
                                                   [40, self.max_green, self.max_green])
         
         # Define fuzzy rules
+        rule1 = ctrl.Rule(self.vehicle_count['low'], self.green_duration['short'])
+        rule2 = ctrl.Rule(self.vehicle_count['medium'], self.green_duration['medium'])
+        rule3 = ctrl.Rule(self.vehicle_count['high'], self.green_duration['long'])
+        
+        # Create control system
+        self.traffic_ctrl = ctrl.ControlSystem([rule1, rule2, rule3])
+        self.simulation = ctrl.ControlSystemSimulation(self.traffic_ctrl)
+        
+        print("✅ Fuzzy traffic controller initialized")
+    
+    def compute_green_duration(self, vehicle_count: int) -> int:
+        """
+        Compute optimal green light duration based on vehicle count.
+        
+        Args:
