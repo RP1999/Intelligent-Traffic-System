@@ -84,3 +84,52 @@ class RiskScore:
             'formula': '(Speed_Factor × 0.6) + (History_Factor × 0.4)',
             'weights': {
                 'speed': SPEED_WEIGHT,
+                'history': HISTORY_WEIGHT
+            }
+        }
+
+
+# =============================================================================
+# CORE FUNCTIONS
+# =============================================================================
+
+def calculate_speed_factor(current_speed: float, speed_limit: float) -> float:
+    """
+    Calculate the speed factor component of risk score.
+    
+    Scale: 0-100 based on how fast relative to limit.
+    
+    Args:
+        current_speed: Current vehicle speed (km/h or pixel equivalent)
+        speed_limit: Speed limit for the zone
+        
+    Returns:
+        Speed factor (0-100)
+    """
+    if speed_limit <= 0:
+        speed_limit = 60.0  # Default
+    
+    speed_ratio = current_speed / speed_limit
+    
+    # Calculate speed factor based on ratio brackets
+    if speed_ratio <= 0.8:
+        # Safe speed (under 80% of limit)
+        speed_factor = 0
+    elif speed_ratio <= 1.0:
+        # Approaching limit (80-100%)
+        # Linear scale: 0-20
+        speed_factor = (speed_ratio - 0.8) * 100  # 0 at 0.8, 20 at 1.0
+    elif speed_ratio <= 1.2:
+        # Slightly over (100-120%)
+        # Linear scale: 20-50
+        speed_factor = 20 + (speed_ratio - 1.0) * 150  # 20 at 1.0, 50 at 1.2
+    elif speed_ratio <= 1.5:
+        # Significantly over (120-150%)
+        # Linear scale: 50-100
+        speed_factor = 50 + (speed_ratio - 1.2) * 166.67  # 50 at 1.2, 100 at 1.5
+    else:
+        # Extremely over (>150%)
+        speed_factor = 100
+    
+    return min(100, max(0, speed_factor))
+
