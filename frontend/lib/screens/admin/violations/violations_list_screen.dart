@@ -103,3 +103,40 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
     }
   }
 
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Violation Management',
+                style: AppTypography.h1.copyWith(fontSize: 28),
+              ),
+              const SizedBox(height: 4),
+              Consumer<ViolationsProvider>(
+                builder: (context, provider, _) {
+                  return Text(
+                    '${provider.total} total violations',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const Spacer(),
+          
+          // Refresh button
+          IconButton(
+            onPressed: () {
+              context.read<ViolationsProvider>().loadViolations(refresh: true);
+            },
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+          const SizedBox(width: 8),
+          
