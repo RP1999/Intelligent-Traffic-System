@@ -29,3 +29,27 @@ class ViolationsProvider extends ChangeNotifier {
   Violation? _selectedViolation;
   LoadingState _detailState = LoadingState.initial;
 
+  // Getters
+  LoadingState get state => _state;
+  String? get errorMessage => _errorMessage;
+  List<Violation> get violations => _violations;
+  int get total => _total;
+  int get currentPage => _currentPage;
+  int get totalPages => (_total / _pageSize).ceil();
+  bool get hasMore => _violations.length < _total;
+  String get searchQuery => _searchQuery;
+  String? get statusFilter => _statusFilter;
+  String? get typeFilter => _typeFilter;
+  Violation? get selectedViolation => _selectedViolation;
+  LoadingState get detailState => _detailState;
+
+  /// Load violations with current filters
+  Future<void> loadViolations({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _violations = [];
+    }
+
+    _state = _violations.isEmpty ? LoadingState.loading : _state;
+    _errorMessage = null;
+    notifyListeners();
