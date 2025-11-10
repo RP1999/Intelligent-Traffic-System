@@ -48,3 +48,13 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+    
+    // Fetch initial state and start polling
+    _fetchSignalStatus();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    // Poll every 3 seconds to reduce connection usage
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _fetchSignalStatus();
