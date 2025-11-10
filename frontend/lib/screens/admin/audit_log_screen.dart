@@ -115,3 +115,49 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
           // Main content
           Expanded(
             child: Container(
+              color: AppColors.background,
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  _buildFilters(),
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _buildDataTable(),
+                  ),
+                  _buildPagination(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNavigation(BuildContext context, int index) {
+    switch (index) {
+      case 0: // Dashboard
+        Navigator.of(context).pushReplacementNamed('/admin/dashboard');
+        break;
+      case 1: // Zone Editor
+        Navigator.of(context).pushReplacementNamed('/admin/zones');
+        break;
+      case 2: // Violations
+        Navigator.of(context).pushReplacementNamed('/admin/violations');
+        break;
+      case 3: // Audit Logs - already here
+        break;
+      case 4: // Settings
+        Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+      case 5: // Logout
+        _handleLogout();
+        break;
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
