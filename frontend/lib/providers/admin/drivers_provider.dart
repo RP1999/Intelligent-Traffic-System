@@ -6,3 +6,7 @@ import '../../models/driver.dart';
 /// State enum for data loading
 enum LoadingState { initial, loading, loaded, error }
 
+/// Provider for managing drivers data
+class DriversProvider extends ChangeNotifier {
+  final ApiClient _apiClient = ApiClient();
+
