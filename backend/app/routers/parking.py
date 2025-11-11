@@ -74,3 +74,41 @@ async def get_detector() -> ParkingDetector:
                     notes=f"Parking violation in {v.zone_name} for {v.duration_sec:.1f}s",
                 )
                 
+                # 3. Persist driver score update to DB
+                async def _persist_driver():
+                    await insert_driver(
+                        driver_id=driver_id,
+                        current_score=driver_score.current_score,
+                        total_violations=driver_score.total_violations,
+                        total_fines=driver_score.total_fines,
+                        created_at=driver_score.created_at,
+                        updated_at=driver_score.updated_at,
+                    )
+                    await insert_driver_violation(
+                        violation_id=vio_record.violation_id,
+                        driver_id=driver_id,
+                        violation_type=vio_type.value,
+                        timestamp=vio_record.timestamp,
+                        location=vio_record.location,
+                        points_deducted=vio_record.points_deducted,
+                        fine_amount=vio_record.fine_amount,
+                        license_plate=vio_record.license_plate,
+                        snapshot_path=vio_record.snapshot_path,
+                        notes=vio_record.notes,
+                    )
+                
+                schedule_coroutine(_persist_driver())
+                
+                print(f"⚠️ Violation scored: {driver_id} → Score: {driver_score.current_score} ({driver_score.risk_level})")
+                
+            except Exception as e:
+                print(f"Error in violation callback: {e}")
+
+        _detector = ParkingDetector(
+            zones=zones,
+            min_overlap=settings.parking_min_overlap,
+            violation_callback=_violation_callback,
+        )
+    return _detector
+
+
