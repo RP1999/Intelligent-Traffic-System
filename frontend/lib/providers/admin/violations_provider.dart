@@ -8,3 +8,8 @@ enum LoadingState { initial, loading, loaded, error }
 
 /// Provider for managing violations data
 class ViolationsProvider extends ChangeNotifier {
+  final ApiClient _apiClient = ApiClient();
+
+  // State
+  LoadingState _state = LoadingState.initial;
+  String? _errorMessage;
