@@ -85,3 +85,19 @@ async def update_4way_north(vehicle_count: int = Query(..., ge=0, le=100)):
     """
     controller = get_four_way_controller()
     controller.update_north_count(vehicle_count)
+    states = controller.get_status()
+    
+    print(f"[4WAY] North count updated: {vehicle_count} vehicles")
+    
+    return {
+        "message": f"North lane updated with {vehicle_count} vehicles",
+        "junction_status": states
+    }
+
+
+@router.post("/4way/emergency", summary="Trigger emergency mode")
+async def trigger_4way_emergency(lane: str = Query("north", regex="^(north|south|east|west)$")):
+    """
+    Trigger emergency mode - forces specified lane GREEN.
+    
+    This simulates an ambulance detection. In production, this is 
