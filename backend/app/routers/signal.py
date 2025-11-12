@@ -101,3 +101,23 @@ async def trigger_4way_emergency(lane: str = Query("north", regex="^(north|south
     Trigger emergency mode - forces specified lane GREEN.
     
     This simulates an ambulance detection. In production, this is 
+    automatically triggered by YOLO when ambulance class is detected.
+    """
+    controller = get_four_way_controller()
+    result = controller.activate_emergency_mode(lane)
+    
+    print(f"[4WAY] EMERGENCY MODE ACTIVATED - {lane.upper()} forced GREEN")
+    
+    return result
+
+
+@router.post("/4way/emergency/stop", summary="Deactivate emergency mode")
+async def stop_4way_emergency():
+    """Deactivate emergency mode and resume normal cycle."""
+    controller = get_four_way_controller()
+    result = controller.deactivate_emergency_mode()
+    
+    print(f"[4WAY] Emergency mode deactivated - resuming normal cycle")
+    
+    return result
+
