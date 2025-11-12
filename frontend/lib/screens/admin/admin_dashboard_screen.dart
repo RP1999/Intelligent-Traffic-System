@@ -66,3 +66,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       body: Row(
         children: [
           // Sidebar
+          AdminSidebar(
+            selectedIndex: _selectedIndex,
+            onItemSelected: (index) {
+              setState(() => _selectedIndex = index);
+              _handleNavigation(index);
+            },
+          ),
+          
+          // Main content
+          Expanded(
+            child: Container(
+              color: AppColors.background,
+              child: _buildMainContent(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNavigation(int index) {
