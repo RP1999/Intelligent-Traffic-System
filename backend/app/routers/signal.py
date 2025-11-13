@@ -121,3 +121,27 @@ async def stop_4way_emergency():
     
     return result
 
+
+@router.post("/4way/tick", summary="Advance 4-way signal timer")
+async def tick_4way(seconds: int = Query(1, ge=1, le=60)):
+    """
+    Manually advance the 4-way signal timer.
+    Useful for demo/testing purposes.
+    """
+    controller = get_four_way_controller()
+    states = controller.tick(seconds)
+    
+    print(f"[4WAY] Ticked {seconds}s | Green={states['current_green'].upper()} | Remaining={states['green_remaining']}s")
+    
+    return {
+        "ticked_seconds": seconds,
+        "junction_status": states
+    }
+
+
+@router.post("/update", summary="Update signal timing based on traffic")
+async def update_signal(request: SignalUpdateRequest):
+    """
+    Update signal timing based on vehicle count using fuzzy logic.
+    
+    This endpoint:
