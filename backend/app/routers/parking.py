@@ -150,4 +150,41 @@ class ViolationResponse(BaseModel):
     license_plate: Optional[str]
     snapshot_path: Optional[str]
     fine_amount: float
- 
+     status: str
+
+
+class ZoneStatsResponse(BaseModel):
+    """Response model for zone statistics."""
+    zone_id: str
+    name: str
+    type: str
+    vehicles_currently: int
+    total_violations: int
+    active: bool
+
+
+# =============================================================================
+# Zone Management Endpoints
+# =============================================================================
+
+@router.get("/zones", response_model=List[ZoneResponse])
+async def list_zones():
+    """List all parking zones."""
+    detector = await get_detector()
+    # Prefer DB-backed zones if available
+    try:
+        db_zones = await db_list_zones()
+        if db_zones:
+            zones = db_zones
+        else:
+            zones = detector.get_zones()
+    except Exception:
+        zones = detector.get_zones()
+    return [
+        ZoneResponse(
+            zone_id=z.zone_id,
+            name=z.name,
+            polygon=[list(p) for p in z.polygon],
+            zone_type=z.zone_type.value,
+            max_duration_sec=z.max_duration_sec,
+            active=z.active,
