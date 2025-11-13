@@ -112,3 +112,41 @@ async def get_detector() -> ParkingDetector:
     return _detector
 
 
+# =============================================================================
+# Pydantic models for request/response
+# =============================================================================
+
+class ZoneCreate(BaseModel):
+    """Request model for creating a parking zone."""
+    zone_id: str
+    name: str
+    polygon: List[List[int]]  # List of [x, y] points
+    zone_type: str = "no_parking"
+    max_duration_sec: float = 0.0
+    color: List[int] = [0, 0, 255]  # BGR
+    active: bool = True
+
+
+class ZoneResponse(BaseModel):
+    """Response model for a parking zone."""
+    zone_id: str
+    name: str
+    polygon: List[List[int]]
+    zone_type: str
+    max_duration_sec: float
+    active: bool
+
+
+class ViolationResponse(BaseModel):
+    """Response model for a parking violation."""
+    violation_id: str
+    track_id: int
+    zone_id: str
+    zone_name: str
+    zone_type: str
+    start_time: str
+    end_time: Optional[str]
+    duration_sec: float
+    license_plate: Optional[str]
+    snapshot_path: Optional[str]
+    fine_amount: float
