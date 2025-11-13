@@ -22,3 +22,15 @@ DB_PATH = Path(__file__).parent.parent.parent / "traffic.db"
 class ViolationType(str, Enum):
     """Types of traffic violations."""
     PARKING_NO_PARKING = "parking_no_parking"
+    PARKING_NO_STOPPING = "parking_no_stopping"
+    PARKING_OVERTIME = "parking_overtime"
+    PARKING_HANDICAP = "parking_handicap"
+    PARKING_LOADING = "parking_loading"
+    SPEEDING = "speeding"
+    RED_LIGHT = "red_light"
+    WRONG_WAY = "wrong_way"
+    LANE_VIOLATION = "lane_violation"
+    RECKLESS_DRIVING = "reckless_driving"
+
+
+# Violation severity and penalty points (aligned with LiveSafeScore spec)
