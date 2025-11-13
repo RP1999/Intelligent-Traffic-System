@@ -30,3 +30,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Driver Profile'),
+        backgroundColor: AppColors.surface,
+      ),
+      body: Consumer<DriversProvider>(
+        builder: (context, provider, _) {
+          if (provider.detailState == LoadingState.loading) {
+            return const LoadingWidget(message: 'Loading driver details...');
+          }
+
+          if (provider.detailState == LoadingState.error) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
