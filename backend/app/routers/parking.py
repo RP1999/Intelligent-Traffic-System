@@ -150,3 +150,4 @@ class ViolationResponse(BaseModel):
     license_plate: Optional[str]
     snapshot_path: Optional[str]
     fine_amount: float
+ 
