@@ -188,3 +188,41 @@ async def list_zones():
             zone_type=z.zone_type.value,
             max_duration_sec=z.max_duration_sec,
             active=z.active,
+        )
+        for z in zones
+    ]
+
+
+@router.get("/zones/{zone_id}", response_model=ZoneResponse)
+async def get_zone(zone_id: str):
+    """Get a specific parking zone."""
+    detector = await get_detector()
+    if zone_id not in detector.zones:
+        raise HTTPException(status_code=404, detail=f"Zone not found: {zone_id}")
+    
+    z = detector.zones[zone_id]
+    return ZoneResponse(
+        zone_id=z.zone_id,
+        name=z.name,
+        polygon=[list(p) for p in z.polygon],
+        zone_type=z.zone_type.value,
+        max_duration_sec=z.max_duration_sec,
+        active=z.active,
+    )
+
+
+@router.post("/zones", response_model=ZoneResponse)
+async def create_zone(zone: ZoneCreate):
+    """Create a new parking zone."""
+    detector = await get_detector()
+    
+    if zone.zone_id in detector.zones:
+        raise HTTPException(status_code=400, detail=f"Zone already exists: {zone.zone_id}")
+    
+    try:
+        zone_type = ZoneType(zone.zone_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid zone_type. Must be one of: {[t.value for t in ZoneType]}"
+        )
