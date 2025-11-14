@@ -99,3 +99,27 @@ class FuzzyTrafficController:
                 return max(self.min_green, min(self.max_green, duration))
             except Exception as e:
                 print(f"⚠️ Fuzzy computation error: {e}")
+        
+        # Fallback: Linear interpolation
+        return self._linear_fallback(vehicle_count)
+    
+    def _linear_fallback(self, vehicle_count: int) -> int:
+        """Fallback linear interpolation if fuzzy system unavailable."""
+        # Map 0-30 vehicles to min_green-max_green seconds
+        ratio = vehicle_count / 30.0
+        duration = self.min_green + ratio * (self.max_green - self.min_green)
+        return int(duration)
+    
+    def get_traffic_level(self, vehicle_count: int) -> str:
+        """
+        Get traffic level classification.
+        
+        Args:
+            vehicle_count: Number of vehicles
+            
+        Returns:
+            Traffic level: 'low', 'medium', or 'high'
+        """
+        # Make thresholds lower for demo so green appears with fewer vehicles
+        if vehicle_count <= 2:
+            return 'low'
