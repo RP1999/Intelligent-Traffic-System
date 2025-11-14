@@ -83,3 +83,19 @@ class FuzzyTrafficController:
         Compute optimal green light duration based on vehicle count.
         
         Args:
+            vehicle_count: Number of vehicles waiting at intersection
+            
+        Returns:
+            Green light duration in seconds
+        """
+        # Clamp vehicle count to valid range
+        vehicle_count = max(0, min(30, vehicle_count))
+        
+        if self.simulation is not None:
+            try:
+                self.simulation.input['vehicle_count'] = vehicle_count
+                self.simulation.compute()
+                duration = int(self.simulation.output['green_duration'])
+                return max(self.min_green, min(self.max_green, duration))
+            except Exception as e:
+                print(f"⚠️ Fuzzy computation error: {e}")
