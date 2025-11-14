@@ -34,3 +34,15 @@ class ViolationType(str, Enum):
 
 
 # Violation severity and penalty points (aligned with LiveSafeScore spec)
+VIOLATION_PENALTIES = {
+    ViolationType.PARKING_NO_PARKING: {"points": 10, "fine": 100.0, "severity": "medium"},
+    ViolationType.PARKING_NO_STOPPING: {"points": 10, "fine": 100.0, "severity": "medium"},
+    ViolationType.PARKING_OVERTIME: {"points": 5, "fine": 50.0, "severity": "low"},
+    ViolationType.PARKING_HANDICAP: {"points": 10, "fine": 200.0, "severity": "high"},
+    ViolationType.PARKING_LOADING: {"points": 10, "fine": 75.0, "severity": "low"},
+    ViolationType.SPEEDING: {"points": 8, "fine": 150.0, "severity": "medium"},
+    ViolationType.RED_LIGHT: {"points": 25, "fine": 300.0, "severity": "high"},
+    ViolationType.WRONG_WAY: {"points": 20, "fine": 500.0, "severity": "critical"},
+    ViolationType.LANE_VIOLATION: {"points": 5, "fine": 80.0, "severity": "low"},
+    ViolationType.RECKLESS_DRIVING: {"points": 25, "fine": 1000.0, "severity": "critical"},
+}
