@@ -10,3 +10,7 @@ enum LoadingState { initial, loading, loaded, error }
 class DriversProvider extends ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
 
+  // State
+  LoadingState _state = LoadingState.initial;
+  String? _errorMessage;
+  List<Driver> _drivers = [];
