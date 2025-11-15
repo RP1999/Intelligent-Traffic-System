@@ -226,3 +226,41 @@ async def create_zone(zone: ZoneCreate):
             status_code=400,
             detail=f"Invalid zone_type. Must be one of: {[t.value for t in ZoneType]}"
         )
+    
+    new_zone = ParkingZone(
+        zone_id=zone.zone_id,
+        name=zone.name,
+        polygon=[tuple(p) for p in zone.polygon],
+        zone_type=zone_type,
+        max_duration_sec=zone.max_duration_sec,
+        color=tuple(zone.color),
+        active=zone.active,
+    )
+    
+    detector.add_zone(new_zone)
+    # Persist to DB
+    try:
+        await insert_zone(new_zone)
+    except Exception:
+        pass
+    
+    return ZoneResponse(
+        zone_id=new_zone.zone_id,
+        name=new_zone.name,
+        polygon=[list(p) for p in new_zone.polygon],
+        zone_type=new_zone.zone_type.value,
+        max_duration_sec=new_zone.max_duration_sec,
+        active=new_zone.active,
+    )
+
+
+@router.delete("/zones/{zone_id}")
+async def delete_zone(zone_id: str):
+    """Delete a parking zone."""
+    detector = await get_detector()
+    
+    if not detector.remove_zone(zone_id):
+        raise HTTPException(status_code=404, detail=f"Zone not found: {zone_id}")
+    # remove from DB
+    try:
+        await db_delete_zone(zone_id)
