@@ -11,3 +11,13 @@ class Violation {
   final String? snapshotPath;
   final String? evidencePath;
   final String? notes;
+
+  Violation({
+    required this.violationId,
+    required this.driverId,
+    this.licensePlate,
+    required this.violationType,
+    required this.fineAmount,
+    required this.pointsDeducted,
+    required this.timestamp,
+    required this.status,
