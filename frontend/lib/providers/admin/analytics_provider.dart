@@ -39,3 +39,18 @@ class AnalyticsProvider extends ChangeNotifier {
     await Future.wait([
       loadDashboardStats(),
       loadViolationTrends(),
+      loadHotspots(),
+    ]);
+  }
+
+  /// Load dashboard statistics
+  Future<void> loadDashboardStats() async {
+    _statsState = LoadingState.loading;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.get(ApiEndpoints.dashboardStats);
+
+      if (response.success && response.data != null) {
+        _stats = DashboardStats.fromJson(response.data!);
+        _statsState = LoadingState.loaded;
