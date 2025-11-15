@@ -14,3 +14,7 @@ class DriversProvider extends ChangeNotifier {
   LoadingState _state = LoadingState.initial;
   String? _errorMessage;
   List<Driver> _drivers = [];
+  int _total = 0;
+  int _currentPage = 1;
+  final int _pageSize = 20;
+
