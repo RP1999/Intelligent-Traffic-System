@@ -87,3 +87,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _handleNavigation(int index) {
+    switch (index) {
+      case 0: // Dashboard - stay here
+        break;
+      case 1: // Zone Editor
+        Navigator.of(context).pushReplacementNamed('/admin/zones');
+        break;
+      case 2: // Violations
+        Navigator.of(context).pushReplacementNamed('/admin/violations');
+        break;
+      case 3: // Drivers
+        Navigator.of(context).pushReplacementNamed('/admin/drivers');
+        break;
+      case 4: // Analytics
+        Navigator.of(context).pushReplacementNamed('/admin/analytics');
+        break;
+      case 5: // Audit Logs
+        Navigator.of(context).pushReplacementNamed('/admin/logs');
+        break;
+      case 6: // Settings
+        Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+      case 7: // Logout
+        _handleLogout();
+        break;
