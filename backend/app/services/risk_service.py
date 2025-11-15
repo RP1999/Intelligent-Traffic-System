@@ -133,3 +133,47 @@ def calculate_speed_factor(current_speed: float, speed_limit: float) -> float:
     
     return min(100, max(0, speed_factor))
 
+
+def calculate_history_factor(violation_history_count: int = None, violations: List[Dict] = None) -> float:
+    """
+    Calculate the violation history factor component of risk score.
+    
+    Scale: 0-100 based on past violations.
+    
+    Args:
+        violation_history_count: Simple count of violations (if no details available)
+        violations: List of violation dicts with 'type' key (for weighted calculation)
+        
+    Returns:
+        History factor (0-100)
+    """
+    history_score = 0
+    
+    if violations:
+        # Weighted calculation based on violation types
+        for v in violations:
+            violation_type = v.get('type', v.get('violation_type', 'default'))
+            weight = VIOLATION_WEIGHTS.get(violation_type.lower(), VIOLATION_WEIGHTS['default'])
+            history_score += weight
+    elif violation_history_count is not None:
+        # Simple calculation: 10 points per violation
+        history_score = violation_history_count * 10
+    
+    # Cap at 100
+    return min(100, history_score)
+
+
+def get_risk_level(score: float) -> str:
+    """
+    Get risk level classification from score.
+    
+    Args:
+        score: Risk score (0-100)
+        
+    Returns:
+        Risk level string: 'LOW', 'MEDIUM', 'HIGH', or 'CRITICAL'
+    """
+    for level, (low, high) in RISK_LEVELS.items():
+        if low <= score < high:
+            return level
+    return 'CRITICAL'
