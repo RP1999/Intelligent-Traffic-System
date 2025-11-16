@@ -123,3 +123,17 @@ class FuzzyTrafficController:
         # Make thresholds lower for demo so green appears with fewer vehicles
         if vehicle_count <= 2:
             return 'low'
+        elif vehicle_count <= 8:
+            return 'medium'
+        else:
+            return 'high'
+    
+    def get_signal_recommendation(self, vehicle_count: int) -> dict:
+        """
+        Get full signal recommendation with all details.
+        
+        Args:
+            vehicle_count: Number of vehicles at intersection
+            
+        Returns:
+            Dictionary with duration, traffic_level, and recommendation details
