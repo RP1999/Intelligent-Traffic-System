@@ -33,3 +33,11 @@ class DashboardStats {
     );
   }
 }
+
+/// Violation trend data for charts
+class ViolationTrend {
+  final String date;
+  final int total;
+  final Map<String, int> byType;
+
+  ViolationTrend({
