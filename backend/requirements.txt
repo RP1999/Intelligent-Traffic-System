@@ -1,2 +1,4 @@
 # =============================================================================
 # Intelligent Traffic Management System - Backend Requirements
+# CPU-optimized dependencies (no CUDA)
+# =============================================================================
