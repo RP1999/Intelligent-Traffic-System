@@ -46,3 +46,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                  const SizedBox(height: 16),
+                  Text(
+                    provider.errorMessage ?? 'Failed to load driver',
+                    style: AppTypography.bodyLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => provider.loadDriverDetail(widget.driverId),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
