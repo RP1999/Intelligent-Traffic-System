@@ -21,3 +21,12 @@ class Violation {
     required this.pointsDeducted,
     required this.timestamp,
     required this.status,
+    this.location,
+    this.snapshotPath,
+    this.evidencePath,
+    this.notes,
+  });
+
+  factory Violation.fromJson(Map<String, dynamic> json) {
+    return Violation(
+      violationId: json['violation_id'] ?? '',
