@@ -64,3 +64,47 @@ class SeverityLevel(str, Enum):
 
 @dataclass
 class PositionRecord:
+    """A single position and timestamp record."""
+    x: int
+    y: int
+    timestamp: float
+    speed_pixels: float = 0.0
+
+
+@dataclass
+class VehicleBehavior:
+    """Tracks a vehicle's behavior history."""
+    track_id: int
+    positions: deque = field(default_factory=lambda: deque(maxlen=120))  # 4 seconds at 30fps
+    speeds: deque = field(default_factory=lambda: deque(maxlen=60))
+    behaviors_detected: List[str] = field(default_factory=list)
+    last_behavior_time: float = 0.0
+    sudden_stop_count: int = 0
+    harsh_brake_count: int = 0
+    drift_score: float = 0.0
+    
+    def add_position(self, x: int, y: int, speed_pixels: float = 0.0):
+        """Add a new position record."""
+        self.positions.append(PositionRecord(x, y, time.time(), speed_pixels))
+        if speed_pixels > 0:
+            self.speeds.append(speed_pixels)
+    
+    def get_recent_speeds(self, window: int = 30) -> List[float]:
+        """Get recent speed values."""
+        return list(self.speeds)[-window:]
+    
+    def get_position_variance(self, axis: str = 'x', window: int = 30) -> float:
+        """Calculate position variance for drift detection."""
+        if len(self.positions) < window // 2:
+            return 0.0
+        
+        positions = list(self.positions)[-window:]
+        values = [p.x if axis == 'x' else p.y for p in positions]
+        
+        if not values:
+            return 0.0
+        
+        mean = sum(values) / len(values)
+        variance = sum((v - mean) ** 2 for v in values) / len(values)
+        return variance ** 0.5  # Standard deviation
+
