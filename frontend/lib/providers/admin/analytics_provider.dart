@@ -54,3 +54,17 @@ class AnalyticsProvider extends ChangeNotifier {
       if (response.success && response.data != null) {
         _stats = DashboardStats.fromJson(response.data!);
         _statsState = LoadingState.loaded;
+      } else {
+        _errorMessage = response.error ?? 'Failed to load dashboard stats';
+        _statsState = LoadingState.error;
+      }
+    } on UnauthorizedException {
+      _errorMessage = 'Session expired. Please login again.';
+      _statsState = LoadingState.error;
+      rethrow;
+    } catch (e) {
+      _errorMessage = 'Error loading stats: $e';
+      _statsState = LoadingState.error;
+    }
+
+    notifyListeners();
