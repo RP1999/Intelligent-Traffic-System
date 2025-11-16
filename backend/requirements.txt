@@ -2,3 +2,5 @@
 # Intelligent Traffic Management System - Backend Requirements
 # CPU-optimized dependencies (no CUDA)
 # =============================================================================
+# Last Updated: January 3, 2026
+# Python Version: 3.11+ (Tested with 3.12)
