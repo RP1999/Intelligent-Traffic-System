@@ -145,3 +145,17 @@ async def update_signal(request: SignalUpdateRequest):
     Update signal timing based on vehicle count using fuzzy logic.
     
     This endpoint:
+    1. Takes the current vehicle count
+    2. Runs fuzzy inference to determine optimal green duration
+    3. Updates the signal timing parameters
+    
+    The fuzzy rules:
+    - Low traffic (0-5 vehicles) → Short green (~10-20s)
+    - Medium traffic (5-15 vehicles) → Medium green (~20-40s)
+    - High traffic (15+ vehicles) → Long green (~40-60s)
+    """
+    signal = get_signal()
+    recommendation = signal.update_timing(request.vehicle_count)
+    
+    return {
+        "message": "Signal timing updated",
