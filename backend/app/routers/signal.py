@@ -159,3 +159,16 @@ async def update_signal(request: SignalUpdateRequest):
     
     return {
         "message": "Signal timing updated",
+        "recommendation": recommendation,
+        "signal_status": signal.get_status(),
+    }
+
+
+@router.post("/set-state", summary="Manually set signal state")
+async def set_signal_state(request: SignalStateRequest):
+    """
+    Manually set the traffic signal state.
+    
+    States: 'red', 'yellow', 'green'
+    Optionally provide duration in seconds.
+    """
