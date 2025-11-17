@@ -172,3 +172,21 @@ async def set_signal_state(request: SignalStateRequest):
     States: 'red', 'yellow', 'green'
     Optionally provide duration in seconds.
     """
+    signal = get_signal()
+    
+    try:
+        signal.set_state(request.state, request.duration)
+    except ValueError as e:
+        return {"error": str(e)}
+    
+    return {
+        "message": f"Signal set to {request.state}",
+        "signal_status": signal.get_status(),
+    }
+
+
+@router.post("/tick", summary="Advance signal timer")
+async def tick_signal(seconds: int = Query(1, ge=1, le=60)):
+    """
+    Advance the signal timer by specified seconds.
+    Simulates time passing for demo purposes.
