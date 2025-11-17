@@ -264,3 +264,41 @@ async def delete_zone(zone_id: str):
     # remove from DB
     try:
         await db_delete_zone(zone_id)
+    except Exception:
+        pass
+    return {"status": "deleted", "zone_id": zone_id}
+
+
+@router.patch("/zones/{zone_id}/toggle")
+async def toggle_zone(zone_id: str):
+    """Toggle a parking zone's active state."""
+    detector = await get_detector()
+    
+    if zone_id not in detector.zones:
+        raise HTTPException(status_code=404, detail=f"Zone not found: {zone_id}")
+    
+    zone = detector.zones[zone_id]
+    zone.active = not zone.active
+    
+    return {"zone_id": zone_id, "active": zone.active}
+
+
+# =============================================================================
+# Violation Endpoints
+# =============================================================================
+
+@router.get("/violations", response_model=List[ViolationResponse])
+async def list_violations(
+    status: Optional[str] = Query(None, description="Filter by status: active, resolved, disputed"),
+    zone_id: Optional[str] = Query(None, description="Filter by zone ID"),
+    limit: int = Query(100, ge=1, le=1000),
+):
+    """List parking violations with optional filters."""
+    # Prefer persisted violations from DB when possible
+    try:
+        violations = await db_list_violations(limit=limit)
+    except Exception:
+        detector = await get_detector()
+        violations = detector.get_all_violations()
+    
+    # Apply filters
