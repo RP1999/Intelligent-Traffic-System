@@ -56,3 +56,81 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   void _handleNavigation(int index) {
     switch (index) {
       case 0:
+        Navigator.of(context).pushReplacementNamed('/admin/dashboard');
+        break;
+      case 1:
+        Navigator.of(context).pushReplacementNamed('/admin/zones');
+        break;
+      case 2:
+        Navigator.of(context).pushReplacementNamed('/admin/violations');
+        break;
+      case 3:
+        Navigator.of(context).pushReplacementNamed('/admin/drivers');
+        break;
+      case 4:
+        // Already here - Analytics
+        break;
+      case 5:
+        Navigator.of(context).pushReplacementNamed('/admin/logs');
+        break;
+      case 6:
+        Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+    }
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Analytics Dashboard',
+                style: AppTypography.h1.copyWith(fontSize: 28),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Traffic violation statistics and trends',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          
+          // Period selector
+          Consumer<AnalyticsProvider>(
+            builder: (context, provider, _) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: provider.trendPeriod,
+                    dropdownColor: AppColors.surface,
+                    items: const [
+                      DropdownMenuItem(value: 7, child: Text('Last 7 Days')),
+                      DropdownMenuItem(value: 14, child: Text('Last 14 Days')),
+                      DropdownMenuItem(value: 30, child: Text('Last 30 Days')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        provider.setTrendPeriod(value);
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 16),
+          
+          // Refresh button
+          IconButton(
