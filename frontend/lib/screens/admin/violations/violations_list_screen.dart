@@ -140,3 +140,39 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
           ),
           const SizedBox(width: 8),
           
+          // Analytics button
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushNamed('/admin/analytics');
+            },
+            icon: const Icon(Icons.analytics),
+            label: const Text('Analytics'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.background,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilters() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          // Search box
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by license plate...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          context.read<ViolationsProvider>().setSearchQuery('');
