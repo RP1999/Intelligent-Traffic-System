@@ -53,3 +53,15 @@ class ViolationsProvider extends ChangeNotifier {
     _state = _violations.isEmpty ? LoadingState.loading : _state;
     _errorMessage = null;
     notifyListeners();
+
+    try {
+      final queryParams = <String, dynamic>{
+        'limit': _pageSize.toString(),
+        'offset': ((_currentPage - 1) * _pageSize).toString(),
+      };
+
+      if (_typeFilter != null && _typeFilter!.isNotEmpty) {
+        queryParams['violation_type'] = _typeFilter!;
+      }
+      if (_dateFrom != null) {
+        queryParams['date_from'] = _dateFrom!;
