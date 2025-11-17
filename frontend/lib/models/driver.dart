@@ -4,3 +4,6 @@ class Driver {
   final int currentScore;
   final int totalViolations;
   final double totalFines;
+  final DateTime? lastViolation;
+  final String riskLevel;
+  final String? phone;
