@@ -65,3 +65,27 @@ class ViolationsProvider extends ChangeNotifier {
       }
       if (_dateFrom != null) {
         queryParams['date_from'] = _dateFrom!;
+      }
+      if (_dateTo != null) {
+        queryParams['date_to'] = _dateTo!;
+      }
+
+      final response = await _apiClient.get(
+        ApiEndpoints.allViolations,
+        queryParams: queryParams,
+      );
+
+      if (response.success && response.data != null) {
+        final parsed = ViolationsResponse.fromJson(response.data!);
+        
+        // Apply client-side search filtering
+        var filtered = parsed.violations;
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          filtered = filtered.where((v) {
+            return (v.licensePlate?.toLowerCase().contains(query) ?? false) ||
+                v.violationId.toLowerCase().contains(query) ||
+                v.driverId.toLowerCase().contains(query);
+          }).toList();
+        }
+
