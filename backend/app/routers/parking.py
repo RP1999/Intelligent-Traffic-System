@@ -302,3 +302,41 @@ async def list_violations(
         violations = detector.get_all_violations()
     
     # Apply filters
+    if status:
+        violations = [v for v in violations if v.status == status]
+    if zone_id:
+        violations = [v for v in violations if v.zone_id == zone_id]
+    
+    # Limit results
+    violations = violations[:limit]
+    
+    return [
+        ViolationResponse(**v.to_dict())
+        for v in violations
+    ]
+
+
+@router.get("/violations/active", response_model=List[ViolationResponse])
+async def list_active_violations():
+    """List only active (unresolved) parking violations."""
+    try:
+        violations = await db_list_violations(limit=1000)
+        violations = [v for v in violations if v.status == "active"]
+    except Exception:
+        detector = await get_detector()
+        violations = detector.get_active_violations()
+    return [ViolationResponse(**v.to_dict()) for v in violations]
+
+
+@router.get("/violations/{violation_id}", response_model=ViolationResponse)
+async def get_violation(violation_id: str):
+    """Get a specific violation by ID."""
+    try:
+        v = await db_get_violation(violation_id)
+        if v:
+            return ViolationResponse(**v.to_dict())
+    except Exception:
+        pass
+    detector = await get_detector()
+    for v in detector.get_all_violations():
+        if v.violation_id == violation_id:
