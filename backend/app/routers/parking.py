@@ -340,4 +340,41 @@ async def get_violation(violation_id: str):
     detector = await get_detector()
     for v in detector.get_all_violations():
         if v.violation_id == violation_id:
- 
+             return ViolationResponse(**v.to_dict())
+    
+    raise HTTPException(status_code=404, detail=f"Violation not found: {violation_id}")
+
+
+# =============================================================================
+# Statistics Endpoints
+# =============================================================================
+
+@router.get("/stats")
+async def get_stats():
+    """Get overall parking statistics."""
+    detector = await get_detector()
+    zone_stats = detector.get_zone_stats()
+    try:
+        violations = await db_list_violations(limit=1000)
+    except Exception:
+        violations = detector.get_all_violations()
+    
+    total_fines = sum(v.fine_amount for v in violations)
+    
+    return {
+        "total_zones": len(detector.zones),
+        "active_zones": sum(1 for z in detector.zones.values() if z.active),
+        "vehicles_tracked": len(detector.tracked_vehicles),
+        "total_violations": len(violations),
+        "active_violations": len(detector.get_active_violations()),
+        "total_fines": round(total_fines, 2),
+        "zones": zone_stats,
+    }
+
+
+@router.post("/reset")
+async def reset_detector():
+    """Reset the parking detector (clear all tracking and violations)."""
+    detector = await get_detector()
+    detector.reset()
+    return {"status": "reset", "message": "Parking detector reset successfully"}
