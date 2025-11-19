@@ -108,3 +108,30 @@ class VehicleBehavior:
         variance = sum((v - mean) ** 2 for v in values) / len(values)
         return variance ** 0.5  # Standard deviation
 
+
+@dataclass
+class BehaviorEvent:
+    """A detected abnormal behavior event."""
+    vehicle_id: int
+    behavior_type: BehaviorType
+    severity: SeverityLevel
+    plate_number: Optional[str]
+    details: Dict = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=datetime.now)
+    
+    def to_dict(self) -> dict:
+        return {
+            'vehicle_id': self.vehicle_id,
+            'behavior_type': self.behavior_type.value,
+            'severity': self.severity.value,
+            'plate_number': self.plate_number,
+            'details': self.details,
+            'timestamp': self.timestamp.isoformat(),
+        }
+
+
+# ============================================================================
+# GLOBAL STATE
+# ============================================================================
+
+# Vehicle behavior tracking: track_id -> VehicleBehavior
