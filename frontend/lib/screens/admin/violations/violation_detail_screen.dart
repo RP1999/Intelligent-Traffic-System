@@ -46,3 +46,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                     onPressed: () => _verifyViolation(provider.selectedViolation!),
                     icon: const Icon(Icons.check_circle, color: AppColors.success),
                     label: const Text('Verify', style: TextStyle(color: AppColors.success)),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _dismissViolation(provider.selectedViolation!),
+                    icon: const Icon(Icons.cancel, color: AppColors.error),
+                    label: const Text('Dismiss', style: TextStyle(color: AppColors.error)),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      body: Consumer<ViolationsProvider>(
+        builder: (context, provider, _) {
