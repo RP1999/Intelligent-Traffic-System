@@ -37,3 +37,42 @@ settings = get_settings()
 # CONFIGURATION CONSTANTS
 # ============================================================================
 
+# Frame skipping - only run YOLO every N frames
+YOLO_DETECTION_INTERVAL: int = 2
+
+# Plate detection interval
+PLATE_DETECTION_INTERVAL: int = 3
+
+# OCR cooldown per vehicle (seconds)
+OCR_COOLDOWN_SECONDS: float = 2.0
+
+# Speed estimation (pixels/sec to km/h)
+SPEED_SCALE_FACTOR: float = 0.5
+# Lowered thresholds for demo sensitivity
+SPEEDING_THRESHOLD_KMH: float = 60.0  # km/h threshold (for display/logic informative)
+SPEEDING_THRESHOLD_PIXELS: float = 120.0  # pixels/second for demo (more sensitive)
+
+# Parking violation timing (shorter for demo sensitivity)
+PARKING_WARNING_SECONDS: float = 3.0  # seconds before a warning
+PARKING_VIOLATION_SECONDS: float = 8.0  # seconds before a violation
+
+# Signal automation interval
+SIGNAL_UPDATE_INTERVAL: int = 30  # frames (~1 second at 30fps)
+
+# History cleanup
+PLATE_HISTORY_MAX_AGE: int = 30
+TRACKING_HISTORY_MAX_AGE: int = 60
+
+# TTS cooldown (don't spam warnings)
+TTS_COOLDOWN_SECONDS: float = 10.0
+
+
+# ============================================================================
+# PARKING ZONES CONFIGURATION
+# ============================================================================
+
+# Define parking zones as polygons (x, y) in frame coordinates
+# These are "no parking" zones - red boxes will be drawn
+# Adjust these coordinates based on your video feed
+DEFAULT_PARKING_ZONES = [
+    {
