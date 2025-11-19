@@ -340,3 +340,4 @@ async def get_violation(violation_id: str):
     detector = await get_detector()
     for v in detector.get_all_violations():
         if v.violation_id == violation_id:
+ 
