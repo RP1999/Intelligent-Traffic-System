@@ -7,3 +7,6 @@ class Driver {
   final DateTime? lastViolation;
   final String riskLevel;
   final String? phone;
+  final String? name;
+  final List<DriverViolation>? recentViolations;
+
