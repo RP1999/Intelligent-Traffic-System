@@ -7,3 +7,6 @@ class Violation {
   final DateTime timestamp;
   final String? location;
   final double fineAmount;
+  final int pointsDeducted;
+  final String? evidencePath;
+  final String? snapshotPath;
