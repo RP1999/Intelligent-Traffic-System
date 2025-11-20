@@ -10,3 +10,6 @@ class Violation {
   final int pointsDeducted;
   final String? evidencePath;
   final String? snapshotPath;
+  final String? notes;
+  final String status; // unpaid, paid, disputed, verified, dismissed
+
