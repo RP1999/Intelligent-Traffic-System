@@ -76,3 +76,42 @@ TTS_COOLDOWN_SECONDS: float = 10.0
 # Adjust these coordinates based on your video feed
 DEFAULT_PARKING_ZONES = [
     {
+        "id": "zone_1",
+        "name": "No Parking Zone 1",
+        "polygon": [(50, 400), (300, 400), (300, 550), (50, 550)],
+        "color": (0, 0, 255),  # Red
+    },
+    {
+        "id": "zone_2", 
+        "name": "No Parking Zone 2",
+        "polygon": [(500, 400), (750, 400), (750, 550), (500, 550)],
+        "color": (0, 0, 255),  # Red
+    },
+]
+
+
+# ============================================================================
+# GLOBAL STATE & CACHING
+# ============================================================================
+
+# Model cache
+_model_cache: Dict[str, Any] = {}
+
+# Plate history: track_id -> {"bbox", "text", "timestamp", "frame_count"}
+plate_history: Dict[int, Dict[str, Any]] = {}
+
+# OCR cooldown: track_id -> last_ocr_time
+ocr_cooldown: Dict[int, float] = {}
+
+# Speed tracking: track_id -> {"prev_centroid", "prev_time", "speed", "is_speeding", "speed_pixels"}
+speed_history: Dict[int, Dict[str, Any]] = {}
+
+# Parking tracking: track_id -> {"entry_time", "zone_id", "warned", "penalized", "plate", "tts_time"}
+parking_tracker: Dict[int, Dict[str, Any]] = {}
+
+# Penalized vehicles (for flashing effect)
+penalized_vehicles: Dict[int, float] = {}  # track_id -> penalize_time
+
+# Previous frame detections (for frame skipping)
+_prev_detections: List[Any] = []
+_prev_plate_boxes: List[Tuple[int, int, int, int]] = []
