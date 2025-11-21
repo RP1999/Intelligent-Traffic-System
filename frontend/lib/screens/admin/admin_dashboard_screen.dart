@@ -65,3 +65,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       body: Row(
         children: [
+          // Sidebar
+          AdminSidebar(
+            selectedIndex: _selectedIndex,
+            onItemSelected: (index) {
+              setState(() => _selectedIndex = index);
+              _handleNavigation(index);
+            },
+          ),
+          
+          // Main content
+          Expanded(
+            child: Container(
+              color: AppColors.background,
+              child: _buildMainContent(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNavigation(int index) {
+    switch (index) {
+      case 0: // Dashboard - stay here
+        break;
+      case 1: // Zone Editor
+        Navigator.of(context).pushReplacementNamed('/admin/zones');
+        break;
+      case 2: // Violations
+        Navigator.of(context).pushReplacementNamed('/admin/violations');
+        break;
+      case 3: // Drivers
+        Navigator.of(context).pushReplacementNamed('/admin/drivers');
