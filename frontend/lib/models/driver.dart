@@ -10,3 +10,6 @@ class Driver {
   final String? name;
   final List<DriverViolation>? recentViolations;
 
+  Driver({
+    required this.driverId,
+    required this.currentScore,
