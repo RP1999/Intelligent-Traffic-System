@@ -190,3 +190,22 @@ async def tick_signal(seconds: int = Query(1, ge=1, le=60)):
     """
     Advance the signal timer by specified seconds.
     Simulates time passing for demo purposes.
+    """
+    signal = get_signal()
+    state_changed = signal.tick(seconds)
+    
+    return {
+        "state_changed": state_changed,
+        "signal_status": signal.get_status(),
+    }
+
+
+@router.get("/compute", summary="Compute green duration without changing state")
+async def compute_duration(vehicle_count: int = Query(..., ge=0, le=100)):
+    """
+    Compute the recommended green light duration for a given vehicle count.
+    This is a read-only endpoint that doesn't modify the signal state.
+    """
+    controller = FuzzyTrafficController()
+    return controller.get_signal_recommendation(vehicle_count)
+
