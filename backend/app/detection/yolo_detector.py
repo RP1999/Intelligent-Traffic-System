@@ -111,3 +111,116 @@ parking_tracker: Dict[int, Dict[str, Any]] = {}
 
 # Penalized vehicles (for flashing effect)
 penalized_vehicles: Dict[int, float] = {}  # track_id -> penalize_time
+
+# Previous frame detections (for frame skipping)
+_prev_detections: List[Any] = []
+_prev_plate_boxes: List[Tuple[int, int, int, int]] = []
+
+# Frame counter
+_frame_counter: int = 0
+
+# Parking zones (can be updated at runtime)
+parking_zones: List[Dict] = DEFAULT_PARKING_ZONES.copy()
+
+
+# ============================================================================
+# DATA CLASSES
+# ============================================================================
+
+@dataclass
+class Detection:
+    """Container for a single detection result."""
+    track_id: int
+    class_id: int
+    class_name: str
+    confidence: float
+    bbox: Tuple[int, int, int, int]
+    centroid: Tuple[int, int]
+    area: int
+    timestamp: float = field(default_factory=time.time)
+    has_plate: bool = False
+    plate_bbox: Optional[Tuple[int, int, int, int]] = None
+    plate_text: Optional[str] = None
+    speed_kmh: float = 0.0
+    speed_pixels: float = 0.0
+    is_speeding: bool = False
+    parking_time: float = 0.0
+    parking_status: str = ""  # "", "warning", "violation"
+    parking_zone: Optional[str] = None
+    is_penalized: bool = False
+    
+    def to_dict(self) -> dict:
+        return {
+            "track_id": self.track_id,
+            "class_id": self.class_id,
+            "class_name": self.class_name,
+            "confidence": round(self.confidence, 3),
+            "bbox": self.bbox,
+            "centroid": self.centroid,
+            "area": self.area,
+            "timestamp": self.timestamp,
+            "has_plate": self.has_plate,
+            "plate_bbox": self.plate_bbox,
+            "plate_text": self.plate_text,
+            "speed_kmh": round(self.speed_kmh, 1),
+            "speed_pixels": round(self.speed_pixels, 1),
+            "is_speeding": self.is_speeding,
+            "parking_time": round(self.parking_time, 1),
+            "parking_status": self.parking_status,
+            "parking_zone": self.parking_zone,
+            "is_penalized": self.is_penalized,
+        }
+
+
+@dataclass 
+class FrameResult:
+    """Container for detection results from a single frame."""
+    frame_id: int
+    timestamp: float
+    detections: List[Detection]
+    inference_time_ms: float
+    plate_boxes: List[Tuple[int, int, int, int]] = field(default_factory=list)
+    image: Optional[np.ndarray] = None
+    vehicle_count: int = 0
+    speeding_count: int = 0
+    parking_warnings: int = 0
+    parking_violations: int = 0
+    signal_state: Optional[str] = None
+    signal_duration: Optional[int] = None
+    
+    def to_dict(self) -> dict:
+        return {
+            "frame_id": self.frame_id,
+            "timestamp": self.timestamp,
+            "detection_count": len(self.detections),
+            "plate_count": len(self.plate_boxes),
+            "inference_time_ms": round(self.inference_time_ms, 2),
+            "vehicle_count": self.vehicle_count,
+            "speeding_count": self.speeding_count,
+            "parking_warnings": self.parking_warnings,
+            "parking_violations": self.parking_violations,
+            "signal_state": self.signal_state,
+            "signal_duration": self.signal_duration,
+            "detections": [d.to_dict() for d in self.detections],
+        }
+
+
+# ============================================================================
+# CLASS DEFINITIONS
+# ============================================================================
+
+VEHICLE_CLASSES = {
+    2: "car",
+    3: "motorcycle", 
+    5: "bus",
+    7: "truck",
+}
+
+# Emergency vehicle classes (for YOLO retraining)
+EMERGENCY_CLASSES = {
+    8: "ambulance",
+    # Future additions:
+    # 9: "fire_truck",
+    # 10: "police_car",
+}
+
