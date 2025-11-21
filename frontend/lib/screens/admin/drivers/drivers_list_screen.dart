@@ -31,3 +31,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<DriversProvider>().loadNextPage();
+    }
