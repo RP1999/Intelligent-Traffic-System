@@ -137,3 +137,20 @@ class FuzzyTrafficController:
             
         Returns:
             Dictionary with duration, traffic_level, and recommendation details
+        """
+        duration = self.compute_green_duration(vehicle_count)
+        traffic_level = self.get_traffic_level(vehicle_count)
+        
+        return {
+            "vehicle_count": vehicle_count,
+            "traffic_level": traffic_level,
+            "green_duration_sec": duration,
+            "yellow_duration_sec": 3,  # Standard yellow light
+            "red_duration_sec": max(10, 70 - duration),  # Remaining time for cross traffic
+            "cycle_time_sec": duration + 3 + max(10, 70 - duration),
+            "fuzzy_available": FUZZY_AVAILABLE,
+        }
+
+
+# =============================================================================
+# Traffic Signal State Machine
