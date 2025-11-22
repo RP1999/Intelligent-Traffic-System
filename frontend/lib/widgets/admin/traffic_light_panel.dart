@@ -58,3 +58,22 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
     // Poll every 3 seconds to reduce connection usage
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _fetchSignalStatus();
+      // No more independent simulation - all 4 junctions use backend data
+    });
+  }
+
+  Future<void> _fetchSignalStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/signal/4way/status'),
+      );
+      
+      if (response.statusCode == 200 && mounted) {
+        final data = json.decode(response.body);
+        setState(() {
+          _currentGreenLane = data['current_green'] ?? 'north';
+          _countdown = data['green_remaining'] ?? 0;
+          _emergencyMode = data['emergency_mode'] ?? false;
+          _isYellowPhase = data['is_yellow_phase'] ?? false;
+          _yellowRemaining = data['yellow_remaining'] ?? 0;
+          _laneData = data['lanes'] ?? {};
