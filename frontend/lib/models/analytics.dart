@@ -41,3 +41,16 @@ class ViolationTrend {
   final Map<String, int> byType;
 
   ViolationTrend({
+    required this.date,
+    required this.total,
+    required this.byType,
+  });
+
+  factory ViolationTrend.fromJson(Map<String, dynamic> json) {
+    final byTypeRaw = json['by_type'] as Map<String, dynamic>? ?? {};
+    return ViolationTrend(
+      date: json['date'] ?? '',
+      total: json['total'] ?? 0,
+      byType: byTypeRaw.map((k, v) => MapEntry(k, (v as num).toInt())),
+    );
+  }
