@@ -98,3 +98,57 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         break;
       case 3: // Drivers
         Navigator.of(context).pushReplacementNamed('/admin/drivers');
+        break;
+      case 4: // Analytics
+        Navigator.of(context).pushReplacementNamed('/admin/analytics');
+        break;
+      case 5: // Audit Logs
+        Navigator.of(context).pushReplacementNamed('/admin/logs');
+        break;
+      case 6: // Settings
+        Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+      case 7: // Logout
+        _handleLogout();
+        break;
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true && mounted) {
+      await context.read<AuthProvider>().logout();
+      Navigator.of(context).pushReplacementNamed('/');
+    }
+  }
+
+  Widget _buildMainContent() {
+    return CustomScrollView(
+      slivers: [
+        // App Bar
+        SliverToBoxAdapter(
+          child: _buildHeader(),
+        ),
+        
+        // Stats Cards
