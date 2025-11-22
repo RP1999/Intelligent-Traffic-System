@@ -62,3 +62,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               ),
             );
           }
+
+          final driver = provider.selectedDriver;
+          if (driver == null) {
+            return const Center(child: Text('No driver data'));
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left side - Profile Card
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    children: [
