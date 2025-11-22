@@ -46,3 +46,19 @@ class FuzzyTrafficController:
         """
         Initialize the fuzzy controller.
         
+        Args:
+            min_green: Minimum green light duration (seconds)
+            max_green: Maximum green light duration (seconds)
+        """
+        self.min_green = min_green
+        self.max_green = max_green
+        self.simulation = None
+        
+        if FUZZY_AVAILABLE:
+            self._setup_fuzzy_system()
+        else:
+            print("⚠️ Running in fallback mode (linear interpolation)")
+    
+    def _setup_fuzzy_system(self):
+        """Set up the fuzzy inference system."""
+        # Define fuzzy variables
