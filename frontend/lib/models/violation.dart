@@ -30,3 +30,7 @@ class Violation {
   factory Violation.fromJson(Map<String, dynamic> json) {
     return Violation(
       violationId: json['violation_id'] ?? '',
+      driverId: json['driver_id'] ?? '',
+      licensePlate: json['license_plate'] ?? json['plate_text'],
+      violationType: json['violation_type'] ?? 'unknown',
+      fineAmount: (json['fine_amount'] ?? 0.0).toDouble(),
