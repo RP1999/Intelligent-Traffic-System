@@ -13,3 +13,6 @@ class Violation {
   final String? notes;
   final String status; // unpaid, paid, disputed, verified, dismissed
 
+  Violation({
+    required this.violationId,
+    required this.driverId,
