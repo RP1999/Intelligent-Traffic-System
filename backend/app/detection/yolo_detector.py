@@ -224,3 +224,116 @@ EMERGENCY_CLASSES = {
     # 10: "police_car",
 }
 
+TRAFFIC_CLASSES = {
+    **VEHICLE_CLASSES,
+    **EMERGENCY_CLASSES,
+    0: "person",
+    1: "bicycle",
+}
+
+VEHICLE_CLASS_IDS = [2, 3, 5, 7]
+EMERGENCY_CLASS_IDS = [8]  # Ambulance - triggers emergency mode
+ALL_VEHICLE_CLASS_IDS = VEHICLE_CLASS_IDS + EMERGENCY_CLASS_IDS
+
+
+# ============================================================================
+# LAZY SERVICE IMPORTS
+# ============================================================================
+
+_ocr_service = None
+_scoring_engine = None
+_traffic_controller = None
+_tts_service = None
+_lane_weaving_service = None
+_behavior_service = None
+
+
+def get_ocr_service():
+    """Lazy load OCR service."""
+    global _ocr_service
+    if _ocr_service is None:
+        try:
+            from app.services.ocr_service import read_plate
+            _ocr_service = read_plate
+            print("✅ OCR service loaded")
+        except ImportError as e:
+            print(f"⚠️ OCR service not available: {e}")
+            _ocr_service = lambda x: None
+    return _ocr_service
+
+
+def get_lane_weaving_service():
+    """Lazy load lane weaving detection service (Member 2)."""
+    global _lane_weaving_service
+    if _lane_weaving_service is None:
+        try:
+            from app.services import lane_weaving_service
+            _lane_weaving_service = lane_weaving_service
+            print("✅ Lane weaving service loaded (Member 2)")
+        except ImportError as e:
+            print(f"⚠️ Lane weaving service not available: {e}")
+            _lane_weaving_service = None
+    return _lane_weaving_service
+
+
+def get_behavior_service():
+    """Lazy load abnormal behavior detection service (Member 4)."""
+    global _behavior_service
+    if _behavior_service is None:
+        try:
+            from app.services import behavior_service
+            _behavior_service = behavior_service
+            print("✅ Behavior detection service loaded (Member 4)")
+        except ImportError as e:
+            print(f"⚠️ Behavior service not available: {e}")
+            _behavior_service = None
+    return _behavior_service
+
+
+def get_scoring_engine():
+    """Lazy load scoring engine for database violations."""
+    global _scoring_engine
+    if _scoring_engine is None:
+        try:
+            from app.scoring import get_scoring_engine as _get_engine, ViolationType
+            _scoring_engine = {"engine": _get_engine(), "ViolationType": ViolationType}
+            print("✅ Scoring engine loaded")
+        except ImportError as e:
+            print(f"⚠️ Scoring engine not available: {e}")
+            _scoring_engine = {"engine": None, "ViolationType": None}
+    return _scoring_engine
+
+
+def get_traffic_controller():
+    """Lazy load 4-way traffic signal controller."""
+    global _traffic_controller
+    if _traffic_controller is None:
+        try:
+            from app.fuzzy.traffic_controller import get_four_way_controller
+            _traffic_controller = get_four_way_controller()
+            print("[OK] 4-Way Traffic controller loaded")
+        except ImportError as e:
+            print(f"[WARNING] Traffic controller not available: {e}")
+            _traffic_controller = None
+    return _traffic_controller
+
+
+# Emergency detection state
+_last_emergency_detection_time: float = 0
+EMERGENCY_COOLDOWN_SECONDS: float = 30.0  # Don't re-trigger for 30 seconds
+
+
+def check_for_emergency_vehicle(detections: list) -> tuple:
+    """
+    Check if any detection is an emergency vehicle (ambulance).
+    
+    Args:
+        detections: List of Detection objects from current frame.
+        
+    Returns:
+        Tuple of (is_emergency, vehicle_type, track_id)
+    """
+    for det in detections:
+        if det.class_id in EMERGENCY_CLASS_IDS:
+            vehicle_type = EMERGENCY_CLASSES.get(det.class_id, 'emergency')
+            return (True, vehicle_type, det.track_id)
