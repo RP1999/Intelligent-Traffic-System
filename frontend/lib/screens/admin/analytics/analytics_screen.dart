@@ -134,3 +134,94 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           
           // Refresh button
           IconButton(
+            onPressed: () {
+              context.read<AnalyticsProvider>().loadAllAnalytics();
+            },
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsCards() {
+    return Consumer<AnalyticsProvider>(
+      builder: (context, provider, _) {
+        if (provider.statsState == LoadingState.loading) {
+          return const SizedBox(
+            height: 150,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final stats = provider.stats;
+        if (stats == null) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Violations Today',
+                  stats.violationsToday.toString(),
+                  Icons.warning_amber,
+                  AppColors.warning,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  'This Week',
+                  stats.violationsThisWeek.toString(),
+                  Icons.calendar_today,
+                  AppColors.info,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  'Avg Risk Score',
+                  '${stats.averageRiskScore.toStringAsFixed(1)}%',
+                  Icons.speed,
+                  stats.averageRiskScore > 50 ? AppColors.error : AppColors.success,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  'Pending Fines',
+                  '\$${stats.pendingFines.toStringAsFixed(0)}',
+                  Icons.attach_money,
+                  AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
