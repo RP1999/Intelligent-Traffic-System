@@ -337,3 +337,116 @@ def check_for_emergency_vehicle(detections: list) -> tuple:
         if det.class_id in EMERGENCY_CLASS_IDS:
             vehicle_type = EMERGENCY_CLASSES.get(det.class_id, 'emergency')
             return (True, vehicle_type, det.track_id)
+    return (False, None, None)
+
+
+def trigger_emergency_if_detected(detections: list) -> dict:
+    """
+    If an ambulance is detected, trigger emergency mode on the 4-way controller.
+    Includes cooldown to prevent spam.
+    
+    Args:
+        detections: List of Detection objects from current frame.
+        
+    Returns:
+        Dict with emergency status or None if no emergency.
+    """
+    global _last_emergency_detection_time
+    
+    is_emergency, vehicle_type, track_id = check_for_emergency_vehicle(detections)
+    
+    if not is_emergency:
+        return None
+    
+    current_time = time.time()
+    
+    # Check cooldown
+    if (current_time - _last_emergency_detection_time) < EMERGENCY_COOLDOWN_SECONDS:
+        return {'status': 'cooldown', 'message': 'Emergency mode already active'}
+    
+    _last_emergency_detection_time = current_time
+    
+    # Trigger emergency on traffic controller
+    controller = get_traffic_controller()
+    if controller:
+        result = controller.activate_emergency_mode('north')  # Video = North lane
+        
+        # Play TTS alert
+        speak_warning(
+            f"Emergency! {vehicle_type.title()} detected. Clearing North lane.",
+            track_id=track_id,
+            warning_type="emergency"
+        )
+        
+        print(f"[EMERGENCY] {vehicle_type.upper()} detected (Track ID: {track_id}) - North lane forced GREEN!")
+        return result
+    
+    return {'status': 'error', 'message': 'Traffic controller not available'}
+
+
+def get_tts_service():
+    """Lazy load TTS service for voice warnings."""
+    global _tts_service
+    if _tts_service is None:
+        try:
+            from app.tts import get_tts_service as _get_tts
+            _tts_service = _get_tts()
+            print("✅ TTS service loaded")
+        except ImportError as e:
+            print(f"⚠️ TTS service not available: {e}")
+            _tts_service = None
+    return _tts_service
+
+
+# ============================================================================
+# TTS WARNING FUNCTION
+# ============================================================================
+
+def speak_warning(message: str, track_id: int = None, warning_type: str = None):
+    """
+    Generate and play a voice warning dynamically.
+    
+    Args:
+        message: The actual warning message to speak
+        track_id: Vehicle track ID (for cooldown tracking)
+        warning_type: Type of warning (for logging only)
+    
+    Includes cooldown to prevent spam.
+    """
+    global parking_tracker
+    
+    current_time = time.time()
+    
+    # Check TTS cooldown for this vehicle
+    if track_id is not None and track_id in parking_tracker:
+        last_tts = parking_tracker[track_id].get("tts_time", 0)
+        if (current_time - last_tts) < TTS_COOLDOWN_SECONDS:
+            return  # Skip, too soon
+        parking_tracker[track_id]["tts_time"] = current_time
+    
+    # Log to console
+    print(f"[AUDIO] 🔊 {message}")
+    
+    # Try to use TTS service - ALWAYS generate dynamic messages
+    tts = get_tts_service()
+    if tts:
+        try:
+            # Generate and play the ACTUAL message (not cached files)
+            tts.generate_warning(message, play_immediately=True)
+        except Exception as e:
+            print(f"[TTS] Error: {e}")
+
+
+# ============================================================================
+# MODEL LOADING
+# ============================================================================
+
+def load_model(model_path: str, device: str = "cpu") -> Any:
+    """Load a YOLOv8 model with caching."""
+    global _model_cache
+    
+    cache_key = f"{model_path}_{device}"
+    
+    if cache_key not in _model_cache:
+        from ultralytics import YOLO
+        
