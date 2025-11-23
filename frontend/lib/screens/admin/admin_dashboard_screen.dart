@@ -136,3 +136,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
     );
+    
+    if (confirmed == true && mounted) {
+      await context.read<AuthProvider>().logout();
+      Navigator.of(context).pushReplacementNamed('/');
+    }
+  }
+
+  Widget _buildMainContent() {
+    return CustomScrollView(
+      slivers: [
+        // App Bar
+        SliverToBoxAdapter(
+          child: _buildHeader(),
+        ),
+        
+        // Stats Cards
+        SliverToBoxAdapter(
+          child: _buildStatsSection(),
+        ),
+        
+        // Main Grid
+        SliverToBoxAdapter(
+          child: _buildMainGrid(),
