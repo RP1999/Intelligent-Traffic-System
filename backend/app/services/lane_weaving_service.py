@@ -18,3 +18,13 @@ from typing import Dict, List, Tuple, Optional
 from collections import deque
 from datetime import datetime
 
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+# Lane weaving detection thresholds
+X_VELOCITY_THRESHOLD = 15.0  # pixels per frame for significant lateral movement
+DIRECTION_CHANGES_THRESHOLD = 3  # minimum direction changes to detect weaving
+WEAVING_WINDOW_FRAMES = 30  # frames to analyze for weaving pattern
+
