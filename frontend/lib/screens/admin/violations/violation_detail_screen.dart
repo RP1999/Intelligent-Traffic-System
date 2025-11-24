@@ -62,3 +62,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
       ),
       body: Consumer<ViolationsProvider>(
         builder: (context, provider, _) {
+          if (provider.detailState == LoadingState.loading) {
+            return const LoadingWidget(message: 'Loading violation details...');
+          }
+
+          if (provider.detailState == LoadingState.error) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                  const SizedBox(height: 16),
+                  Text(
+                    provider.errorMessage ?? 'Failed to load violation',
+                    style: AppTypography.bodyLarge,
+                  ),
+                  const SizedBox(height: 16),
