@@ -154,3 +154,23 @@ class FuzzyTrafficController:
 
 # =============================================================================
 # Traffic Signal State Machine
+# =============================================================================
+
+class TrafficSignal:
+    """
+    Traffic signal state machine with timing control.
+    Auto-advances based on elapsed time.
+    """
+    
+    STATES = ['red', 'yellow', 'green']
+    
+    def __init__(self, signal_id: str = "main"):
+        self.signal_id = signal_id
+        self.state = 'red'
+        self.remaining_time = 30  # Default red duration
+        self.green_duration = 30
+        self.yellow_duration = 3
+        self.red_duration = 30
+        self.controller = FuzzyTrafficController()
+        self.last_update = time.time()
+        self.last_tick_time = time.time()
