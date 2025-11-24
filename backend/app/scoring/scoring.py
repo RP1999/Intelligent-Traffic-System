@@ -46,3 +46,15 @@ VIOLATION_PENALTIES = {
     ViolationType.LANE_VIOLATION: {"points": 5, "fine": 80.0, "severity": "low"},
     ViolationType.RECKLESS_DRIVING: {"points": 25, "fine": 1000.0, "severity": "critical"},
 }
+
+
+@dataclass
+class ViolationRecord:
+    """Record of a single violation event."""
+    violation_id: str
+    driver_id: str
+    violation_type: ViolationType
+    timestamp: float
+    location: Optional[str] = None
+    points_deducted: int = 0
+    fine_amount: float = 0.0
