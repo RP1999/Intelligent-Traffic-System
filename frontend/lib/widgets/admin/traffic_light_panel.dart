@@ -77,3 +77,19 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
           _isYellowPhase = data['is_yellow_phase'] ?? false;
           _yellowRemaining = data['yellow_remaining'] ?? 0;
           _laneData = data['lanes'] ?? {};
+          
+          // FIX: Main light ALWAYS shows NORTH lane state (the video feed)
+          // This ensures the main light matches what's visible in the video
+          final northLaneData = _laneData['north'];
+          if (northLaneData != null) {
+            final stateStr = northLaneData['state'] ?? 'red';
+            if (stateStr == 'red') {
+              _currentState = TrafficLightState.red;
+            } else if (stateStr == 'yellow') {
+              _currentState = TrafficLightState.yellow;
+            } else {
+              _currentState = TrafficLightState.green;
+            }
+          }
+        });
+      }
