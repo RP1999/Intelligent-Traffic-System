@@ -42,3 +42,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
         _scrollController.position.maxScrollExtent - 200) {
       context.read<DriversProvider>().loadNextPage();
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // Sidebar
+          AdminSidebar(
+            selectedIndex: 3, // Drivers index
+            onItemSelected: (index) => _handleNavigation(index),
