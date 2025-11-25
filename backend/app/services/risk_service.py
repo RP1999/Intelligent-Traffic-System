@@ -207,3 +207,39 @@ def calculate_risk(
     
     # Final risk score
     risk_score = (speed_factor * SPEED_WEIGHT) + (history_factor * HISTORY_WEIGHT)
+    
+    # Get risk level
+    risk_level = get_risk_level(risk_score)
+    
+    return RiskScore(
+        vehicle_id=vehicle_id,
+        plate_number=plate_number,
+        risk_score=risk_score,
+        speed_factor=speed_factor,
+        violation_history_factor=history_factor,
+        risk_level=risk_level,
+        current_speed=speed,
+        speed_limit=speed_limit,
+        violation_count=violation_history_count
+    )
+
+
+def save_risk_score_to_database(risk: RiskScore) -> int:
+    """
+    Save the calculated risk score to the risk_scores table.
+    
+    Args:
+        risk: RiskScore object with calculation details.
+        
+    Returns:
+        ID of the inserted record.
+    """
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO risk_scores (
+                vehicle_id, plate_number, risk_score, speed_factor,
+                violation_history_factor, risk_level, current_speed, speed_limit
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
