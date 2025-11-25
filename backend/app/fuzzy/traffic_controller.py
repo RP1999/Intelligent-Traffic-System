@@ -190,3 +190,19 @@ class TrafficSignal:
     def set_state(self, state: str, duration: int = None):
         """Set signal state with optional duration override."""
         if state not in self.STATES:
+            raise ValueError(f"Invalid state: {state}. Must be one of {self.STATES}")
+        
+        self.state = state
+        
+        if duration is not None:
+            self.remaining_time = duration
+        else:
+            if state == 'green':
+                self.remaining_time = self.green_duration
+            elif state == 'yellow':
+                self.remaining_time = self.yellow_duration
+            else:
+                self.remaining_time = self.red_duration
+        
+        import time
+        self.last_update = time.time()
