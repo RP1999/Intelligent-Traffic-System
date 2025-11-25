@@ -563,3 +563,116 @@ def calculate_speed(track_id: int, centroid: Tuple[int, int], current_time: floa
     
     return smoothed_speed, smoothed_pixels, is_speeding
 
+
+def cleanup_speed_history(active_track_ids: set):
+    """Remove speed history for vehicles no longer tracked."""
+    global speed_history
+    to_remove = [tid for tid in speed_history if tid not in active_track_ids]
+    for tid in to_remove:
+        if speed_history[tid]["frame_count"] > TRACKING_HISTORY_MAX_AGE:
+            del speed_history[tid]
+
+
+# ============================================================================
+# PARKING VIOLATION DETECTION
+# ============================================================================
+
+def check_parking_violation(
+    det: Detection,
+    current_time: float,
+) -> Tuple[float, str, Optional[str], bool]:
+    """
+    Check if a vehicle is in a parking violation zone.
+    
+    Returns:
+        Tuple of (time_in_zone, status, zone_id, is_penalized)
+    """
+    global parking_tracker, penalized_vehicles
+    
+    track_id = det.track_id
+    
+    # Check if vehicle centroid is in any parking zone
+    zone = get_zone_for_point(det.centroid)
+    
+    if zone is None:
+        # Vehicle is not in any zone
+        if track_id in parking_tracker:
+            del parking_tracker[track_id]
+        return 0.0, "", None, track_id in penalized_vehicles
+    
+    zone_id = zone["id"]
+    
+    # Vehicle is stationary in a zone (speed < 5 km/h)
+    is_stationary = det.speed_kmh < 5.0
+    
+    if track_id in parking_tracker:
+        entry = parking_tracker[track_id]
+        time_in_zone = current_time - entry["entry_time"]
+        
+        if time_in_zone >= PARKING_VIOLATION_SECONDS:
+            status = "violation"
+            
+            if not entry.get("penalized", False):
+                # Get plate display - use detection plate, or stored plate, or fallback to vehicle ID
+                plate_display = det.plate_text or entry.get("plate") or f"Vehicle {track_id}"
+                
+                # APPLY PENALTY TO DATABASE
+                _apply_parking_penalty(
+                    track_id=track_id,
+                    plate_text=det.plate_text or entry.get("plate"),
+                    zone_id=zone_id,
+                )
+                entry["penalized"] = True
+                penalized_vehicles[track_id] = current_time
+                
+                # TTS Violation announcement
+                speak_warning(
+                    f"Violation recorded for {plate_display}. Fine has been issued.",
+                    track_id
+                )
+                
+        elif time_in_zone >= PARKING_WARNING_SECONDS:
+            status = "warning"
+            
+            if not entry.get("warned", False):
+                # TTS Warning - use plate text from detection or stored entry
+                plate_display = det.plate_text or entry.get("plate") or f"Vehicle {track_id}"
+                speak_warning(
+                    f"{plate_display}, please move immediately. You are in a no parking zone.",
+                    track_id
+                )
+                entry["warned"] = True
+        else:
+            status = ""
+        
+        # Update plate if available
+        if det.plate_text and not entry.get("plate"):
+            entry["plate"] = det.plate_text
+        
+        is_penalized = entry.get("penalized", False) or track_id in penalized_vehicles
+        return time_in_zone, status, zone_id, is_penalized
+    
+    else:
+        # Start tracking if vehicle is stationary in zone
+        if is_stationary:
+            parking_tracker[track_id] = {
+                "entry_time": current_time,
+                "zone_id": zone_id,
+                "warned": False,
+                "penalized": False,
+                "plate": det.plate_text,
+                "tts_time": 0,
+            }
+        return 0.0, "", zone_id, track_id in penalized_vehicles
+
+
+def _apply_parking_penalty(track_id: int, plate_text: str, zone_id: str):
+    """Apply parking violation penalty to database via ScoringEngine."""
+    scoring = get_scoring_engine()
+    
+    driver_id = plate_text or f"UNKNOWN-{track_id}"
+    
+    if scoring["engine"] is None:
+        print(f"[PENALTY] ⚠️ Scoring engine not available. Would penalize: {driver_id}")
+        return
+    
