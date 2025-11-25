@@ -243,3 +243,42 @@ def save_risk_score_to_database(risk: RiskScore) -> int:
                 vehicle_id, plate_number, risk_score, speed_factor,
                 violation_history_factor, risk_level, current_speed, speed_limit
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            risk.vehicle_id,
+            risk.plate_number,
+            risk.risk_score,
+            risk.speed_factor,
+            risk.violation_history_factor,
+            risk.risk_level,
+            risk.current_speed,
+            risk.speed_limit
+        ))
+        
+        conn.commit()
+        risk_id = cursor.lastrowid
+        print(f"[RISK] Saved score #{risk_id}: {risk.risk_score:.1f} ({risk.risk_level}) for vehicle {risk.vehicle_id}")
+        return risk_id
+        
+    finally:
+        conn.close()
+
+
+def get_recent_violations(vehicle_id: int = None, plate_number: str = None, days: int = 30) -> List[Dict]:
+    """
+    Get recent violations for a vehicle from the database.
+    
+    Args:
+        vehicle_id: Track ID of the vehicle
+        plate_number: License plate number
+        days: Number of days to look back
+        
+    Returns:
+        List of violation dicts.
+    """
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    
+    try:
+        # Calculate date threshold
+        threshold = (datetime.now() - timedelta(days=days)).isoformat()
+        
