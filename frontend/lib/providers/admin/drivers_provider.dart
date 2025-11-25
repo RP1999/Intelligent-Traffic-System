@@ -18,3 +18,7 @@ class DriversProvider extends ChangeNotifier {
   int _currentPage = 1;
   final int _pageSize = 20;
 
+  // Sorting
+  String _sortBy = 'current_score';
+  String _sortOrder = 'asc';
+
