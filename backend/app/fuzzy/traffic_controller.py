@@ -174,3 +174,19 @@ class TrafficSignal:
         self.controller = FuzzyTrafficController()
         self.last_update = time.time()
         self.last_tick_time = time.time()
+        self.vehicle_count = 0
+        self.auto_tick_enabled = True
+    
+    def update_timing(self, vehicle_count: int):
+        """Update signal timing based on vehicle count."""
+        self.vehicle_count = vehicle_count
+        recommendation = self.controller.get_signal_recommendation(vehicle_count)
+        
+        self.green_duration = recommendation['green_duration_sec']
+        self.red_duration = recommendation['red_duration_sec']
+        
+        return recommendation
+    
+    def set_state(self, state: str, duration: int = None):
+        """Set signal state with optional duration override."""
+        if state not in self.STATES:
