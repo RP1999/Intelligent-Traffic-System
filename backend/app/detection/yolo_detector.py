@@ -450,3 +450,116 @@ def load_model(model_path: str, device: str = "cpu") -> Any:
     if cache_key not in _model_cache:
         from ultralytics import YOLO
         
+        print(f"🔄 Loading model: {model_path} on {device}...")
+        start = time.time()
+        
+        model = YOLO(model_path)
+        model.to(device)
+        
+        print(f"✅ Model loaded in {time.time() - start:.2f}s")
+        _model_cache[cache_key] = model
+    
+    return _model_cache[cache_key]
+
+
+def load_vehicle_model(device: str = "cpu") -> Any:
+    """Load the YOLOv8 vehicle detection model."""
+    return load_model("yolov8n.pt", device)
+
+
+def load_plate_model(device: str = "cpu") -> Any:
+    """Load the custom license plate detection model."""
+    possible_paths = [
+        Path("models") / "best_plate.pt",
+        Path(__file__).parent.parent.parent.parent / "models" / "best_plate.pt",
+        Path(settings.plate_model) if settings.plate_model else None,
+    ]
+    
+    for path in possible_paths:
+        if path and path.exists():
+            print(f"📋 Found plate model at: {path}")
+            return load_model(str(path), device)
+    
+    print(f"⚠️ Plate model not found")
+    return None
+
+
+def get_models(device: str = "cpu") -> Tuple[Any, Any]:
+    """Initialize and return both models."""
+    return load_vehicle_model(device), load_plate_model(device)
+
+
+# ============================================================================
+# ZONE HELPER FUNCTIONS
+# ============================================================================
+
+def point_in_polygon(point: Tuple[int, int], polygon: List[Tuple[int, int]]) -> bool:
+    """Check if a point is inside a polygon using cv2.pointPolygonTest."""
+    polygon_np = np.array(polygon, dtype=np.int32)
+    result = cv2.pointPolygonTest(polygon_np, point, False)
+    return result >= 0
+
+
+def get_zone_for_point(point: Tuple[int, int]) -> Optional[Dict]:
+    """Find which parking zone contains a point, if any."""
+    for zone in parking_zones:
+        if point_in_polygon(point, zone["polygon"]):
+            return zone
+    return None
+
+
+# ============================================================================
+# SPEED ESTIMATION
+# ============================================================================
+
+def calculate_speed(track_id: int, centroid: Tuple[int, int], current_time: float) -> Tuple[float, float, bool]:
+    """
+    Calculate vehicle speed from centroid movement.
+    
+    Returns:
+        Tuple of (speed_kmh, speed_pixels_per_sec, is_speeding)
+    """
+    global speed_history
+    
+    if track_id not in speed_history:
+        speed_history[track_id] = {
+            "prev_centroid": centroid,
+            "prev_time": current_time,
+            "speed": 0.0,
+            "speed_pixels": 0.0,
+            "is_speeding": False,
+            "frame_count": 0,
+        }
+        return 0.0, 0.0, False
+    
+    history = speed_history[track_id]
+    history["frame_count"] += 1
+    
+    time_delta = current_time - history["prev_time"]
+    
+    if time_delta < 0.01:
+        return history["speed"], history["speed_pixels"], history["is_speeding"]
+    
+    prev_x, prev_y = history["prev_centroid"]
+    curr_x, curr_y = centroid
+    
+    distance_pixels = np.sqrt((curr_x - prev_x) ** 2 + (curr_y - prev_y) ** 2)
+    speed_pixels_per_sec = distance_pixels / time_delta
+    speed_kmh = speed_pixels_per_sec * SPEED_SCALE_FACTOR
+    
+    # Smooth with EMA
+    alpha = 0.3
+    smoothed_speed = alpha * speed_kmh + (1 - alpha) * history["speed"]
+    smoothed_pixels = alpha * speed_pixels_per_sec + (1 - alpha) * history["speed_pixels"]
+    
+    # Check speeding (use pixel threshold for demo accuracy)
+    is_speeding = smoothed_pixels > SPEEDING_THRESHOLD_PIXELS
+    
+    history["prev_centroid"] = centroid
+    history["prev_time"] = current_time
+    history["speed"] = smoothed_speed
+    history["speed_pixels"] = smoothed_pixels
+    history["is_speeding"] = is_speeding
+    
+    return smoothed_speed, smoothed_pixels, is_speeding
+
