@@ -14,3 +14,19 @@ class ViolationsListScreen extends StatefulWidget {
   const ViolationsListScreen({super.key});
 
   @override
+  State<ViolationsListScreen> createState() => _ViolationsListScreenState();
+}
+
+class _ViolationsListScreenState extends State<ViolationsListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  String? _selectedStatus;
+  String? _selectedType;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ViolationsProvider>().loadViolations(refresh: true);
+    });
+    
