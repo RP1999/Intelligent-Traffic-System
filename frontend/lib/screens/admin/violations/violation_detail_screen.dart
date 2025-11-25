@@ -106,3 +106,88 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                 
                 // Right side - Fine Breakdown
                 Expanded(
+                  flex: 2,
+                  child: Column(
+                    children: [
+                      _buildFineBreakdownCard(violation),
+                      const SizedBox(height: 24),
+                      _buildViolationInfoCard(violation),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEvidenceCard(Violation violation) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.photo_library, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text(
+                  'Evidence',
+                  style: AppTypography.h3,
+                ),
+                const Spacer(),
+                _buildViolationTypeBadge(violation.violationType),
+              ],
+            ),
+          ),
+          
+          // Evidence Images
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Full Snapshot
+                Text(
+                  'Full Snapshot',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 300,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: violation.snapshotPath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            '${AppConfig.apiBaseUrl}/snapshots/${violation.snapshotPath}',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderImage('Snapshot not available');
+                            },
