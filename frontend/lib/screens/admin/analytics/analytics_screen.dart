@@ -225,3 +225,62 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: AppTypography.h3.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartsRow() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Line Chart - Violation Trends
+          Expanded(
+            flex: 2,
+            child: _buildTrendChart(),
+          ),
+          const SizedBox(width: 24),
+          
+          // Pie Chart - Distribution
+          Expanded(
+            flex: 1,
+            child: _buildDistributionChart(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendChart() {
+    return Consumer<AnalyticsProvider>(
+      builder: (context, provider, _) {
+        return Container(
+          height: 350,
