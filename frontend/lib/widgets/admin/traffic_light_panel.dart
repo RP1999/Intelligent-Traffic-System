@@ -93,3 +93,23 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
           }
         });
       }
+    } catch (e) {
+      // Keep last known state on error
+      debugPrint('[TrafficLight] Error fetching status: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
