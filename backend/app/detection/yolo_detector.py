@@ -789,3 +789,116 @@ def track_vehicles(
     frame_id: int = 0,
 ) -> Tuple[List[Detection], bool]:
     """
+    Stage 1: Vehicle detection with tracking and frame skipping.
+    """
+    global _prev_detections
+    
+    run_detection = (frame_id % YOLO_DETECTION_INTERVAL == 0)
+    
+    if not run_detection and _prev_detections:
+        return _prev_detections, False
+    
+    results = model.track(
+        source=frame,
+        conf=confidence,
+        classes=VEHICLE_CLASS_IDS,
+        persist=True,
+        verbose=False,
+    )
+    
+    detections = []
+    current_time = time.time()
+    
+    if results and len(results) > 0:
+        result = results[0]
+        
+        if result.boxes is not None:
+            boxes = result.boxes
+            
+            for i in range(len(boxes)):
+                xyxy = boxes.xyxy[i].cpu().numpy()
+                x1, y1, x2, y2 = map(int, xyxy)
+                
+                conf = float(boxes.conf[i].cpu().numpy())
+                cls_id = int(boxes.cls[i].cpu().numpy())
+                
+                track_id = int(boxes.id[i].cpu().numpy()) if boxes.id is not None else -1
+                
+                centroid = ((x1 + x2) // 2, (y1 + y2) // 2)
+                area = (x2 - x1) * (y2 - y1)
+                class_name = VEHICLE_CLASSES.get(cls_id, f"class_{cls_id}")
+                
+                speed_kmh, speed_pixels, is_speeding = calculate_speed(track_id, centroid, current_time)
+                
+                detection = Detection(
+                    track_id=track_id,
+                    class_id=cls_id,
+                    class_name=class_name,
+                    confidence=conf,
+                    bbox=(x1, y1, x2, y2),
+                    centroid=centroid,
+                    area=area,
+                    timestamp=current_time,
+                    speed_kmh=speed_kmh,
+                    speed_pixels=speed_pixels,
+                    is_speeding=is_speeding,
+                )
+                
+                # Check speeding penalty (only once per vehicle)
+                if is_speeding and track_id not in penalized_vehicles:
+                    # We'll apply penalty if plate is detected later
+                    pass
+                
+                detections.append(detection)
+    
+    _prev_detections = detections
+    
+    active_ids = {d.track_id for d in detections}
+    cleanup_speed_history(active_ids)
+    cleanup_parking_tracker(active_ids)
+    
+    return detections, True
+
+
+# ============================================================================
+# STAGE 2: PLATE DETECTION WITH OCR
+# ============================================================================
+
+def detect_plates_in_crops(
+    plate_model: Any,
+    frame: np.ndarray,
+    vehicle_detections: List[Detection],
+    confidence: float = 0.2,
+) -> Tuple[List[Tuple[int, int, int, int]], Dict[int, Dict[str, Any]]]:
+    """Stage 2: Plate detection with OCR caching."""
+    global plate_history, ocr_cooldown
+    
+    if plate_model is None:
+        return [], {}
+    
+    all_plates = []
+    vehicle_plate_map = {}
+    
+    read_plate = get_ocr_service()
+    current_time = time.time()
+    
+    for det in vehicle_detections:
+        vx1, vy1, vx2, vy2 = det.bbox
+        
+        h, w = frame.shape[:2]
+        vx1, vy1 = max(0, vx1), max(0, vy1)
+        vx2, vy2 = min(w, vx2), min(h, vy2)
+        
+        crop_w, crop_h = vx2 - vx1, vy2 - vy1
+        if crop_w < 50 or crop_h < 50:
+            continue
+        
+        vehicle_crop = frame[vy1:vy2, vx1:vx2]
+        
+        results = plate_model.predict(source=vehicle_crop, conf=confidence, verbose=False)
+        
+        if results and len(results) > 0 and results[0].boxes is not None:
+            boxes = results[0].boxes
+            
+            for i in range(len(boxes)):
+                xyxy = boxes.xyxy[i].cpu().numpy()
