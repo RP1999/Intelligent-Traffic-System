@@ -902,3 +902,116 @@ def detect_plates_in_crops(
             
             for i in range(len(boxes)):
                 xyxy = boxes.xyxy[i].cpu().numpy()
+                px1, py1, px2, py2 = map(int, xyxy)
+                
+                # Geometric filter: ignore top 30%
+                if (py1 + py2) // 2 < (crop_h * 0.3):
+                    continue
+                
+                # Convert to real coordinates
+                real_px1, real_py1 = vx1 + px1, vy1 + py1
+                real_px2, real_py2 = vx1 + px2, vy1 + py2
+                plate_bbox = (real_px1, real_py1, real_px2, real_py2)
+                
+                # OCR with caching
+                plate_text = None
+                should_run_ocr = True
+                track_id = det.track_id
+                
+                if track_id in plate_history and plate_history[track_id].get("text"):
+                    plate_text = plate_history[track_id]["text"]
+                    last_ocr_time = ocr_cooldown.get(track_id, 0)
+                    if (current_time - last_ocr_time) < OCR_COOLDOWN_SECONDS:
+                        should_run_ocr = False
+                
+                if should_run_ocr:
+                    plate_crop = vehicle_crop[py1:py2, px1:px2]
+                    if plate_crop.size > 0:
+                        new_text = read_plate(plate_crop)
+                        if new_text:
+                            plate_text = new_text
+                            ocr_cooldown[track_id] = current_time
+                            
+                            # If this vehicle was speeding and now we have plate, penalize
+                            if det.is_speeding and track_id not in penalized_vehicles:
+                                _apply_speeding_penalty(track_id, plate_text, det.speed_kmh)
+                
+                all_plates.append(plate_bbox)
+                vehicle_plate_map[track_id] = {"bbox": plate_bbox, "text": plate_text}
+                
+                plate_history[track_id] = {
+                    "bbox": plate_bbox,
+                    "text": plate_text,
+                    "timestamp": current_time,
+                    "frame_count": 0,
+                }
+                break
+    
+    return all_plates, vehicle_plate_map
+
+
+def update_plate_history(vehicle_detections: List[Detection]) -> Dict[int, Dict[str, Any]]:
+    """Update plate history and return remembered plates."""
+    global plate_history
+    
+    current_track_ids = {det.track_id for det in vehicle_detections}
+    remembered_plates = {}
+    
+    to_remove = []
+    for track_id, info in plate_history.items():
+        info["frame_count"] += 1
+        
+        if track_id in current_track_ids and info["frame_count"] < PLATE_HISTORY_MAX_AGE:
+            remembered_plates[track_id] = {"bbox": info["bbox"], "text": info.get("text")}
+        
+        if info["frame_count"] >= PLATE_HISTORY_MAX_AGE:
+            to_remove.append(track_id)
+    
+    for track_id in to_remove:
+        del plate_history[track_id]
+        if track_id in ocr_cooldown:
+            del ocr_cooldown[track_id]
+    
+    return remembered_plates
+
+
+# ============================================================================
+# MAIN DETECTION PIPELINE
+# ============================================================================
+
+def detect_and_track(
+    vehicle_model: Any,
+    frame: np.ndarray,
+    frame_id: int = 0,
+    confidence: float = 0.5,
+    plate_model: Any = None,
+    run_plate_detection: bool = True,
+) -> FrameResult:
+    """
+    Complete detection pipeline with all integrations.
+    """
+    global _frame_counter, _prev_plate_boxes
+    
+    timestamp = time.time()
+    start_time = time.time()
+    
+    # Stage 1: Vehicle tracking
+    detections, _ = track_vehicles(vehicle_model, frame, confidence, _frame_counter)
+    
+    # Stage 2: Plate detection
+    all_plates = []
+    vehicle_plate_map = {}
+    
+    if run_plate_detection and plate_model is not None:
+        if _frame_counter % PLATE_DETECTION_INTERVAL == 0:
+            all_plates, vehicle_plate_map = detect_plates_in_crops(plate_model, frame, detections)
+            _prev_plate_boxes = all_plates
+        else:
+            all_plates = _prev_plate_boxes
+        
+        remembered_plates = update_plate_history(detections)
+        for track_id, plate_info in remembered_plates.items():
+            if track_id not in vehicle_plate_map:
+                vehicle_plate_map[track_id] = plate_info
+                if plate_info["bbox"] not in all_plates:
+                    all_plates.append(plate_info["bbox"])
