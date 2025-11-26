@@ -16,3 +16,6 @@ class Violation {
   Violation({
     required this.violationId,
     required this.driverId,
+    this.licensePlate,
+    required this.violationType,
+    required this.timestamp,
