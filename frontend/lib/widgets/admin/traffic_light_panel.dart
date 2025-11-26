@@ -113,3 +113,18 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 16),
+          
+          // Main junction - Full traffic light
+          _buildMainJunction(),
+          const SizedBox(height: 16),
+          
+          // Timer for main junction
+          _buildTimer(),
+          const SizedBox(height: 16),
