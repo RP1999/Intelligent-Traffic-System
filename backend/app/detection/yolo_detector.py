@@ -676,3 +676,116 @@ def _apply_parking_penalty(track_id: int, plate_text: str, zone_id: str):
         print(f"[PENALTY] ⚠️ Scoring engine not available. Would penalize: {driver_id}")
         return
     
+    ViolationType = scoring["ViolationType"]
+    
+    try:
+        driver, violation = scoring["engine"].record_violation(
+            driver_id=driver_id,
+            violation_type=ViolationType.PARKING_NO_PARKING,
+            location=f"zone:{zone_id}",  # Store zone_id for analytics lookup
+            license_plate=plate_text,
+            notes="Automated detection - illegal parking > 15 seconds",
+        )
+        print(f"[PENALTY] 🚨 DB SAVED: {driver_id} | Score: {driver.current_score} | Fine: ${violation.fine_amount}")
+        
+    except Exception as e:
+        print(f"[PENALTY] Error saving to DB: {e}")
+
+
+def _apply_speeding_penalty(track_id: int, plate_text: str, speed: float):
+    """Apply speeding violation penalty to database."""
+    scoring = get_scoring_engine()
+    
+    driver_id = plate_text or f"UNKNOWN-{track_id}"
+    
+    if scoring["engine"] is None:
+        print(f"[PENALTY] ⚠️ Scoring engine not available. Would penalize speeder: {driver_id}")
+        return
+    
+    ViolationType = scoring["ViolationType"]
+    
+    try:
+        driver, violation = scoring["engine"].record_violation(
+            driver_id=driver_id,
+            violation_type=ViolationType.SPEEDING,
+            location="Traffic Camera",
+            license_plate=plate_text,
+            notes=f"Speeding: {speed:.0f} km/h detected",
+        )
+        print(f"[PENALTY] 🚨 SPEEDING DB SAVED: {driver_id} | Speed: {speed:.0f} km/h | Fine: ${violation.fine_amount}")
+        
+        penalized_vehicles[track_id] = time.time()
+        
+    except Exception as e:
+        print(f"[PENALTY] Error saving speeding to DB: {e}")
+
+
+def cleanup_parking_tracker(active_track_ids: set):
+    """Remove parking entries for vehicles no longer tracked."""
+    global parking_tracker
+    to_remove = [tid for tid in parking_tracker if tid not in active_track_ids]
+    for tid in to_remove:
+        del parking_tracker[tid]
+
+
+# ============================================================================
+# SIGNAL AUTOMATION (4-WAY JUNCTION)
+# ============================================================================
+
+def update_traffic_signal(vehicle_count: int, frame_id: int, detections: list = None) -> Tuple[Optional[str], Optional[int]]:
+    """
+    Update 4-way traffic signal based on vehicle count.
+    Also checks for emergency vehicles (ambulance) to trigger emergency mode.
+    
+    Args:
+        vehicle_count: Number of vehicles detected (for North lane)
+        frame_id: Current frame number
+        detections: List of Detection objects (for emergency vehicle check)
+    
+    Returns:
+        Tuple of (current_state, green_remaining)
+    """
+    controller = get_traffic_controller()
+    
+    if controller is None:
+        return None, None
+    
+    try:
+        # Check for emergency vehicles (ambulance) if detections provided
+        if detections:
+            emergency_result = trigger_emergency_if_detected(detections)
+            if emergency_result and emergency_result.get('status') == 'emergency_activated':
+                return 'green', controller.emergency_duration
+        
+        # Update North lane count (real YOLO data)
+        controller.update_north_count(vehicle_count)
+        
+        # Auto-tick advances the signal based on elapsed time
+        if frame_id % SIGNAL_UPDATE_INTERVAL == 0:
+            states = controller.auto_tick()
+            current_green = states['current_green']
+            state = states['lanes'][current_green]['state']
+            remaining = states['green_remaining']
+            
+            print(f"[SIGNAL] 4-WAY | Green: {current_green.upper()} | State={state} | Remaining={remaining}s | Emergency={states['emergency_mode']}")
+            
+            return state, remaining
+        
+        return None, None
+        
+    except Exception as e:
+        print(f"[SIGNAL] Error: {e}")
+        return None, None
+
+
+# ============================================================================
+# STAGE 1: VEHICLE TRACKING
+# ============================================================================
+
+def track_vehicles(
+    model: Any,
+    frame: np.ndarray,
+    confidence: float = 0.5,
+    frame_id: int = 0,
+) -> Tuple[List[Detection], bool]:
+    """
