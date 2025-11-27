@@ -185,3 +185,46 @@ def detect_sudden_stop(
     older_speeds = speeds[-30:-20] if len(speeds) >= 30 else speeds[:10]
     
     if not older_speeds or not recent_speeds:
+        return None
+    
+    avg_old_speed = sum(older_speeds) / len(older_speeds)
+    avg_new_speed = sum(recent_speeds) / len(recent_speeds)
+    
+    # Sudden stop: speed dropped by more than 50%
+    if avg_old_speed > 20 and avg_new_speed < avg_old_speed * (1 - SUDDEN_STOP_SPEED_DROP):
+        behavior.sudden_stop_count += 1
+        behavior.last_behavior_time = time.time()
+        behavior.behaviors_detected.append('sudden_stop')
+        
+        severity = SeverityLevel.HIGH if avg_old_speed > 100 else SeverityLevel.MEDIUM
+        
+        event = BehaviorEvent(
+            vehicle_id=track_id,
+            behavior_type=BehaviorType.SUDDEN_STOP,
+            severity=severity,
+            plate_number=plate_text,
+            details={
+                'speed_before': round(avg_old_speed, 1),
+                'speed_after': round(avg_new_speed, 1),
+                'speed_drop_percent': round((1 - avg_new_speed / avg_old_speed) * 100, 1),
+            }
+        )
+        
+        _behavior_events.append(event)
+        print(f"[BEHAVIOR] 🛑 Vehicle {track_id} SUDDEN STOP: {avg_old_speed:.0f} → {avg_new_speed:.0f} px/s")
+        
+        return event
+    
+    return None
+
+
+def detect_harsh_brake(
+    track_id: int,
+    current_speed: float,
+    plate_text: Optional[str] = None
+) -> Optional[BehaviorEvent]:
+    """
+    Detect harsh braking: high deceleration rate.
+    
+    Args:
+        track_id: Vehicle tracking ID
