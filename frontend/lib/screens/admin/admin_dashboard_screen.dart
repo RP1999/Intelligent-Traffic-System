@@ -159,3 +159,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         // Main Grid
         SliverToBoxAdapter(
           child: _buildMainGrid(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Command Center',
+                style: AppTypography.h1.copyWith(fontSize: 32),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Real-time traffic monitoring and control',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
