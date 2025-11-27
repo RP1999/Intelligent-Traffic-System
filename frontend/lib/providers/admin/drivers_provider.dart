@@ -22,3 +22,7 @@ class DriversProvider extends ChangeNotifier {
   String _sortBy = 'current_score';
   String _sortOrder = 'asc';
 
+  // Search
+  String _searchQuery = '';
+
+  // Selected driver for detail view
