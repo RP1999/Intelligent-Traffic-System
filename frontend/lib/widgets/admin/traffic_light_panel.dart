@@ -128,3 +128,26 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
           // Timer for main junction
           _buildTimer(),
           const SizedBox(height: 16),
+          
+          // Divider
+          Divider(color: AppColors.border, height: 1),
+          const SizedBox(height: 12),
+          
+          // Other junctions label
+          Text(
+            'Other Junctions',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          // 3 simulated junctions in a row
+          _buildSimulatedJunctions(),
+          const SizedBox(height: 16),
+          
+          // Controls
+          _buildControls(),
+        ],
+      ),
+    );
