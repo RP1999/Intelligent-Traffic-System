@@ -176,3 +176,64 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
                         onPressed: () {
                           _searchController.clear();
                           context.read<ViolationsProvider>().setSearchQuery('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.surfaceVariant,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              onChanged: (value) {
+                context.read<ViolationsProvider>().setSearchQuery(value);
+              },
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Status filter dropdown
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedStatus,
+                  hint: const Text('Status'),
+                  isExpanded: true,
+                  dropdownColor: AppColors.surface,
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('All Status')),
+                    DropdownMenuItem(value: 'unpaid', child: Text('Unpaid')),
+                    DropdownMenuItem(value: 'paid', child: Text('Paid')),
+                    DropdownMenuItem(value: 'disputed', child: Text('Disputed')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedStatus = value);
+                    context.read<ViolationsProvider>().setStatusFilter(value);
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Type filter dropdown
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedType,
+                  hint: const Text('Violation Type'),
+                  isExpanded: true,
