@@ -54,3 +54,17 @@ class ViolationTrend {
       byType: byTypeRaw.map((k, v) => MapEntry(k, (v as num).toInt())),
     );
   }
+}
+
+/// Violation trends response
+class ViolationTrendsResponse {
+  final int periodDays;
+  final String startDate;
+  final List<ViolationTrend> trends;
+
+  ViolationTrendsResponse({
+    required this.periodDays,
+    required this.startDate,
+    required this.trends,
+  });
+
