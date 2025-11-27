@@ -282,3 +282,33 @@ def get_recent_violations(vehicle_id: int = None, plate_number: str = None, days
         # Calculate date threshold
         threshold = (datetime.now() - timedelta(days=days)).isoformat()
         
+        if plate_number:
+            cursor.execute("""
+                SELECT * FROM violations 
+                WHERE plate_text = ? AND timestamp > ?
+            """, (plate_number, threshold))
+        elif vehicle_id:
+            cursor.execute("""
+                SELECT * FROM violations 
+                WHERE track_id = ? AND timestamp > ?
+            """, (vehicle_id, threshold))
+        else:
+            return []
+        
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+    except sqlite3.OperationalError:
+        # Table might not exist
+        return []
+        
+    finally:
+        conn.close()
+
+
+def get_high_risk_vehicles(threshold: float = 60.0, limit: int = 20) -> List[Dict]:
+    """
+    Get list of vehicles with risk scores above threshold.
+    
+    Args:
+        threshold: Minimum risk score
