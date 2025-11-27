@@ -62,3 +62,19 @@ class FuzzyTrafficController:
     def _setup_fuzzy_system(self):
         """Set up the fuzzy inference system."""
         # Define fuzzy variables
+        
+        # Input: Vehicle count (0 to 30)
+        self.vehicle_count = ctrl.Antecedent(np.arange(0, 31, 1), 'vehicle_count')
+        
+        # Output: Green light duration (10 to 60 seconds)
+        self.green_duration = ctrl.Consequent(np.arange(self.min_green, self.max_green + 1, 1), 'green_duration')
+        
+        # Define membership functions for vehicle count (shifted lower for demo)
+        # Low: mostly 0-4, Medium: 2-12, High: 8-30
+        self.vehicle_count['low'] = fuzz.trimf(self.vehicle_count.universe, [0, 0, 4])
+        self.vehicle_count['medium'] = fuzz.trimf(self.vehicle_count.universe, [2, 6, 12])
+        self.vehicle_count['high'] = fuzz.trimf(self.vehicle_count.universe, [8, 15, 30])
+        
+        # Define membership functions for green duration
+        self.green_duration['short'] = fuzz.trimf(self.green_duration.universe, 
+                                                   [self.min_green, self.min_green, 25])
