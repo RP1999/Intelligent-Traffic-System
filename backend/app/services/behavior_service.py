@@ -135,3 +135,53 @@ class BehaviorEvent:
 # ============================================================================
 
 # Vehicle behavior tracking: track_id -> VehicleBehavior
+_vehicle_behaviors: Dict[int, VehicleBehavior] = {}
+
+# Recent behavior events
+_behavior_events: List[BehaviorEvent] = []
+
+# Behavior cooldown to prevent spam
+BEHAVIOR_COOLDOWN = 5.0  # seconds
+
+
+# ============================================================================
+# DETECTION FUNCTIONS
+# ============================================================================
+
+def detect_sudden_stop(
+    track_id: int,
+    current_speed: float,
+    plate_text: Optional[str] = None
+) -> Optional[BehaviorEvent]:
+    """
+    Detect sudden stop: >50% speed reduction in <2 seconds.
+    
+    Args:
+        track_id: Vehicle tracking ID
+        current_speed: Current speed in pixels/second
+        plate_text: License plate if available
+    
+    Returns:
+        BehaviorEvent if sudden stop detected
+    """
+    global _vehicle_behaviors
+    
+    if track_id not in _vehicle_behaviors:
+        _vehicle_behaviors[track_id] = VehicleBehavior(track_id=track_id)
+    
+    behavior = _vehicle_behaviors[track_id]
+    behavior.speeds.append(current_speed)
+    
+    # Need speed history
+    if len(behavior.speeds) < 10:
+        return None
+    
+    # Check cooldown
+    if time.time() - behavior.last_behavior_time < BEHAVIOR_COOLDOWN:
+        return None
+    
+    speeds = list(behavior.speeds)
+    recent_speeds = speeds[-10:]  # Last ~0.33 seconds
+    older_speeds = speeds[-30:-20] if len(speeds) >= 30 else speeds[:10]
+    
+    if not older_speeds or not recent_speeds:
