@@ -1015,3 +1015,116 @@ def detect_and_track(
                 vehicle_plate_map[track_id] = plate_info
                 if plate_info["bbox"] not in all_plates:
                     all_plates.append(plate_info["bbox"])
+    
+    # Enrich detections
+    speeding_count = 0
+    parking_warnings = 0
+    parking_violations = 0
+    red_light_violations = 0
+    
+    # Get frame dimensions for red light check
+    frame_height = frame.shape[0]
+    
+    # Get member services
+    lane_service = get_lane_weaving_service()
+    behavior_svc = get_behavior_service()
+    
+    for det in detections:
+        # Add plate info
+        if det.track_id in vehicle_plate_map:
+            plate_info = vehicle_plate_map[det.track_id]
+            det.has_plate = True
+            det.plate_bbox = plate_info["bbox"]
+            det.plate_text = plate_info.get("text")
+        
+        if det.is_speeding:
+            speeding_count += 1
+        
+        # Check parking violations
+        parking_time, parking_status, zone_id, is_penalized = check_parking_violation(det, timestamp)
+        det.parking_time = parking_time
+        det.parking_status = parking_status
+        det.parking_zone = zone_id
+        det.is_penalized = is_penalized
+        
+        if parking_status == "warning":
+            parking_warnings += 1
+        elif parking_status == "violation":
+            parking_violations += 1
+        
+        # ===== MEMBER 2: Red Light Violation Detection =====
+        is_red_light_violator = check_red_light_violation(det, frame_height, timestamp)
+        if is_red_light_violator:
+            det.is_penalized = True
+            red_light_violations += 1
+        
+        # ===== MEMBER 2: Lane Weaving Detection =====
+        if lane_service:
+            try:
+                weaving_event = lane_service.detect_lane_weaving(
+                    det.track_id, det.centroid, det.plate_text
+                )
+                if weaving_event:
+                    print(f"[MEMBER2] Lane weaving: Vehicle {det.track_id}")
+            except Exception as e:
+                pass  # Non-critical feature
+        
+        # ===== MEMBER 4: Abnormal Behavior Detection =====
+        if behavior_svc:
+            try:
+                behavior_svc.analyze_vehicle_behavior(
+                    det.track_id,
+                    det.centroid,
+                    det.speed_pixels,
+                    det.plate_text
+                )
+            except Exception as e:
+                pass  # Non-critical feature
+    
+    # Signal automation (4-way junction with emergency detection)
+    vehicle_count = len(detections)
+    signal_state, signal_duration = update_traffic_signal(vehicle_count, _frame_counter, detections)
+    
+    _frame_counter += 1
+    inference_time = (time.time() - start_time) * 1000
+    
+    return FrameResult(
+        frame_id=frame_id,
+        timestamp=timestamp,
+        detections=detections,
+        inference_time_ms=inference_time,
+        plate_boxes=all_plates,
+        image=frame,
+        vehicle_count=vehicle_count,
+        speeding_count=speeding_count,
+        parking_warnings=parking_warnings,
+        parking_violations=parking_violations,
+        signal_state=signal_state,
+        signal_duration=signal_duration,
+    )
+
+
+# ============================================================================
+# RED LIGHT VIOLATION DETECTION (Member 2 Feature)
+# ============================================================================
+
+# Stop line position (relative to frame height)
+STOP_LINE_RATIO = 0.6  # 60% down from top
+
+# Red light violation tracking
+_red_light_violators: Dict[int, float] = {}  # track_id -> violation_time
+
+def check_red_light_violation(
+    det: Detection,
+    frame_height: int,
+    current_time: float,
+) -> bool:
+    """
+    Check if a vehicle is violating a red light.
+    
+    Logic:
+    - Get current signal state for North lane (video feed)
+    - Define stop line at STOP_LINE_RATIO of frame height
+    - If signal is RED and vehicle Y position > stop line and speed > 10 km/h:
+      - Trigger penalty
+    
