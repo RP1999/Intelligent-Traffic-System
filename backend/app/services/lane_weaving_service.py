@@ -38,3 +38,13 @@ VIOLATION_PENALTIES = {
     'wrong_way_driving': 20,     # -20 points per incident
     'speeding': 8,               # -8 points per incident
     'parking_violation': 10,     # -10 points per incident
+    'running_red_light': 25,     # -25 points per incident
+    'tailgating': 3,             # -3 points per incident
+}
+SCORE_DECAY_RATE = 0.1  # Score recovery per second
+MIN_SAFETY_SCORE = 0
+MAX_SAFETY_SCORE = 100
+
+
+# ============================================================================
+# DATA CLASSES
