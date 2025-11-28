@@ -30,3 +30,19 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
       context.read<ViolationsProvider>().loadViolations(refresh: true);
     });
     
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<ViolationsProvider>().loadNextPage();
+    }
+  }
