@@ -53,3 +53,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
           AdminSidebar(
             selectedIndex: 3, // Drivers index
             onItemSelected: (index) => _handleNavigation(index),
+          ),
+          
+          // Main content
+          Expanded(
+            child: Container(
+              color: AppColors.background,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  _buildFilters(),
