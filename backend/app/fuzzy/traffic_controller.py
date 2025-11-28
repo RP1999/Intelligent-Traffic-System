@@ -215,3 +215,23 @@ class TrafficSignal:
         Returns:
             True if state changed, False otherwise
         """
+        if not self.auto_tick_enabled:
+            return False
+        
+        current_time = time.time()
+        elapsed = int(current_time - self.last_tick_time)
+        
+        if elapsed >= 1:
+            self.last_tick_time = current_time
+            return self.tick(elapsed)
+        
+        return False
+    
+    def tick(self, elapsed_seconds: int = 1) -> bool:
+        """
+        Advance the signal timer.
+        
+        Args:
+            elapsed_seconds: Time elapsed since last tick
+            
+        Returns:
