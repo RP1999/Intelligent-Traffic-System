@@ -206,3 +206,12 @@ class TrafficSignal:
         
         import time
         self.last_update = time.time()
+    
+    def auto_tick(self) -> bool:
+        """
+        Automatically advance signal based on actual elapsed time.
+        Call this periodically to keep signal synchronized with real time.
+        
+        Returns:
+            True if state changed, False otherwise
+        """
