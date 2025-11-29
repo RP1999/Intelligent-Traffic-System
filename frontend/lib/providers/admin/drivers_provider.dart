@@ -26,3 +26,7 @@ class DriversProvider extends ChangeNotifier {
   String _searchQuery = '';
 
   // Selected driver for detail view
+  Driver? _selectedDriver;
+  LoadingState _detailState = LoadingState.initial;
+
+  // Getters
