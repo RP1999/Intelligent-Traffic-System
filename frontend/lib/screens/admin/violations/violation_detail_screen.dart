@@ -236,3 +236,65 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                             },
                           ),
                         )
+                      : _buildPlaceholderImage('No plate image'),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Detected Plate Number
+                Row(
+                  children: [
+                    Text(
+                      'Detected Plate:',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+                      ),
+                      child: Text(
+                        violation.licensePlate ?? 'UNKNOWN',
+                        style: AppTypography.h4.copyWith(
+                          color: AppColors.primary,
+                          fontFamily: 'monospace',
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderImage(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.image_not_supported,
+            size: 48,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
