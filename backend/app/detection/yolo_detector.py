@@ -115,3 +115,42 @@ penalized_vehicles: Dict[int, float] = {}  # track_id -> penalize_time
 # Previous frame detections (for frame skipping)
 _prev_detections: List[Any] = []
 _prev_plate_boxes: List[Tuple[int, int, int, int]] = []
+
+# Frame counter
+_frame_counter: int = 0
+
+# Parking zones (can be updated at runtime)
+parking_zones: List[Dict] = DEFAULT_PARKING_ZONES.copy()
+
+
+# ============================================================================
+# DATA CLASSES
+# ============================================================================
+
+@dataclass
+class Detection:
+    """Container for a single detection result."""
+    track_id: int
+    class_id: int
+    class_name: str
+    confidence: float
+    bbox: Tuple[int, int, int, int]
+    centroid: Tuple[int, int]
+    area: int
+    timestamp: float = field(default_factory=time.time)
+    has_plate: bool = False
+    plate_bbox: Optional[Tuple[int, int, int, int]] = None
+    plate_text: Optional[str] = None
+    speed_kmh: float = 0.0
+    speed_pixels: float = 0.0
+    is_speeding: bool = False
+    parking_time: float = 0.0
+    parking_status: str = ""  # "", "warning", "violation"
+    parking_zone: Optional[str] = None
+    is_penalized: bool = False
+    
+    def to_dict(self) -> dict:
+        return {
+            "track_id": self.track_id,
+            "class_id": self.class_id,
+            "class_name": self.class_name,
