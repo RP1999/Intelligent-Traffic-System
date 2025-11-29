@@ -30,3 +30,7 @@ class DriversProvider extends ChangeNotifier {
   LoadingState _detailState = LoadingState.initial;
 
   // Getters
+  LoadingState get state => _state;
+  String? get errorMessage => _errorMessage;
+  List<Driver> get drivers => _drivers;
+  int get total => _total;
