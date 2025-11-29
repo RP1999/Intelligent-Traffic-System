@@ -68,3 +68,17 @@ class AnalyticsProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  /// Load violation trends
+  Future<void> loadViolationTrends({int? days}) async {
+    if (days != null) _trendPeriod = days;
+    
+    _trendsState = LoadingState.loading;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.get(
+        ApiEndpoints.violationTrends,
+        queryParams: {'days': _trendPeriod.toString()},
+      );
