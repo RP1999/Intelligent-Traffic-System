@@ -151,3 +151,16 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
         ],
       ),
     );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text('Signal Control', style: AppTypography.h4, overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 4),
+            if (_emergencyMode)
