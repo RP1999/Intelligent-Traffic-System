@@ -68,3 +68,10 @@ class ViolationTrendsResponse {
     required this.trends,
   });
 
+  factory ViolationTrendsResponse.fromJson(Map<String, dynamic> json) {
+    return ViolationTrendsResponse(
+      periodDays: json['period_days'] ?? 7,
+      startDate: json['start_date'] ?? '',
+      trends: ((json['trends'] ?? []) as List)
+          .map((t) => ViolationTrend.fromJson(t))
+          .toList(),
