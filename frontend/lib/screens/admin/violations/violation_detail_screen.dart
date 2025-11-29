@@ -191,3 +191,48 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                             errorBuilder: (context, error, stackTrace) {
                               return _buildPlaceholderImage('Snapshot not available');
                             },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : _buildPlaceholderImage('No snapshot available'),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Cropped Plate Image
+                Text(
+                  'License Plate Crop',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 120,
+                  width: 280,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: violation.evidencePath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            '${AppConfig.apiBaseUrl}/evidence/${violation.evidencePath}',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderImage('Plate image not available');
+                            },
+                          ),
+                        )
