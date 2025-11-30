@@ -235,3 +235,28 @@ class TrafficSignal:
             elapsed_seconds: Time elapsed since last tick
             
         Returns:
+            True if state changed, False otherwise
+        """
+        self.remaining_time -= elapsed_seconds
+        
+        if self.remaining_time <= 0:
+            # State transition
+            if self.state == 'green':
+                self.set_state('yellow')
+            elif self.state == 'yellow':
+                self.set_state('red')
+            else:  # red
+                self.set_state('green')
+            return True
+        
+        return False
+    
+    def get_status(self) -> dict:
+        """Get current signal status with auto-tick update."""
+        # Auto-advance based on elapsed time
+        state_changed = self.auto_tick()
+        
+        # Log status for debugging (only when state changes or every 5 polls)
+        if state_changed:
+            print(f"[SIGNAL] State changed to {self.state.upper()} | Remaining: {self.remaining_time}s | Vehicles: {self.vehicle_count}")
+        
