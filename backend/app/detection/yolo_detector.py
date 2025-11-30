@@ -1354,3 +1354,116 @@ def draw_detections(
         else:
             color = colors.get(det.class_name, (0, 255, 0))
         
+        # Draw vehicle box
+        thickness = 3 if det.is_penalized else box_thickness
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness)
+        
+        # Draw speed above box
+        if show_speed and det.speed_kmh > 0:
+            speed_text = f"{det.speed_kmh:.0f} km/h"
+            if det.is_speeding:
+                speed_text += " SPEEDING!"
+            
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            (tw, th), _ = cv2.getTextSize(speed_text, font, 0.6, 2)
+            
+            speed_color = (0, 0, 255) if det.is_speeding else (255, 255, 255)
+            cv2.rectangle(annotated, (x1, y1 - th - 25), (x1 + tw + 4, y1 - 15), (0, 0, 0), -1)
+            cv2.putText(annotated, speed_text, (x1 + 2, y1 - 18), font, 0.6, speed_color, 2)
+        
+        # Build label
+        if show_labels or show_track_id:
+            label_parts = []
+            
+            if show_track_id and det.track_id >= 0:
+                label_parts.append(f"ID:{det.track_id}")
+            
+            if show_labels:
+                label_parts.append(det.class_name)
+            
+            label = " | ".join(label_parts)
+            
+            if det.plate_text:
+                label += f" | {det.plate_text}"
+            elif det.has_plate:
+                label += " [Plate]"
+            
+            # Parking timer
+            if det.parking_time > 0:
+                label += f" | Parked: {det.parking_time:.0f}s"
+                if det.parking_status:
+                    label += f" [{det.parking_status.upper()}]"
+            
+            if det.is_penalized:
+                label += " | PENALIZED!"
+            
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            (tw, th), _ = cv2.getTextSize(label, font, 0.5, 1)
+            
+            cv2.rectangle(annotated, (x1, y1 - th - 10), (x1 + tw + 4, y1), color, -1)
+            cv2.putText(annotated, label, (x1 + 2, y1 - 5), font, 0.5, (255, 255, 255), 1)
+    
+    return annotated
+
+
+def draw_frame_info(frame: np.ndarray, result: FrameResult, extra_info: str = "") -> np.ndarray:
+    """Draw frame information overlay."""
+    info_parts = [
+        f"Frame: {result.frame_id}",
+        f"Vehicles: {result.vehicle_count}",
+        f"Plates: {len(result.plate_boxes)}",
+        f"Speeding: {result.speeding_count}",
+        f"Parking: W={result.parking_warnings} V={result.parking_violations}",
+        f"{result.inference_time_ms:.0f}ms",
+    ]
+    
+    if result.signal_state:
+        info_parts.append(f"Signal: {result.signal_state.upper()}")
+    
+    if extra_info:
+        info_parts.append(extra_info)
+    
+    info_text = " | ".join(info_parts)
+    
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    (tw, th), _ = cv2.getTextSize(info_text, font, 0.6, 2)
+    
+    cv2.rectangle(frame, (5, 5), (tw + 15, th + 15), (0, 0, 0), -1)
+    cv2.putText(frame, info_text, (10, th + 8), font, 0.6, (0, 255, 0), 2)
+    
+    return frame
+
+
+# ============================================================================
+# VIDEO PROCESSING
+# ============================================================================
+
+def process_video(
+    video_path: str,
+    vehicle_model: Any = None,
+    plate_model: Any = None,
+    confidence: float = 0.5,
+    skip_frames: int = 0,
+    max_frames: Optional[int] = None,
+    enable_plate_detection: bool = True,
+) -> Generator[FrameResult, None, None]:
+    """Process a video file with full detection pipeline."""
+    global _frame_counter, _prev_detections, _prev_plate_boxes
+    
+    _frame_counter = 0
+    _prev_detections = []
+    _prev_plate_boxes = []
+    
+    if vehicle_model is None:
+        vehicle_model = load_vehicle_model()
+    if plate_model is None and enable_plate_detection:
+        plate_model = load_plate_model()
+    
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError(f"Could not open video: {video_path}")
+    
+    frame_id = 0
+    processed = 0
+    
+    try:
