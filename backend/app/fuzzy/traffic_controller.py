@@ -260,3 +260,18 @@ class TrafficSignal:
         if state_changed:
             print(f"[SIGNAL] State changed to {self.state.upper()} | Remaining: {self.remaining_time}s | Vehicles: {self.vehicle_count}")
         
+        return {
+            "signal_id": self.signal_id,
+            "state": self.state,
+            "remaining_time": max(0, self.remaining_time),  # Never show negative
+            "green_duration": self.green_duration,
+            "yellow_duration": self.yellow_duration,
+            "red_duration": self.red_duration,
+            "vehicle_count": self.vehicle_count,
+            "traffic_level": self.controller.get_traffic_level(self.vehicle_count),
+        }
+
+
+# Global signal instance
+_signal: TrafficSignal = None
+
