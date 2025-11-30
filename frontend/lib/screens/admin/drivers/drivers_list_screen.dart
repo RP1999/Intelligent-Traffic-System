@@ -64,3 +64,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
                 children: [
                   _buildHeader(),
                   _buildFilters(),
+                  Expanded(child: _buildDriversGrid()),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNavigation(int index) {
