@@ -1241,3 +1241,116 @@ def get_north_signal_state() -> str:
         status = controller.get_all_states()
         return status.get('lanes', {}).get('north', {}).get('state', 'unknown')
     except:
+        return 'unknown'
+
+
+# ============================================================================
+# VISUALIZATION
+# ============================================================================
+
+def draw_stop_line(frame: np.ndarray) -> np.ndarray:
+    """Draw the stop line on the frame when light is red."""
+    h, w = frame.shape[:2]
+    signal_state = get_north_signal_state()
+    
+    if signal_state == 'red':
+        stop_line_y = int(h * STOP_LINE_RATIO)
+        # Draw thick red line
+        cv2.line(frame, (0, stop_line_y), (w, stop_line_y), (0, 0, 255), 4)
+        # Add label
+        cv2.putText(frame, "STOP LINE - RED LIGHT", (10, stop_line_y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+    elif signal_state == 'yellow':
+        stop_line_y = int(h * STOP_LINE_RATIO)
+        # Draw yellow line (warning)
+        cv2.line(frame, (0, stop_line_y), (w, stop_line_y), (0, 255, 255), 2)
+        cv2.putText(frame, "STOP LINE - YELLOW", (10, stop_line_y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+    
+    return frame
+
+
+def draw_parking_zones(frame: np.ndarray) -> np.ndarray:
+    """Draw the parking zone boundaries on the frame."""
+    for zone in parking_zones:
+        polygon = np.array(zone["polygon"], dtype=np.int32)
+        color = zone.get("color", (0, 0, 255))
+        
+        # Draw filled polygon with transparency
+        overlay = frame.copy()
+        cv2.fillPoly(overlay, [polygon], color)
+        cv2.addWeighted(overlay, 0.2, frame, 0.8, 0, frame)
+        
+        # Draw boundary
+        cv2.polylines(frame, [polygon], True, color, 2)
+        
+        # Draw zone label
+        x, y = zone["polygon"][0]
+        cv2.putText(frame, zone["name"], (x + 5, y + 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+    
+    return frame
+
+
+def draw_detections(
+    frame: np.ndarray,
+    result: FrameResult,
+    show_labels: bool = True,
+    show_track_id: bool = True,
+    show_speed: bool = True,
+    show_parking_zones: bool = True,
+    show_stop_line: bool = True,
+    box_thickness: int = 2,
+) -> np.ndarray:
+    """
+    Draw detection boxes, plates, speed, parking status.
+    
+    Flashing purple for penalized vehicles.
+    """
+    annotated = frame.copy()
+    
+    # Draw stop line first (when light is red)
+    if show_stop_line:
+        annotated = draw_stop_line(annotated)
+    
+    # Draw parking zones
+    if show_parking_zones:
+        annotated = draw_parking_zones(annotated)
+    
+    colors = {
+        "car": (0, 255, 0),
+        "motorcycle": (0, 200, 255),
+        "bus": (255, 100, 0),
+        "truck": (255, 0, 255),
+        "speeding": (0, 0, 255),
+        "warning": (0, 165, 255),
+        "violation": (255, 0, 255),
+        "penalized": (255, 0, 255),  # Purple
+    }
+    plate_color = (255, 255, 0)
+    
+    # Draw plate boxes
+    for px1, py1, px2, py2 in result.plate_boxes:
+        cv2.rectangle(annotated, (px1, py1), (px2, py2), plate_color, box_thickness)
+    
+    current_time = time.time()
+    
+    for det in result.detections:
+        x1, y1, x2, y2 = det.bbox
+        
+        # Choose color based on status
+        if det.is_penalized:
+            # Flashing purple effect
+            if int(current_time * 4) % 2 == 0:
+                color = colors["penalized"]
+            else:
+                color = (128, 0, 128)  # Darker purple
+        elif det.parking_status == "violation":
+            color = colors["violation"]
+        elif det.parking_status == "warning":
+            color = colors["warning"]
+        elif det.is_speeding:
+            color = colors["speeding"]
+        else:
+            color = colors.get(det.class_name, (0, 255, 0))
+        
