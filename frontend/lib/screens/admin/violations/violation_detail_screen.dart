@@ -78,3 +78,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                     style: AppTypography.bodyLarge,
                   ),
                   const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => provider.loadViolationDetail(widget.violationId),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final violation = provider.selectedViolation;
+          if (violation == null) {
+            return const Center(child: Text('No violation data'));
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
