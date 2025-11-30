@@ -182,3 +182,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          
+          // Refresh button
+          IconButton(
+            onPressed: _loadStats,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+          const SizedBox(width: 16),
+          
+          // Emergency button
+          _buildEmergencyButton(),
+        ],
+      ),
