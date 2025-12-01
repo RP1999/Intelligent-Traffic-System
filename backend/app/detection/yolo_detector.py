@@ -1467,3 +1467,118 @@ def process_video(
     processed = 0
     
     try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if skip_frames > 0 and frame_id % (skip_frames + 1) != 0:
+                frame_id += 1
+                continue
+            
+            result = detect_and_track(
+                vehicle_model=vehicle_model,
+                frame=frame,
+                frame_id=frame_id,
+                confidence=confidence,
+                plate_model=plate_model,
+                run_plate_detection=enable_plate_detection,
+            )
+            
+            yield result
+            
+            processed += 1
+            frame_id += 1
+            
+            if max_frames and processed >= max_frames:
+                break
+    finally:
+        cap.release()
+
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def reset_state():
+    """Reset all global tracking state."""
+    global _frame_counter, _prev_detections, _prev_plate_boxes
+    global plate_history, ocr_cooldown, speed_history, parking_tracker, penalized_vehicles
+    
+    _frame_counter = 0
+    _prev_detections = []
+    _prev_plate_boxes = []
+    plate_history.clear()
+    ocr_cooldown.clear()
+    speed_history.clear()
+    parking_tracker.clear()
+    penalized_vehicles.clear()
+    
+    print("🔄 Detection state reset")
+
+
+def set_parking_zones(zones: List[Dict]):
+    """Update parking zones at runtime."""
+    global parking_zones
+    parking_zones = zones
+    print(f"📍 Updated parking zones: {len(zones)} zones")
+
+
+def detect_plates(plate_model, frame, vehicle_detections, confidence=0.3):
+    """Legacy compatibility function."""
+    plates, plate_map = detect_plates_in_crops(plate_model, frame, vehicle_detections, confidence)
+    legacy_map = {tid: info["bbox"] for tid, info in plate_map.items()}
+    return plates, legacy_map
+
+
+# ============================================================================
+# MAIN - Standalone testing
+# ============================================================================
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Full Integration Detection")
+    parser.add_argument("--video", type=str, help="Path to video file")
+    parser.add_argument("--confidence", type=float, default=0.5)
+    parser.add_argument("--no-plates", action="store_true")
+    parser.add_argument("--display", action="store_true")
+    args = parser.parse_args()
+    
+    print("🚀 Full Integration Detection Pipeline")
+    print(f"   YOLO Interval: {YOLO_DETECTION_INTERVAL}")
+    print(f"   Plate Interval: {PLATE_DETECTION_INTERVAL}")
+    print(f"   OCR Cooldown: {OCR_COOLDOWN_SECONDS}s")
+    print(f"   Speeding: {SPEEDING_THRESHOLD_PIXELS} px/s")
+    print(f"   Parking Warning: {PARKING_WARNING_SECONDS}s")
+    print(f"   Parking Violation: {PARKING_VIOLATION_SECONDS}s")
+    print(f"   Parking Zones: {len(parking_zones)}")
+    
+    vehicle_model, plate_model = get_models()
+    
+    video_path = args.video or str(Path(__file__).parent.parent.parent.parent / "data" / "videos" / "SriLankan_Traffic_Video.mp4")
+    
+    print(f"📹 Processing: {video_path}")
+    reset_state()
+    
+    for result in process_video(
+        video_path,
+        vehicle_model=vehicle_model,
+        plate_model=plate_model if not args.no_plates else None,
+        confidence=args.confidence,
+        enable_plate_detection=not args.no_plates,
+    ):
+        annotated = draw_detections(result.image, result)
+        annotated = draw_frame_info(annotated, result)
+        
+        print(f"F{result.frame_id}: V={result.vehicle_count} P={len(result.plate_boxes)} S={result.speeding_count} Park={result.parking_warnings}/{result.parking_violations} {result.inference_time_ms:.0f}ms")
+        
+        if args.display:
+            cv2.imshow("Detection", annotated)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    
+    if args.display:
+        cv2.destroyAllWindows()
+    
+    print("✅ Complete!")
