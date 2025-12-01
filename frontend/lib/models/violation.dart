@@ -19,3 +19,6 @@ class Violation {
     this.licensePlate,
     required this.violationType,
     required this.timestamp,
+    this.location,
+    required this.fineAmount,
+    required this.pointsDeducted,
