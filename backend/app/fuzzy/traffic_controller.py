@@ -275,3 +275,13 @@ class TrafficSignal:
 # Global signal instance
 _signal: TrafficSignal = None
 
+
+def get_signal() -> TrafficSignal:
+    """Get or create the global traffic signal instance."""
+    global _signal
+    if _signal is None:
+        _signal = TrafficSignal()
+    return _signal
+
+
+# =============================================================================
