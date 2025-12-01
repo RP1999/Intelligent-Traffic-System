@@ -13,3 +13,6 @@ class Driver {
   Driver({
     required this.driverId,
     required this.currentScore,
+    required this.totalViolations,
+    required this.totalFines,
+    this.lastViolation,
