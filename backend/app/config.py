@@ -43,3 +43,18 @@ class Settings(BaseSettings):
     parking_snapshot_dir: Path = data_dir / "snapshots"
     
     # --- Scoring Settings ---
+    initial_driver_score: int = 100
+    score_reset_hour: int = 0  # Midnight reset
+    
+    # --- Fine Calculation ---
+    base_fine_amount: float = 500.0  # Base fine in currency
+    duration_multiplier: float = 0.1  # Additional fine per minute
+    traffic_impact_multiplier: float = 0.2  # Additional fine based on congestion
+    
+    # --- SSE Settings ---
+    sse_retry_timeout: int = 3000  # milliseconds
+    
+    # --- Video Ingestion ---
+    default_fps: int = 30
+    frame_buffer_size: int = 100
+    
