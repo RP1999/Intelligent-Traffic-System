@@ -299,3 +299,23 @@ class FourWayTrafficController:
     Cycle: Round-robin (N -> E -> S -> W) with fuzzy-computed green durations.
     Emergency: Ambulance detection forces one lane GREEN, others RED.
     """
+    
+    LANES = ['north', 'south', 'east', 'west']
+    CYCLE_ORDER = ['north', 'east', 'south', 'west']  # Round-robin order
+    COLORS = ['red', 'yellow', 'green']
+    
+    def __init__(self):
+        """Initialize the 4-way controller."""
+        # Vehicle counts per lane
+        self.lane_counts: Dict[str, int] = {
+            'north': 0, 'south': 0, 'east': 0, 'west': 0
+        }
+        
+        # Light states per lane
+        self.lane_states: Dict[str, str] = {
+            'north': 'red', 'south': 'red', 'east': 'red', 'west': 'red'
+        }
+        
+        # Current green lane and timing
+        self.current_green_lane: str = 'north'
+        self.green_remaining: int = 30
