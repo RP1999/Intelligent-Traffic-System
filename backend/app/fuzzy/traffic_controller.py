@@ -285,3 +285,17 @@ def get_signal() -> TrafficSignal:
 
 
 # =============================================================================
+# 4-WAY HYBRID JUNCTION CONTROLLER
+# =============================================================================
+
+class FourWayTrafficController:
+    """
+    4-Way Junction Controller with Hybrid Data Sources.
+    
+    Architecture:
+    - North Lane: REAL vehicle count from YOLO video detection
+    - South/East/West Lanes: SIMULATED traffic density (random, updates every 10s)
+    
+    Cycle: Round-robin (N -> E -> S -> W) with fuzzy-computed green durations.
+    Emergency: Ambulance detection forces one lane GREEN, others RED.
+    """
