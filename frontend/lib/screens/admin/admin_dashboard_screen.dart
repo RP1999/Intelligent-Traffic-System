@@ -152,3 +152,62 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         
         // Stats Cards
+        SliverToBoxAdapter(
+          child: _buildStatsSection(),
+        ),
+        
+        // Main Grid
+        SliverToBoxAdapter(
+          child: _buildMainGrid(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Command Center',
+                style: AppTypography.h1.copyWith(fontSize: 32),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Real-time traffic monitoring and control',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          
+          // Refresh button
+          IconButton(
+            onPressed: _loadStats,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+          const SizedBox(width: 16),
+          
+          // Emergency button
+          _buildEmergencyButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF4444), Color(0xFFCC0000)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
