@@ -164,3 +164,22 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
             ),
             const SizedBox(width: 4),
             if (_emergencyMode)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '🚨',
+                  style: AppTypography.caption.copyWith(fontSize: 10),
+                ),
+              ),
+            if (_isManualOverride && !_emergencyMode)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
