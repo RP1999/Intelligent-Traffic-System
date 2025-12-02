@@ -89,3 +89,27 @@ class ViolationsProvider extends ChangeNotifier {
           }).toList();
         }
 
+        // Apply status filter client-side (if backend doesn't support it)
+        if (_statusFilter != null && _statusFilter!.isNotEmpty) {
+          filtered = filtered.where((v) => 
+            v.status.toLowerCase() == _statusFilter!.toLowerCase()
+          ).toList();
+        }
+
+        if (refresh) {
+          _violations = filtered;
+        } else {
+          _violations.addAll(filtered);
+        }
+        _total = parsed.total;
+        _state = LoadingState.loaded;
+      } else {
+        _errorMessage = response.error ?? 'Failed to load violations';
+        _state = LoadingState.error;
+      }
+    } on UnauthorizedException {
+      _errorMessage = 'Session expired. Please login again.';
+      _state = LoadingState.error;
+      rethrow;
+    } catch (e) {
+      _errorMessage = 'Error loading violations: $e';
