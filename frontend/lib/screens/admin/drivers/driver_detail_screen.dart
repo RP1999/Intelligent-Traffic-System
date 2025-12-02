@@ -78,3 +78,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                   flex: 2,
                   child: Column(
                     children: [
+                      _buildProfileCard(driver),
+                      const SizedBox(height: 24),
+                      _buildScoreCard(driver),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                
+                // Right side - Violation Timeline
+                Expanded(
+                  flex: 3,
+                  child: _buildViolationTimeline(driver),
+                ),
+              ],
+            ),
+          );
