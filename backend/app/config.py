@@ -58,3 +58,21 @@ class Settings(BaseSettings):
     default_fps: int = 30
     frame_buffer_size: int = 100
     
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()
+
+
+# Create directories on import
+settings = get_settings()
+settings.data_dir.mkdir(parents=True, exist_ok=True)
+settings.videos_dir.mkdir(parents=True, exist_ok=True)
+settings.plates_dir.mkdir(parents=True, exist_ok=True)
+settings.models_dir.mkdir(parents=True, exist_ok=True)
+settings.parking_snapshot_dir.mkdir(parents=True, exist_ok=True)
