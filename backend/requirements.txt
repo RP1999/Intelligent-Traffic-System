@@ -10,3 +10,5 @@
 fastapi>=0.115.6
 uvicorn[standard]>=0.32.1
 python-multipart>=0.0.18
+aiofiles>=24.1.0
+sse-starlette>=2.1.3
