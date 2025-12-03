@@ -329,3 +329,13 @@ class FourWayTrafficController:
         # Emergency mode
         self.emergency_mode: bool = False
         self.emergency_lane: Optional[str] = None
+        self.emergency_start_time: Optional[float] = None
+        self.emergency_duration: int = 30  # seconds
+        
+        # Fuzzy controller for computing green durations
+        self.fuzzy_controller = FuzzyTrafficController()
+        
+        # Auto-tick timing
+        self.last_tick_time: float = time.time()
+        self.auto_tick_enabled: bool = True
+        
