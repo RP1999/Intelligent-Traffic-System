@@ -75,3 +75,8 @@ class ViolationTrendsResponse {
       trends: ((json['trends'] ?? []) as List)
           .map((t) => ViolationTrend.fromJson(t))
           .toList(),
+    );
+  }
+
+  /// Get aggregated violation counts by type
+  Map<String, int> get aggregatedByType {
