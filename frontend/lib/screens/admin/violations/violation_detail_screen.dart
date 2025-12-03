@@ -110,3 +110,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                   child: Column(
                     children: [
                       _buildFineBreakdownCard(violation),
+                      const SizedBox(height: 24),
+                      _buildViolationInfoCard(violation),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEvidenceCard(Violation violation) {
+    return Container(
+      decoration: BoxDecoration(
