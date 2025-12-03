@@ -113,3 +113,26 @@ class ViolationsProvider extends ChangeNotifier {
       rethrow;
     } catch (e) {
       _errorMessage = 'Error loading violations: $e';
+      _state = LoadingState.error;
+    }
+
+    notifyListeners();
+  }
+
+  /// Load next page
+  Future<void> loadNextPage() async {
+    if (!hasMore || _state == LoadingState.loading) return;
+    _currentPage++;
+    await loadViolations();
+  }
+
+  /// Set search query and reload
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    loadViolations(refresh: true);
+  }
+
+  /// Set status filter
+  void setStatusFilter(String? status) {
+    _statusFilter = status;
+    loadViolations(refresh: true);
