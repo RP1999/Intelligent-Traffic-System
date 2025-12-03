@@ -183,3 +183,17 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
+                  'MANUAL',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 9,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        // FIX: Always show NORTH lane status (matches the video feed)
+        Text(
+          'North Lane: ${_currentState.name.toUpperCase()}',
