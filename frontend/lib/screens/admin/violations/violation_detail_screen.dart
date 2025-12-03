@@ -94,3 +94,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left side - Evidence Card
+                Expanded(
+                  flex: 3,
+                  child: _buildEvidenceCard(violation),
+                ),
+                const SizedBox(width: 24),
+                
+                // Right side - Fine Breakdown
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    children: [
+                      _buildFineBreakdownCard(violation),
