@@ -319,3 +319,13 @@ class FourWayTrafficController:
         # Current green lane and timing
         self.current_green_lane: str = 'north'
         self.green_remaining: int = 30
+        self.yellow_remaining: int = 0
+        self.is_yellow_phase: bool = False
+        
+        # Simulation timing
+        self.last_sim_update: float = time.time()
+        self.sim_update_interval: int = 10  # seconds between simulated data updates
+        
+        # Emergency mode
+        self.emergency_mode: bool = False
+        self.emergency_lane: Optional[str] = None
