@@ -80,3 +80,7 @@ class ViolationTrendsResponse {
 
   /// Get aggregated violation counts by type
   Map<String, int> get aggregatedByType {
+    final result = <String, int>{};
+    for (final trend in trends) {
+      for (final entry in trend.byType.entries) {
+        result[entry.key] = (result[entry.key] ?? 0) + entry.value;
