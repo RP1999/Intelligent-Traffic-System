@@ -154,3 +154,42 @@ class Detection:
             "track_id": self.track_id,
             "class_id": self.class_id,
             "class_name": self.class_name,
+            "confidence": round(self.confidence, 3),
+            "bbox": self.bbox,
+            "centroid": self.centroid,
+            "area": self.area,
+            "timestamp": self.timestamp,
+            "has_plate": self.has_plate,
+            "plate_bbox": self.plate_bbox,
+            "plate_text": self.plate_text,
+            "speed_kmh": round(self.speed_kmh, 1),
+            "speed_pixels": round(self.speed_pixels, 1),
+            "is_speeding": self.is_speeding,
+            "parking_time": round(self.parking_time, 1),
+            "parking_status": self.parking_status,
+            "parking_zone": self.parking_zone,
+            "is_penalized": self.is_penalized,
+        }
+
+
+@dataclass 
+class FrameResult:
+    """Container for detection results from a single frame."""
+    frame_id: int
+    timestamp: float
+    detections: List[Detection]
+    inference_time_ms: float
+    plate_boxes: List[Tuple[int, int, int, int]] = field(default_factory=list)
+    image: Optional[np.ndarray] = None
+    vehicle_count: int = 0
+    speeding_count: int = 0
+    parking_warnings: int = 0
+    parking_violations: int = 0
+    signal_state: Optional[str] = None
+    signal_duration: Optional[int] = None
+    
+    def to_dict(self) -> dict:
+        return {
+            "frame_id": self.frame_id,
+            "timestamp": self.timestamp,
+            "detection_count": len(self.detections),
