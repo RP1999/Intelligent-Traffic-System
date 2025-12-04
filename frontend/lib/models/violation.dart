@@ -42,3 +42,8 @@ class Violation {
       evidencePath: json['evidence_path'],
       notes: json['notes'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'violation_id': violationId,
