@@ -193,3 +193,42 @@ class FrameResult:
             "frame_id": self.frame_id,
             "timestamp": self.timestamp,
             "detection_count": len(self.detections),
+            "plate_count": len(self.plate_boxes),
+            "inference_time_ms": round(self.inference_time_ms, 2),
+            "vehicle_count": self.vehicle_count,
+            "speeding_count": self.speeding_count,
+            "parking_warnings": self.parking_warnings,
+            "parking_violations": self.parking_violations,
+            "signal_state": self.signal_state,
+            "signal_duration": self.signal_duration,
+            "detections": [d.to_dict() for d in self.detections],
+        }
+
+
+# ============================================================================
+# CLASS DEFINITIONS
+# ============================================================================
+
+VEHICLE_CLASSES = {
+    2: "car",
+    3: "motorcycle", 
+    5: "bus",
+    7: "truck",
+}
+
+# Emergency vehicle classes (for YOLO retraining)
+EMERGENCY_CLASSES = {
+    8: "ambulance",
+    # Future additions:
+    # 9: "fire_truck",
+    # 10: "police_car",
+}
+
+TRAFFIC_CLASSES = {
+    **VEHICLE_CLASSES,
+    **EMERGENCY_CLASSES,
+    0: "person",
+    1: "bicycle",
+}
+
+VEHICLE_CLASS_IDS = [2, 3, 5, 7]
