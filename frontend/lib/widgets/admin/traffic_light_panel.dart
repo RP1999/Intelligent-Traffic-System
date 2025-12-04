@@ -197,3 +197,24 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
         // FIX: Always show NORTH lane status (matches the video feed)
         Text(
           'North Lane: ${_currentState.name.toUpperCase()}',
+          style: AppTypography.caption.copyWith(
+            color: _getStateColor(),
+            fontWeight: FontWeight.bold,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainJunction() {
+    return Center(
+      child: Column(
+        children: [
+          // FIX: Main light is always NORTH - the video feed lane
+          Text(
+            'North Lane (Video Feed)',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
