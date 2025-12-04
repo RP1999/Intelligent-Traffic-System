@@ -339,3 +339,14 @@ class FourWayTrafficController:
         self.last_tick_time: float = time.time()
         self.auto_tick_enabled: bool = True
         
+        # Initialize with north green
+        self.lane_states['north'] = 'green'
+        self._update_simulated_lanes()
+        
+        print("[OK] 4-Way Hybrid Traffic Controller initialized")
+    
+    def _update_simulated_lanes(self):
+        """Generate random traffic density for simulated lanes (S, E, W)."""
+        current_time = time.time()
+        
+        if current_time - self.last_sim_update >= self.sim_update_interval:
