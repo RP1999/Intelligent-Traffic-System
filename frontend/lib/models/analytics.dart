@@ -84,3 +84,7 @@ class ViolationTrendsResponse {
     for (final trend in trends) {
       for (final entry in trend.byType.entries) {
         result[entry.key] = (result[entry.key] ?? 0) + entry.value;
+      }
+    }
+    return result;
+  }
