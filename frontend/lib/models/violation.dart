@@ -40,3 +40,5 @@ class Violation {
       location: json['location'],
       snapshotPath: json['snapshot_path'],
       evidencePath: json['evidence_path'],
+      notes: json['notes'],
+    );
