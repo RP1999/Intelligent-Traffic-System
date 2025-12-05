@@ -142,3 +142,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.photo_library, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text(
+                  'Evidence',
+                  style: AppTypography.h3,
+                ),
+                const Spacer(),
+                _buildViolationTypeBadge(violation.violationType),
+              ],
+            ),
