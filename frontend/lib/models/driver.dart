@@ -106,3 +106,32 @@ class DriverViolation {
   }
 }
 
+/// Response wrapper for paginated drivers
+class DriversResponse {
+  final List<Driver> drivers;
+  final int total;
+  final int limit;
+  final int offset;
+
+  DriversResponse({
+    required this.drivers,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
+
+  factory DriversResponse.fromJson(Map<String, dynamic> json) {
+    return DriversResponse(
+      drivers: ((json['drivers'] ?? []) as List)
+          .map((d) => Driver.fromJson(d))
+          .toList(),
+      total: json['total'] ?? 0,
+      limit: json['limit'] ?? 50,
+      offset: json['offset'] ?? 0,
+    );
+  }
+
+  bool get hasMore => offset + drivers.length < total;
+  int get currentPage => (offset / limit).floor() + 1;
+  int get totalPages => (total / limit).ceil();
+}
