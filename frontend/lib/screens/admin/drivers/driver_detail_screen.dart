@@ -110,3 +110,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             blurRadius: 10,
           ),
         ],
+      ),
+      child: Column(
+        children: [
+          // Header with avatar
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getRiskColor(driver.riskLevel),
+                  _getRiskColor(driver.riskLevel).withOpacity(0.6),
+                ],
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
