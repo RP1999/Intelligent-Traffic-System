@@ -52,4 +52,30 @@ class Driver {
 
   Map<String, dynamic> toJson() {
     return {
-  
+        'driver_id': driverId,
+      'current_score': currentScore,
+      'total_violations': totalViolations,
+      'total_fines': totalFines,
+      'last_violation': lastViolation?.toIso8601String(),
+      'risk_level': riskLevel,
+      'phone': phone,
+      'name': name,
+    };
+  }
+
+  /// Get display-friendly risk level
+  String get displayRiskLevel {
+    switch (riskLevel.toLowerCase()) {
+      case 'excellent':
+        return 'Excellent';
+      case 'good':
+        return 'Good';
+      case 'fair':
+        return 'Fair';
+      case 'poor':
+        return 'Poor';
+      case 'critical':
+        return 'Critical';
+      default:
+        return riskLevel;
+    }
