@@ -232,3 +232,42 @@ TRAFFIC_CLASSES = {
 }
 
 VEHICLE_CLASS_IDS = [2, 3, 5, 7]
+EMERGENCY_CLASS_IDS = [8]  # Ambulance - triggers emergency mode
+ALL_VEHICLE_CLASS_IDS = VEHICLE_CLASS_IDS + EMERGENCY_CLASS_IDS
+
+
+# ============================================================================
+# LAZY SERVICE IMPORTS
+# ============================================================================
+
+_ocr_service = None
+_scoring_engine = None
+_traffic_controller = None
+_tts_service = None
+_lane_weaving_service = None
+_behavior_service = None
+
+
+def get_ocr_service():
+    """Lazy load OCR service."""
+    global _ocr_service
+    if _ocr_service is None:
+        try:
+            from app.services.ocr_service import read_plate
+            _ocr_service = read_plate
+            print("✅ OCR service loaded")
+        except ImportError as e:
+            print(f"⚠️ OCR service not available: {e}")
+            _ocr_service = lambda x: None
+    return _ocr_service
+
+
+def get_lane_weaving_service():
+    """Lazy load lane weaving detection service (Member 2)."""
+    global _lane_weaving_service
+    if _lane_weaving_service is None:
+        try:
+            from app.services import lane_weaving_service
+            _lane_weaving_service = lane_weaving_service
+            print("✅ Lane weaving service loaded (Member 2)")
+        except ImportError as e:
