@@ -79,3 +79,30 @@ class Driver {
       default:
         return riskLevel;
     }
+  }
+}
+
+/// Simplified violation for driver history
+class DriverViolation {
+  final String violationId;
+  final String violationType;
+  final DateTime timestamp;
+  final double fineAmount;
+
+  DriverViolation({
+    required this.violationId,
+    required this.violationType,
+    required this.timestamp,
+    required this.fineAmount,
+  });
+
+  factory DriverViolation.fromJson(Map<String, dynamic> json) {
+    return DriverViolation(
+      violationId: json['violation_id'] ?? '',
+      violationType: json['violation_type'] ?? 'unknown',
+      timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      fineAmount: (json['fine_amount'] ?? 0).toDouble(),
+    );
+  }
+}
+
