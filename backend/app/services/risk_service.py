@@ -335,3 +335,34 @@ def get_high_risk_vehicles(threshold: float = 60.0, limit: int = 20) -> List[Dic
         conn.close()
 
 
+def log_abnormal_behavior(
+    vehicle_id: int,
+    behavior_type: str,
+    severity: str,
+    details: str = None,
+    plate_number: str = None
+) -> int:
+    """
+    Log an abnormal driving behavior to the database.
+    
+    Args:
+        vehicle_id: Track ID of the vehicle
+        behavior_type: Type of behavior ('sudden_stop', 'harsh_brake', 'lane_drift', 'wrong_way')
+        severity: Severity level ('warning', 'danger', 'critical')
+        details: Optional JSON or text details
+        plate_number: Optional license plate
+        
+    Returns:
+        ID of the inserted record.
+    """
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO abnormal_behavior_log (
+                vehicle_id, plate_number, behavior_type, severity, details
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (vehicle_id, plate_number, behavior_type, severity, details))
+        
+        conn.commit()
