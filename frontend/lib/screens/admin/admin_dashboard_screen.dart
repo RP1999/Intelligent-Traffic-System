@@ -228,3 +228,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 const Icon(Icons.warning_amber_rounded, color: Colors.white),
                 const SizedBox(width: 8),
+                Text(
+                  'EMERGENCY',
+                  style: AppTypography.buttonMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
