@@ -312,3 +312,26 @@ def get_high_risk_vehicles(threshold: float = 60.0, limit: int = 20) -> List[Dic
     
     Args:
         threshold: Minimum risk score
+        limit: Maximum number of records
+        
+    Returns:
+        List of high-risk vehicle records.
+    """
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT * FROM risk_scores 
+            WHERE risk_score >= ? 
+            ORDER BY risk_score DESC 
+            LIMIT ?
+        """, (threshold, limit))
+        
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+    finally:
+        conn.close()
+
+
