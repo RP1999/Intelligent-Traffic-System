@@ -13,3 +13,8 @@ class ViolationsProvider extends ChangeNotifier {
   // State
   LoadingState _state = LoadingState.initial;
   String? _errorMessage;
+  List<Violation> _violations = [];
+  int _total = 0;
+  int _currentPage = 1;
+  final int _pageSize = 20;
+
