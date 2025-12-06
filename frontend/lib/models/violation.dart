@@ -22,3 +22,6 @@ class Violation {
     this.location,
     required this.fineAmount,
     required this.pointsDeducted,
+    this.evidencePath,
+    this.snapshotPath,
+    this.notes,
