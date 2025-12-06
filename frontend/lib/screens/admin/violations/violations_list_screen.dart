@@ -46,3 +46,19 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
       context.read<ViolationsProvider>().loadNextPage();
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // Sidebar
+          AdminSidebar(
+            selectedIndex: 2, // Violations index
+            onItemSelected: (index) => _handleNavigation(index),
+          ),
+          
+          // Main content
+          Expanded(
+            child: Container(
+              color: AppColors.background,
