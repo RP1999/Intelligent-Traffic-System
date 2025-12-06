@@ -199,3 +199,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildEmergencyButton(),
         ],
       ),
+    );
+  }
+
+  Widget _buildEmergencyButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF4444), Color(0xFFCC0000)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
