@@ -250,3 +250,26 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
                 const SizedBox(height: 8),
                 _buildLight(
                   color: Colors.green,
+                  isActive: _currentState == TrafficLightState.green,
+                  size: 40,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildSimulatedJunctions() {
+    // Show south, east, west lanes from backend (all coordinated)
+    final otherLanes = ['south', 'east', 'west'];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: otherLanes.map((lane) {
+        final laneInfo = _laneData[lane];
+        final stateStr = laneInfo?['state'] ?? 'red';
+        final state = stateStr == 'green' ? TrafficLightState.green
+            : stateStr == 'yellow' ? TrafficLightState.yellow
+            : TrafficLightState.red;
+        final junctionName = _laneToJunction[lane] ?? 'Junction';
