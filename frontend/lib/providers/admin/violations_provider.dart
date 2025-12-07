@@ -18,3 +18,8 @@ class ViolationsProvider extends ChangeNotifier {
   int _currentPage = 1;
   final int _pageSize = 20;
 
+  // Filters
+  String _searchQuery = '';
+  String? _statusFilter;
+  String? _typeFilter;
+  String? _dateFrom;
