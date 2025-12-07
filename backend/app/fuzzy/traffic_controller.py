@@ -350,3 +350,14 @@ class FourWayTrafficController:
         current_time = time.time()
         
         if current_time - self.last_sim_update >= self.sim_update_interval:
+            self.lane_counts['south'] = random.randint(0, 20)
+            self.lane_counts['east'] = random.randint(0, 20)
+            self.lane_counts['west'] = random.randint(0, 20)
+            self.last_sim_update = current_time
+    
+    def get_simulated_density(self) -> Dict[str, int]:
+        """
+        Get current simulated traffic density for virtual lanes.
+        
+        Returns:
+            Dict with vehicle counts for south, east, west lanes.
