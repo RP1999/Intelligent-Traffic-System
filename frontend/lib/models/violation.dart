@@ -25,3 +25,6 @@ class Violation {
     this.evidencePath,
     this.snapshotPath,
     this.notes,
+    this.status = 'unpaid',
+  });
+
