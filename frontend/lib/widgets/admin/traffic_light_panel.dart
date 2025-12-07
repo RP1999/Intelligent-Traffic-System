@@ -239,3 +239,14 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
                 _buildLight(
                   color: Colors.red,
                   isActive: _currentState == TrafficLightState.red,
+                  size: 40,
+                ),
+                const SizedBox(height: 8),
+                _buildLight(
+                  color: Colors.amber,
+                  isActive: _currentState == TrafficLightState.yellow,
+                  size: 40,
+                ),
+                const SizedBox(height: 8),
+                _buildLight(
+                  color: Colors.green,
