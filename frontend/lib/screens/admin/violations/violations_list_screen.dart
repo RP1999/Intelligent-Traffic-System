@@ -62,3 +62,19 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
           Expanded(
             child: Container(
               color: AppColors.background,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  _buildFilters(),
+                  Expanded(child: _buildViolationsTable()),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNavigation(int index) {
