@@ -48,3 +48,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
   void dispose() {
     _animController.dispose();
     _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.driverLogin(
+      _phoneController.text.trim(),
+      _passwordController.text,
+    );
+    
+    if (success && mounted) {
+      Navigator.of(context).pushReplacementNamed('/driver/home');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
