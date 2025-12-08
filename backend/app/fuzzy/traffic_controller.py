@@ -361,3 +361,26 @@ class FourWayTrafficController:
         
         Returns:
             Dict with vehicle counts for south, east, west lanes.
+        """
+        self._update_simulated_lanes()
+        return {
+            'south': self.lane_counts['south'],
+            'east': self.lane_counts['east'],
+            'west': self.lane_counts['west']
+        }
+    
+    def update_north_count(self, yolo_count: int):
+        """
+        Update North lane with real YOLO detection count.
+        
+        Args:
+            yolo_count: Number of vehicles detected by YOLO in video feed.
+        """
+        self.lane_counts['north'] = yolo_count
+    
+    def activate_emergency_mode(self, lane: str = 'north') -> Dict:
+        """
+        Activate emergency mode for a specific lane.
+        Forces that lane GREEN immediately, ALL others RED.
+        Called when ambulance is detected by YOLO.
+        
