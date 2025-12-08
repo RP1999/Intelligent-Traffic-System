@@ -48,3 +48,13 @@ MAX_SAFETY_SCORE = 100
 
 # ============================================================================
 # DATA CLASSES
+# ============================================================================
+
+@dataclass
+class VehicleTrack:
+    """Tracks a vehicle's position history for behavior analysis."""
+    track_id: int
+    positions: deque = field(default_factory=lambda: deque(maxlen=60))
+    timestamps: deque = field(default_factory=lambda: deque(maxlen=60))
+    is_weaving: bool = False
+    is_wrong_way: bool = False
