@@ -237,3 +237,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleEmergency() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: AppColors.error),
+            const SizedBox(width: 12),
+            const Text('Emergency Override'),
+          ],
+        ),
+        content: const Text(
+          'This will override all traffic signals and switch to emergency mode. '
+          'All intersections will display flashing yellow.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
