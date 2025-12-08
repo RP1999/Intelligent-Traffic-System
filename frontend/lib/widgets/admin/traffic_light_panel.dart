@@ -273,3 +273,19 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
             : stateStr == 'yellow' ? TrafficLightState.yellow
             : TrafficLightState.red;
         final junctionName = _laneToJunction[lane] ?? 'Junction';
+        final isCurrentGreen = laneInfo?['is_current_green'] ?? false;
+        
+        return _buildMiniJunction(junctionName, state, isCurrentGreen, lane);
+      }).toList(),
+    );
+  }
+  
+  Widget _buildMiniJunction(String name, TrafficLightState state, bool isCurrentGreen, String lane) {
+    Color activeColor;
+    switch (state) {
+      case TrafficLightState.red:
+        activeColor = Colors.red;
+        break;
+      case TrafficLightState.yellow:
+        activeColor = Colors.amber;
+        break;
