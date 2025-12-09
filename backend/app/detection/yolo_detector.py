@@ -271,3 +271,42 @@ def get_lane_weaving_service():
             _lane_weaving_service = lane_weaving_service
             print("✅ Lane weaving service loaded (Member 2)")
         except ImportError as e:
+            print(f"⚠️ Lane weaving service not available: {e}")
+            _lane_weaving_service = None
+    return _lane_weaving_service
+
+
+def get_behavior_service():
+    """Lazy load abnormal behavior detection service (Member 4)."""
+    global _behavior_service
+    if _behavior_service is None:
+        try:
+            from app.services import behavior_service
+            _behavior_service = behavior_service
+            print("✅ Behavior detection service loaded (Member 4)")
+        except ImportError as e:
+            print(f"⚠️ Behavior service not available: {e}")
+            _behavior_service = None
+    return _behavior_service
+
+
+def get_scoring_engine():
+    """Lazy load scoring engine for database violations."""
+    global _scoring_engine
+    if _scoring_engine is None:
+        try:
+            from app.scoring import get_scoring_engine as _get_engine, ViolationType
+            _scoring_engine = {"engine": _get_engine(), "ViolationType": ViolationType}
+            print("✅ Scoring engine loaded")
+        except ImportError as e:
+            print(f"⚠️ Scoring engine not available: {e}")
+            _scoring_engine = {"engine": None, "ViolationType": None}
+    return _scoring_engine
+
+
+def get_traffic_controller():
+    """Lazy load 4-way traffic signal controller."""
+    global _traffic_controller
+    if _traffic_controller is None:
+        try:
+            from app.fuzzy.traffic_controller import get_four_way_controller
