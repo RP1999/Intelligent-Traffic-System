@@ -158,3 +158,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                 _buildViolationTypeBadge(violation.violationType),
               ],
             ),
+          ),
+          
+          // Evidence Images
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Full Snapshot
+                Text(
+                  'Full Snapshot',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
