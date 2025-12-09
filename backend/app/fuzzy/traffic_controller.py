@@ -384,3 +384,20 @@ class FourWayTrafficController:
         Forces that lane GREEN immediately, ALL others RED.
         Called when ambulance is detected by YOLO.
         
+        SAFETY: Only ONE lane can be green at a time.
+        
+        Args:
+            lane: Lane to set GREEN (default 'north' since video = north)
+            
+        Returns:
+            Status dict with emergency info.
+        """
+        if lane not in self.LANES:
+            lane = 'north'
+        
+        self.emergency_mode = True
+        self.emergency_lane = lane
+        self.emergency_start_time = time.time()
+        
+        # SAFETY: Force ALL lanes to RED first, then set target to GREEN
+        for l in self.LANES:
