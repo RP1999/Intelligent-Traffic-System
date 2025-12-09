@@ -126,3 +126,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               ),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 10,
+                      ),
+                    ],
