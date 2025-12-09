@@ -401,3 +401,22 @@ class FourWayTrafficController:
         
         # SAFETY: Force ALL lanes to RED first, then set target to GREEN
         for l in self.LANES:
+            self.lane_states[l] = 'red'
+        self.lane_states[lane] = 'green'
+        
+        self.current_green_lane = lane
+        self.is_yellow_phase = False
+        self.green_remaining = self.emergency_duration
+        self.yellow_remaining = 0
+        
+        print(f"[EMERGENCY] 🚑 Lane {lane.upper()} forced GREEN - ALL others RED!")
+        
+        return {
+            'status': 'emergency_activated',
+            'green_lane': lane,
+            'duration': self.emergency_duration,
+            'message': f'Emergency mode: {lane.upper()} lane forced GREEN'
+        }
+    
+    def deactivate_emergency_mode(self) -> Dict:
+        """
