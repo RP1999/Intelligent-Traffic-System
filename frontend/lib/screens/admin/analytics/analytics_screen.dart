@@ -284,3 +284,107 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       builder: (context, provider, _) {
         return Container(
           height: 350,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: AppColors.border),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.show_chart, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Violation Trends (${provider.trendPeriod} Days)',
+                      style: AppTypography.h3,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Chart
+              Expanded(
+                child: provider.trendsState == LoadingState.loading
+                    ? const LoadingWidget(message: 'Loading trends...')
+                    : provider.trends == null || provider.trends!.trends.isEmpty
+                        ? _buildEmptyChart('No trend data available')
+                        : Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: LineChart(_buildLineChartData(provider)),
+                          ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  LineChartData _buildLineChartData(AnalyticsProvider provider) {
+    final trends = provider.trends!.trends;
+    
+    final spots = trends.asMap().entries.map((entry) {
+      return FlSpot(entry.key.toDouble(), entry.value.total.toDouble());
+    }).toList();
+
+    return LineChartData(
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        horizontalInterval: 5,
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: AppColors.border,
+            strokeWidth: 1,
+          );
+        },
+      ),
+      titlesData: FlTitlesData(
+        show: true,
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 30,
+            interval: 1,
+            getTitlesWidget: (value, meta) {
+              if (value.toInt() >= trends.length || value.toInt() < 0) {
+                return const SizedBox.shrink();
+              }
+              final date = trends[value.toInt()].date;
+              return Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  date.substring(5), // MM-DD
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 40,
+            getTitlesWidget: (value, meta) {
+              return Text(
+                value.toInt().toString(),
+                style: AppTypography.labelSmall.copyWith(
