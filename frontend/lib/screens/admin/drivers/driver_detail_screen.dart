@@ -142,3 +142,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                         blurRadius: 10,
                       ),
                     ],
+                  ),
+                  child: const Icon(
+                    Icons.person,
+                    size: 40,
+                    color: AppColors.surfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  driver.name ?? 'Unknown Driver',
+                  style: AppTypography.h3.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  driver.driverId,
+                  style: AppTypography.bodyMedium.copyWith(
