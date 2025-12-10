@@ -98,3 +98,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
                     const SizedBox(height: 48),
                     
                     // Login form
+                    _buildLoginForm(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Register link
+                    _buildRegisterLink(),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // Footer
+                    _buildFooter(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        // Animated car icon
