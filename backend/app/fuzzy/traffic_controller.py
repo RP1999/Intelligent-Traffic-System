@@ -420,3 +420,13 @@ class FourWayTrafficController:
     
     def deactivate_emergency_mode(self) -> Dict:
         """
+        Deactivate emergency mode and resume normal round-robin cycle.
+        
+        Returns:
+            Status dict confirming deactivation.
+        """
+        self.emergency_mode = False
+        self.emergency_lane = None
+        self.emergency_start_time = None
+        
+        # Resume from current green lane
