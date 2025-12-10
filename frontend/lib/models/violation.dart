@@ -28,3 +28,6 @@ class Violation {
     this.status = 'unpaid',
   });
 
+  factory Violation.fromJson(Map<String, dynamic> json) {
+    return Violation(
+      violationId: json['violation_id'] ?? '',
