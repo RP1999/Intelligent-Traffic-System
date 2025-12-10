@@ -430,3 +430,18 @@ class FourWayTrafficController:
         self.emergency_start_time = None
         
         # Resume from current green lane
+        self.green_remaining = 30
+        
+        print("[OK] Emergency mode deactivated - Resuming normal cycle")
+        
+        return {
+            'status': 'emergency_deactivated',
+            'message': 'Resuming normal round-robin cycle'
+        }
+    
+    def _check_emergency_timeout(self):
+        """Check if emergency mode should auto-deactivate."""
+        if self.emergency_mode and self.emergency_start_time:
+            elapsed = time.time() - self.emergency_start_time
+            if elapsed >= self.emergency_duration:
+                self.deactivate_emergency_mode()
