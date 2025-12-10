@@ -123,3 +123,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
     return Column(
       children: [
         // Animated car icon
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary.withOpacity(0.2),
+                AppColors.accent.withOpacity(0.1),
+              ],
+            ),
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.3),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.2),
+                blurRadius: 30,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.directions_car,
