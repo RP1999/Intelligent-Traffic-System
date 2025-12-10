@@ -34,3 +34,7 @@ class DriversProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   List<Driver> get drivers => _drivers;
   int get total => _total;
+  int get currentPage => _currentPage;
+  int get totalPages => (_total / _pageSize).ceil();
+  bool get hasMore => _drivers.length < _total;
+  String get sortBy => _sortBy;
