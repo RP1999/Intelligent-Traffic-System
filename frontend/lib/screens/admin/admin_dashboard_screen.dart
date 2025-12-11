@@ -251,3 +251,51 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         title: Row(
           children: [
             Icon(Icons.warning, color: AppColors.error),
+            const SizedBox(width: 12),
+            const Text('Emergency Override'),
+          ],
+        ),
+        content: const Text(
+          'This will override all traffic signals and switch to emergency mode. '
+          'All intersections will display flashing yellow.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _activateEmergency();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Activate Emergency'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _activateEmergency() async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Activating emergency mode...'),
+            ],
+          ),
+          backgroundColor: AppColors.warning,
