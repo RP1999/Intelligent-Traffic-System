@@ -366,3 +366,28 @@ def log_abnormal_behavior(
         """, (vehicle_id, plate_number, behavior_type, severity, details))
         
         conn.commit()
+        log_id = cursor.lastrowid
+        print(f"[BEHAVIOR] Logged {behavior_type} ({severity}) for vehicle {vehicle_id}")
+        return log_id
+        
+    finally:
+        conn.close()
+
+
+def calculate_and_save_risk(
+    vehicle_id: int,
+    speed: float,
+    speed_limit: float = 60.0,
+    plate_number: str = None
+) -> Dict:
+    """
+    Calculate risk score from database violation history and save result.
+    
+    Args:
+        vehicle_id: Track ID of the vehicle
+        speed: Current vehicle speed
+        speed_limit: Speed limit for the zone
+        plate_number: Optional license plate
+        
+    Returns:
+        Dict with risk score details.
