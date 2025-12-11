@@ -174,3 +174,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                Container(
+                  height: 300,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: violation.snapshotPath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            '${AppConfig.apiBaseUrl}/snapshots/${violation.snapshotPath}',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderImage('Snapshot not available');
