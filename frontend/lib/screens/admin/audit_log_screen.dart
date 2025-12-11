@@ -238,3 +238,59 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.border),
+        ),
+      ),
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          // Action filter
+          SizedBox(
+            width: 180,
+            child: DropdownButtonFormField<String?>(
+              value: _selectedAction,
+              isExpanded: true,  // Fix overflow
+              decoration: InputDecoration(
+                labelText: 'Filter by Action',
+                prefixIcon: const Icon(Icons.filter_list, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                isDense: true,
+              ),
+              dropdownColor: AppColors.surface,
+              items: const [
+                DropdownMenuItem(value: null, child: Text('All Actions')),
+                DropdownMenuItem(value: 'login', child: Text('Login')),
+                DropdownMenuItem(value: 'logout', child: Text('Logout')),
+                DropdownMenuItem(value: 'zone_create', child: Text('Zone Create')),
+                DropdownMenuItem(value: 'zone_update', child: Text('Zone Update')),
+                DropdownMenuItem(value: 'zone_delete', child: Text('Zone Delete')),
+                DropdownMenuItem(value: 'violation_create', child: Text('Violation Create')),
+                DropdownMenuItem(value: 'settings_update', child: Text('Settings Update')),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedAction = value;
+                  _currentPage = 1;
+                });
+                _loadLogs();
+              },
+            ),
+          ),
+          
+          // Date range picker
+          OutlinedButton.icon(
+            onPressed: _selectDateRange,
+            icon: const Icon(Icons.date_range),
+            label: Text(
+              _dateRange != null
+                  ? '${DateFormat('MMM d').format(_dateRange!.start)} - ${DateFormat('MMM d').format(_dateRange!.end)}'
+                  : 'Select Date Range',
+            ),
+          ),
+          
