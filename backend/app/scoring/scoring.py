@@ -58,3 +58,15 @@ class ViolationRecord:
     location: Optional[str] = None
     points_deducted: int = 0
     fine_amount: float = 0.0
+    license_plate: Optional[str] = None
+    snapshot_path: Optional[str] = None
+    notes: str = ""
+    
+    def to_dict(self) -> dict:
+        return {
+            "violation_id": self.violation_id,
+            "driver_id": self.driver_id,
+            "violation_type": self.violation_type.value,
+            "timestamp": datetime.fromtimestamp(self.timestamp).isoformat(),
+            "location": self.location,
+            "points_deducted": self.points_deducted,
