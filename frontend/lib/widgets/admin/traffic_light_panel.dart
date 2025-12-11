@@ -289,3 +289,14 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
       case TrafficLightState.yellow:
         activeColor = Colors.amber;
         break;
+      case TrafficLightState.green:
+        activeColor = Colors.green;
+        break;
+    }
+    
+    // Display short name (just the letter)
+    final shortName = name.split(' ')[1];  // e.g., "Junction B (South)" -> "B"
+    final directionName = name.split('(').last.replaceAll(')', '');  // e.g., "South"
+    
+    return Column(
+      children: [
