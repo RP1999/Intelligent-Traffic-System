@@ -70,3 +70,15 @@ class ViolationRecord:
             "timestamp": datetime.fromtimestamp(self.timestamp).isoformat(),
             "location": self.location,
             "points_deducted": self.points_deducted,
+            "fine_amount": self.fine_amount,
+            "license_plate": self.license_plate,
+            "snapshot_path": self.snapshot_path,
+            "notes": self.notes,
+        }
+
+
+@dataclass
+class DriverScore:
+    """
+    Driver score tracking with violation history.
+    
