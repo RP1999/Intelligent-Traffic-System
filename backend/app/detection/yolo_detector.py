@@ -310,3 +310,42 @@ def get_traffic_controller():
     if _traffic_controller is None:
         try:
             from app.fuzzy.traffic_controller import get_four_way_controller
+            _traffic_controller = get_four_way_controller()
+            print("[OK] 4-Way Traffic controller loaded")
+        except ImportError as e:
+            print(f"[WARNING] Traffic controller not available: {e}")
+            _traffic_controller = None
+    return _traffic_controller
+
+
+# Emergency detection state
+_last_emergency_detection_time: float = 0
+EMERGENCY_COOLDOWN_SECONDS: float = 30.0  # Don't re-trigger for 30 seconds
+
+
+def check_for_emergency_vehicle(detections: list) -> tuple:
+    """
+    Check if any detection is an emergency vehicle (ambulance).
+    
+    Args:
+        detections: List of Detection objects from current frame.
+        
+    Returns:
+        Tuple of (is_emergency, vehicle_type, track_id)
+    """
+    for det in detections:
+        if det.class_id in EMERGENCY_CLASS_IDS:
+            vehicle_type = EMERGENCY_CLASSES.get(det.class_id, 'emergency')
+            return (True, vehicle_type, det.track_id)
+    return (False, None, None)
+
+
+def trigger_emergency_if_detected(detections: list) -> dict:
+    """
+    If an ambulance is detected, trigger emergency mode on the 4-way controller.
+    Includes cooldown to prevent spam.
+    
+    Args:
+        detections: List of Detection objects from current frame.
+        
+    Returns:
