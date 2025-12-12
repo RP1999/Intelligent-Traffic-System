@@ -190,3 +190,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
                               return _buildPlaceholderImage('Snapshot not available');
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : _buildPlaceholderImage('No snapshot available'),
+                ),
