@@ -300,3 +300,22 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
     
     return Column(
       children: [
+        Text(
+          '$shortName ($directionName)',
+          style: AppTypography.caption.copyWith(
+            color: isCurrentGreen ? AppColors.primary : AppColors.textSecondary,
+            fontSize: 9,
+            fontWeight: isCurrentGreen ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2A2A2A),
+            borderRadius: BorderRadius.circular(8),
+            border: isCurrentGreen 
+                ? Border.all(color: AppColors.primary, width: 1)
+                : null,
+          ),
+          child: AnimatedBuilder(
