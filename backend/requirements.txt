@@ -18,3 +18,5 @@ websockets>=15.0.1
 ultralytics>=8.3.0
 opencv-python>=4.10.0.84
 numpy>=1.24.0
+
+# --- PyTorch CPU-only (Install separately AFTER requirements.txt) ---
