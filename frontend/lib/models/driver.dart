@@ -19,3 +19,6 @@ class Driver {
     required this.riskLevel,
     this.phone,
     this.name,
+    this.recentViolations,
+  });
+
