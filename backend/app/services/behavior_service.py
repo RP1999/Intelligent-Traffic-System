@@ -228,3 +228,39 @@ def detect_harsh_brake(
     
     Args:
         track_id: Vehicle tracking ID
+        current_speed: Current speed in pixels/second
+        plate_text: License plate if available
+    
+    Returns:
+        BehaviorEvent if harsh brake detected
+    """
+    global _vehicle_behaviors
+    
+    if track_id not in _vehicle_behaviors:
+        _vehicle_behaviors[track_id] = VehicleBehavior(track_id=track_id)
+    
+    behavior = _vehicle_behaviors[track_id]
+    
+    if len(behavior.speeds) < 2:
+        return None
+    
+    # Check cooldown
+    if time.time() - behavior.last_behavior_time < BEHAVIOR_COOLDOWN:
+        return None
+    
+    prev_speed = behavior.speeds[-2] if len(behavior.speeds) >= 2 else current_speed
+    deceleration = prev_speed - current_speed
+    
+    if deceleration > HARSH_BRAKE_PIXEL_THRESHOLD:
+        behavior.harsh_brake_count += 1
+        behavior.last_behavior_time = time.time()
+        behavior.behaviors_detected.append('harsh_brake')
+        
+        severity = SeverityLevel.HIGH if deceleration > HARSH_BRAKE_PIXEL_THRESHOLD * 1.5 else SeverityLevel.MEDIUM
+        
+        event = BehaviorEvent(
+            vehicle_id=track_id,
+            behavior_type=BehaviorType.HARSH_BRAKE,
+            severity=severity,
+            plate_number=plate_text,
+            details={
