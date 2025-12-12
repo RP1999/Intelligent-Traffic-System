@@ -445,3 +445,12 @@ class FourWayTrafficController:
             elapsed = time.time() - self.emergency_start_time
             if elapsed >= self.emergency_duration:
                 self.deactivate_emergency_mode()
+    
+    def _advance_to_next_lane(self):
+        """
+        Move to the next lane in the round-robin cycle.
+        
+        SAFETY: Ensures only ONE lane is green at a time.
+        All other lanes are explicitly set to RED.
+        """
+        current_idx = self.CYCLE_ORDER.index(self.current_green_lane)
