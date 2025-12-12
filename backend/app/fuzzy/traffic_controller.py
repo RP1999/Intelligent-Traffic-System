@@ -454,3 +454,24 @@ class FourWayTrafficController:
         All other lanes are explicitly set to RED.
         """
         current_idx = self.CYCLE_ORDER.index(self.current_green_lane)
+        next_idx = (current_idx + 1) % len(self.CYCLE_ORDER)
+        next_lane = self.CYCLE_ORDER[next_idx]
+        
+        # Calculate green duration for next lane using fuzzy logic
+        vehicle_count = self.lane_counts[next_lane]
+        self.green_remaining = self.fuzzy_controller.compute_green_duration(vehicle_count)
+        
+        # SAFETY: Set ALL lanes to RED first, then set the next lane to GREEN
+        for lane in self.LANES:
+            self.lane_states[lane] = 'red'
+        self.lane_states[next_lane] = 'green'
+        
+        self.current_green_lane = next_lane
+        self.is_yellow_phase = False
+        self.yellow_remaining = 0
+
+    def _set_single_lane_state(self, target_lane: str, state: str):
+        """
+        SAFETY HELPER: Set one lane to a specific state, all others to RED.
+        
+        This ensures only ONE lane can ever be non-red at a time.
