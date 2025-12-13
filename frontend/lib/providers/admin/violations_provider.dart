@@ -136,3 +136,23 @@ class ViolationsProvider extends ChangeNotifier {
   void setStatusFilter(String? status) {
     _statusFilter = status;
     loadViolations(refresh: true);
+  }
+
+  /// Set type filter
+  void setTypeFilter(String? type) {
+    _typeFilter = type;
+    loadViolations(refresh: true);
+  }
+
+  /// Set date range filter
+  void setDateRange(String? from, String? to) {
+    _dateFrom = from;
+    _dateTo = to;
+    loadViolations(refresh: true);
+  }
+
+  /// Clear all filters
+  void clearFilters() {
+    _searchQuery = '';
+    _statusFilter = null;
+    _typeFilter = null;
