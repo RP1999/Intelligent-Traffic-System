@@ -296,3 +296,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               SizedBox(width: 12),
               Text('Activating emergency mode...'),
+            ],
+          ),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Call API to trigger emergency mode
+      final response = await _apiClient.post(ApiEndpoints.emergencyTrigger);
+      
+      if (response.success) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('🚨 Emergency mode ACTIVATED - All signals set to emergency'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
