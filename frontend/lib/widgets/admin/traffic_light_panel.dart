@@ -319,3 +319,26 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
                 : null,
           ),
           child: AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: activeColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: activeColor.withOpacity(0.6),
+                      blurRadius: 12 * _pulseAnimation.value,
+                      spreadRadius: 2 * _pulseAnimation.value,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 2),
+        // Show countdown only for current green lane
+        if (isCurrentGreen)
