@@ -28,3 +28,8 @@ class ViolationsProvider extends ChangeNotifier {
   // Selected violation for detail view
   Violation? _selectedViolation;
   LoadingState _detailState = LoadingState.initial;
+
+  // Getters
+  LoadingState get state => _state;
+  String? get errorMessage => _errorMessage;
+  List<Violation> get violations => _violations;
