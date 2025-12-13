@@ -299,3 +299,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Call API to trigger emergency mode
+      final response = await _apiClient.post(ApiEndpoints.emergencyTrigger);
+      
+      if (response.success) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('🚨 Emergency mode ACTIVATED - All signals set to emergency'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else {
+        throw Exception(response.error ?? 'Unknown error');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to activate emergency: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Widget _buildStatsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: StatCard(
+              title: 'Active Zones',
+              value: _stats?['active_zones']?.toString() ?? '0',
+              icon: Icons.location_on,
+              color: AppColors.primary,
+              isLoading: _isLoading,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: StatCard(
