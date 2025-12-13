@@ -58,3 +58,13 @@ class VehicleTrack:
     timestamps: deque = field(default_factory=lambda: deque(maxlen=60))
     is_weaving: bool = False
     is_wrong_way: bool = False
+    weaving_score: float = 0.0
+    last_direction: Optional[str] = None  # 'left', 'right', None
+    direction_changes: int = 0
+    
+    def add_position(self, x: int, y: int, timestamp: float = None):
+        """Add a new position to the track."""
+        if timestamp is None:
+            timestamp = time.time()
+        self.positions.append((x, y))
+        self.timestamps.append(timestamp)
