@@ -78,3 +78,19 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
   }
 
   void _handleNavigation(int index) {
+    switch (index) {
+      case 0:
+        Navigator.of(context).pushReplacementNamed('/admin/dashboard');
+        break;
+      case 1:
+        Navigator.of(context).pushReplacementNamed('/admin/zones');
+        break;
+      case 2:
+        // Already here
+        break;
+      case 3:
+        Navigator.of(context).pushReplacementNamed('/admin/drivers');
+        break;
+      case 4:
+        Navigator.of(context).pushReplacementNamed('/admin/analytics');
+        break;
