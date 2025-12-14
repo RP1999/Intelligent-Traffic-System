@@ -148,4 +148,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
           ),
           child: const Icon(
             Icons.directions_car,
- 
+             size: 48,
+            color: AppColors.primary,
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        Text(
+          'Welcome Back',
+          style: AppTypography.h1.copyWith(
+            fontSize: 28,
+          ),
+        ),
+        
+        const SizedBox(height: 8),
+        
+        Text(
+          'Sign in to view your driving profile',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
