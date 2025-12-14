@@ -68,3 +68,13 @@ class VehicleTrack:
             timestamp = time.time()
         self.positions.append((x, y))
         self.timestamps.append(timestamp)
+    
+    def get_x_velocities(self, window: int = None) -> List[float]:
+        """Calculate x-axis velocities over recent positions."""
+        if len(self.positions) < 2:
+            return []
+        
+        window = window or WEAVING_WINDOW_FRAMES
+        positions = list(self.positions)[-window:]
+        
+        velocities = []
