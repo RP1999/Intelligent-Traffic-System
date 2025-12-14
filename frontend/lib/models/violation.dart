@@ -34,3 +34,6 @@ class Violation {
       driverId: json['driver_id'] ?? '',
       licensePlate: json['license_plate'],
       violationType: json['violation_type'] ?? 'unknown',
+      timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      location: json['location'],
+      fineAmount: (json['fine_amount'] ?? 0).toDouble(),
