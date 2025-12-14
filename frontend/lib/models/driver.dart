@@ -22,3 +22,6 @@ class Driver {
     this.recentViolations,
   });
 
+  factory Driver.fromJson(Map<String, dynamic> json) {
+    return Driver(
+      driverId: json['driver_id'] ?? '',
