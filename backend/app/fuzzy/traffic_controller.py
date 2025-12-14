@@ -475,3 +475,26 @@ class FourWayTrafficController:
         SAFETY HELPER: Set one lane to a specific state, all others to RED.
         
         This ensures only ONE lane can ever be non-red at a time.
+        
+        Args:
+            target_lane: The lane to set to the given state
+            state: 'green', 'yellow', or 'red'
+        """
+        for lane in self.LANES:
+            if lane == target_lane:
+                self.lane_states[lane] = state
+            else:
+                self.lane_states[lane] = 'red'
+
+    def tick(self, elapsed_seconds: int = 1) -> Dict:
+        """
+        Advance the signal cycle by elapsed seconds.
+        
+        SAFETY: Only ONE lane can be green or yellow at any time.
+        All other lanes are always RED.
+        
+        Args:
+            elapsed_seconds: Time elapsed since last tick (default 1)
+            
+        Returns:
+            Current state of all 4 lanes.
