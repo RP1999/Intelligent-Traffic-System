@@ -173,3 +173,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildLoginForm() {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        return GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Error message
+                  if (authProvider.error != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.error.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
