@@ -82,3 +82,15 @@ class DriverScore:
     """
     Driver score tracking with violation history.
     
+    Score ranges:
+    - 100-90: Excellent (Green)
+    - 89-70: Good (Yellow-Green)
+    - 69-50: Fair (Yellow)
+    - 49-30: Poor (Orange)
+    - 29-0: Critical (Red)
+    """
+    driver_id: str  # Can be license plate or device ID
+    current_score: int = 100
+    total_violations: int = 0
+    total_fines: float = 0.0
+    created_at: float = field(default_factory=time.time)
