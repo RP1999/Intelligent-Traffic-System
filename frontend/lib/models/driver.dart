@@ -25,3 +25,6 @@ class Driver {
   factory Driver.fromJson(Map<String, dynamic> json) {
     return Driver(
       driverId: json['driver_id'] ?? '',
+      currentScore: json['current_score'] ?? 100,
+      totalViolations: json['total_violations'] ?? 0,
+      totalFines: (json['total_fines'] ?? 0).toDouble(),
