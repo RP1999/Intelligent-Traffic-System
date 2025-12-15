@@ -20,3 +20,5 @@ opencv-python>=4.10.0.84
 numpy>=1.24.0
 
 # --- PyTorch CPU-only (Install separately AFTER requirements.txt) ---
+# IMPORTANT: Run this command AFTER installing requirements.txt:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
