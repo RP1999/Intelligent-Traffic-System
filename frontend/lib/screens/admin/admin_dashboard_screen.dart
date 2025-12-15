@@ -316,3 +316,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 5),
           ),
+        );
+      } else {
+        throw Exception(response.error ?? 'Unknown error');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to activate emergency: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
