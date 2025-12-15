@@ -498,3 +498,26 @@ class FourWayTrafficController:
             
         Returns:
             Current state of all 4 lanes.
+        """
+        # Check emergency timeout
+        self._check_emergency_timeout()
+        
+        # Update simulated lane data
+        self._update_simulated_lanes()
+        
+        # Don't advance if in emergency mode
+        if self.emergency_mode:
+            # SAFETY: Ensure emergency lane is green, all others red
+            self._set_single_lane_state(self.emergency_lane, 'green')
+            return self.get_all_states()
+        
+        # Handle yellow phase
+        if self.is_yellow_phase:
+            self.yellow_remaining -= elapsed_seconds
+            if self.yellow_remaining <= 0:
+                self._advance_to_next_lane()
+            else:
+                # SAFETY: Keep current lane yellow, all others red
+                self._set_single_lane_state(self.current_green_lane, 'yellow')
+        else:
+            # Green phase countdown
