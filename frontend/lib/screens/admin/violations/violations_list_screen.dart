@@ -94,3 +94,19 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
       case 4:
         Navigator.of(context).pushReplacementNamed('/admin/analytics');
         break;
+      case 5:
+        Navigator.of(context).pushReplacementNamed('/admin/logs');
+        break;
+      case 6:
+        Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+    }
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
