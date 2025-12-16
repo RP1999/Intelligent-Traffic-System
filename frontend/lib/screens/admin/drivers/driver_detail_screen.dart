@@ -158,3 +158,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 Text(
                   driver.driverId,
                   style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Profile details
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                _buildProfileRow(Icons.phone, 'Phone', driver.phone ?? 'N/A'),
+                const SizedBox(height: 16),
+                _buildProfileRow(
+                  Icons.credit_card,
