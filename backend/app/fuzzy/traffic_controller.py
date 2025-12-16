@@ -521,3 +521,12 @@ class FourWayTrafficController:
                 self._set_single_lane_state(self.current_green_lane, 'yellow')
         else:
             # Green phase countdown
+            self.green_remaining -= elapsed_seconds
+            
+            if self.green_remaining <= 0:
+                # Transition to yellow
+                self.is_yellow_phase = True
+                self.yellow_remaining = 3  # 3 second yellow
+                # SAFETY: Set current lane to yellow, all others red
+                self._set_single_lane_state(self.current_green_lane, 'yellow')
+            else:
