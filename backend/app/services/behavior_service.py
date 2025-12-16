@@ -264,3 +264,62 @@ def detect_harsh_brake(
             severity=severity,
             plate_number=plate_text,
             details={
+                'deceleration': round(deceleration, 1),
+                'speed_before': round(prev_speed, 1),
+                'speed_after': round(current_speed, 1),
+            }
+        )
+        
+        _behavior_events.append(event)
+        print(f"[BEHAVIOR] 🚨 Vehicle {track_id} HARSH BRAKE: decel={deceleration:.0f} px/frame")
+        
+        return event
+    
+    return None
+
+
+def detect_lane_drift(
+    track_id: int,
+    centroid: Tuple[int, int],
+    lane_center_x: int = 640,  # Approximate lane center
+    plate_text: Optional[str] = None
+) -> Optional[BehaviorEvent]:
+    """
+    Detect lane drifting: consistent movement toward lane edges.
+    
+    Args:
+        track_id: Vehicle tracking ID
+        centroid: Current (x, y) position
+        lane_center_x: Expected lane center x-coordinate
+        plate_text: License plate if available
+    
+    Returns:
+        BehaviorEvent if lane drift detected
+    """
+    global _vehicle_behaviors
+    
+    if track_id not in _vehicle_behaviors:
+        _vehicle_behaviors[track_id] = VehicleBehavior(track_id=track_id)
+    
+    behavior = _vehicle_behaviors[track_id]
+    behavior.add_position(centroid[0], centroid[1])
+    
+    if len(behavior.positions) < DRIFT_WINDOW_FRAMES // 2:
+        return None
+    
+    # Check cooldown
+    if time.time() - behavior.last_behavior_time < BEHAVIOR_COOLDOWN * 2:
+        return None
+    
+    # Calculate x-axis variance (drift indicator)
+    x_variance = behavior.get_position_variance('x', DRIFT_WINDOW_FRAMES)
+    behavior.drift_score = x_variance
+    
+    # Also check if consistently moving away from lane center
+    positions = list(behavior.positions)[-DRIFT_WINDOW_FRAMES:]
+    distances_from_center = [abs(p.x - lane_center_x) for p in positions]
+    
+    if len(distances_from_center) >= 10:
+        first_half_avg = sum(distances_from_center[:len(distances_from_center)//2]) / (len(distances_from_center)//2)
+        second_half_avg = sum(distances_from_center[len(distances_from_center)//2:]) / (len(distances_from_center)//2)
+        
