@@ -530,3 +530,27 @@ class FourWayTrafficController:
                 # SAFETY: Set current lane to yellow, all others red
                 self._set_single_lane_state(self.current_green_lane, 'yellow')
             else:
+                # SAFETY: Keep current lane green, all others red
+                self._set_single_lane_state(self.current_green_lane, 'green')
+        return self.get_all_states()
+    
+    def auto_tick(self) -> Dict:
+        """
+        Automatically advance signal based on actual elapsed time.
+        Call this periodically (e.g., from API endpoint).
+        
+        Returns:
+            Current state of all 4 lanes.
+        """
+        if not self.auto_tick_enabled:
+            return self.get_all_states()
+        
+        current_time = time.time()
+        elapsed = int(current_time - self.last_tick_time)
+        
+        if elapsed >= 1:
+            self.last_tick_time = current_time
+            return self.tick(elapsed)
+        
+        return self.get_all_states()
+    
