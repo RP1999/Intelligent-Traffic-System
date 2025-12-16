@@ -206,3 +206,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                         )
                       : _buildPlaceholderImage('No snapshot available'),
                 ),
+                
+                const SizedBox(height: 24),
+                
+                // Cropped Plate Image
+                Text(
+                  'License Plate Crop',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 120,
+                  width: 280,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
