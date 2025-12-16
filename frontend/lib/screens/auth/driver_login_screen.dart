@@ -198,3 +198,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
                         ),
                       ),
                       child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppColors.error,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              authProvider.error!,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  
+                  // Phone field
+                  AppTextField(
+                    label: 'Phone Number',
+                    hint: '+94 77 123 4567',
