@@ -174,3 +174,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 const SizedBox(height: 16),
                 _buildProfileRow(
                   Icons.credit_card,
+                  'License Plate',
+                  driver.driverId,
+                ),
+                const SizedBox(height: 16),
+                _buildProfileRow(
+                  Icons.calendar_today,
+                  'Last Violation',
+                  driver.lastViolation != null
+                      ? DateFormat('MMM dd, yyyy').format(driver.lastViolation!)
+                      : 'None',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
