@@ -332,3 +332,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Widget _buildStatsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: StatCard(
+              title: 'Active Zones',
+              value: _stats?['active_zones']?.toString() ?? '0',
+              icon: Icons.location_on,
+              color: AppColors.primary,
+              isLoading: _isLoading,
+            ),
+          ),
