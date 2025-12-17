@@ -47,3 +47,7 @@ class Violation {
   Map<String, dynamic> toJson() {
     return {
       'violation_id': violationId,
+      'driver_id': driverId,
+      'license_plate': licensePlate,
+      'violation_type': violationType,
+      'fine_amount': fineAmount,
