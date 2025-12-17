@@ -75,3 +75,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
   }
 
   void _handleNavigation(int index) {
+    switch (index) {
+      case 0:
+        Navigator.of(context).pushReplacementNamed('/admin/dashboard');
+        break;
+      case 1:
+        Navigator.of(context).pushReplacementNamed('/admin/zones');
+        break;
+      case 2:
+        Navigator.of(context).pushReplacementNamed('/admin/violations');
+        break;
+      case 3:
