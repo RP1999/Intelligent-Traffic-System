@@ -223,3 +223,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
                   AppTextField(
                     label: 'Phone Number',
                     hint: '+94 77 123 4567',
+                    controller: _phoneController,
+                    prefixIcon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your phone number';
+                      }
+                      if (value.length < 10) {
+                        return 'Please enter a valid phone number';
+                      }
+                      return null;
+                    },
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Password field
+                  AppTextField(
+                    label: 'Password',
+                    hint: '••••••••',
+                    controller: _passwordController,
+                    prefixIcon: Icons.lock_outline,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
