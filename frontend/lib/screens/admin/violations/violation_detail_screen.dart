@@ -222,3 +222,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                   width: 280,
                   decoration: BoxDecoration(
                     color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: violation.evidencePath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            '${AppConfig.apiBaseUrl}/evidence/${violation.evidencePath}',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderImage('Plate image not available');
+                            },
+                          ),
+                        )
+                      : _buildPlaceholderImage('No plate image'),
+                ),
