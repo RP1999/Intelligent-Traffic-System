@@ -346,3 +346,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               isLoading: _isLoading,
             ),
           ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: StatCard(
+              title: 'Violations Today',
+              value: _stats?['total_violations_today']?.toString() ?? '0',
+              icon: Icons.report_problem,
+              color: AppColors.error,
+              isLoading: _isLoading,
