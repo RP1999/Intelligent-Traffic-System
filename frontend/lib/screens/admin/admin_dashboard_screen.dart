@@ -364,3 +364,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: Icons.people,
               color: AppColors.info,
               isLoading: _isLoading,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: StatCard(
+              title: 'Pending Fines',
+              value: 'Rs. ${(_stats?['pending_fines'] ?? 0).toStringAsFixed(0)}',
+              icon: Icons.attach_money,
+              color: AppColors.warning,
+              isLoading: _isLoading,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainGrid() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Live Video Feed
