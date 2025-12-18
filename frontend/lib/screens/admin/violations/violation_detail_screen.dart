@@ -254,3 +254,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+                      ),
+                      child: Text(
+                        violation.licensePlate ?? 'UNKNOWN',
+                        style: AppTypography.h4.copyWith(
+                          color: AppColors.primary,
+                          fontFamily: 'monospace',
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
