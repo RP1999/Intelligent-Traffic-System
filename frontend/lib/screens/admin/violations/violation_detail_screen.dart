@@ -238,3 +238,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                         )
                       : _buildPlaceholderImage('No plate image'),
                 ),
+                
+                const SizedBox(height: 24),
+                
+                // Detected Plate Number
+                Row(
+                  children: [
+                    Text(
+                      'Detected Plate:',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
