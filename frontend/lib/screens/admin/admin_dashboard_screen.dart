@@ -354,3 +354,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: Icons.report_problem,
               color: AppColors.error,
               isLoading: _isLoading,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: StatCard(
+              title: 'Registered Drivers',
+              value: _stats?['total_drivers']?.toString() ?? '0',
+              icon: Icons.people,
+              color: AppColors.info,
+              isLoading: _isLoading,
