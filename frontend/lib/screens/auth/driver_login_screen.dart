@@ -248,3 +248,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
                     prefixIcon: Icons.lock_outline,
                     obscureText: true,
                     textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _handleLogin(),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Login button
+                  AppButton(
+                    text: 'Sign In',
+                    onPressed: _handleLogin,
+                    isLoading: authProvider.isLoading,
+                    icon: Icons.login,
+                    size: AppButtonSize.large,
+                  ),
+                ],
+              ),
+            ),
