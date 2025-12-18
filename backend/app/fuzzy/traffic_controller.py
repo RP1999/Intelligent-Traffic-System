@@ -110,3 +110,19 @@ class FuzzyTrafficController:
         if self.simulation is not None:
             try:
                 self.simulation.input['vehicle_count'] = vehicle_count
+                self.simulation.compute()
+                duration = int(self.simulation.output['green_duration'])
+                return max(self.min_green, min(self.max_green, duration))
+            except Exception as e:
+                print(f"⚠️ Fuzzy computation error: {e}")
+        
+        # Fallback: Linear interpolation
+        return self._linear_fallback(vehicle_count)
+    
+    def _linear_fallback(self, vehicle_count: int) -> int:
+        """Fallback linear interpolation if fuzzy system unavailable."""
+        # Map 0-30 vehicles to min_green-max_green seconds
+        ratio = vehicle_count / 30.0
+        duration = self.min_green + ratio * (self.max_green - self.min_green)
+        return int(duration)
+    
