@@ -554,3 +554,18 @@ class FourWayTrafficController:
         
         return self.get_all_states()
     
+    def get_all_states(self) -> Dict:
+        """
+        Get current state of all 4 lanes.
+        
+        Returns:
+            Complete junction status including all lanes, timing, and mode.
+        """
+        self._update_simulated_lanes()
+        
+        return {
+            'lanes': {
+                lane: {
+                    'state': self.lane_states[lane],
+                    'vehicle_count': self.lane_counts[lane],
+                    'is_real': lane == 'north',
