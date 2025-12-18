@@ -356,3 +356,98 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
             color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.receipt_long, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text(
+                  'Fine Breakdown',
+                  style: AppTypography.h3,
+                ),
+              ],
+            ),
+          ),
+          
+          // Fine details
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildFineRow('Base Fine', violation.fineAmount * 0.7),
+                const SizedBox(height: 12),
+                _buildFineRow('Processing Fee', violation.fineAmount * 0.1),
+                const SizedBox(height: 12),
+                _buildFineRow('Admin Fee', violation.fineAmount * 0.1),
+                const SizedBox(height: 12),
+                _buildFineRow('Impact Score Adjustment', violation.fineAmount * 0.1),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(color: AppColors.border),
+                ),
+                
+                // Total
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total Fine',
+                      style: AppTypography.h4,
+                    ),
+                    Text(
+                      '\$${violation.fineAmount.toStringAsFixed(2)}',
+                      style: AppTypography.h3.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Points
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.remove_circle, color: AppColors.error, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Points Deducted',
+                            style: AppTypography.bodyMedium,
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '-${violation.pointsDeducted}',
+                        style: AppTypography.h4.copyWith(
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
