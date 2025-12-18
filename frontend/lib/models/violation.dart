@@ -51,3 +51,4 @@ class Violation {
       'license_plate': licensePlate,
       'violation_type': violationType,
       'fine_amount': fineAmount,
+      'points_deducted': pointsDeducted,
