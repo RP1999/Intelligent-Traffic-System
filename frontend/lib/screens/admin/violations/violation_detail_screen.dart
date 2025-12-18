@@ -451,3 +451,36 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFineRow(String label, double amount) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        Text(
+          '\$${amount.toStringAsFixed(2)}',
+          style: AppTypography.bodyMedium,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildViolationInfoCard(Violation violation) {
+    final dateFormat = DateFormat('EEEE, MMMM dd, yyyy');
+    final timeFormat = DateFormat('HH:mm:ss');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
