@@ -270,3 +270,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                   ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderImage(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.image_not_supported,
+            size: 48,
+            color: AppColors.textSecondary,
