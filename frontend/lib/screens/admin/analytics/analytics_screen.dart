@@ -481,3 +481,104 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                   ],
                 ),
+              ),
+              
+              // Chart
+              Expanded(
+                child: provider.trendsState == LoadingState.loading
+                    ? const LoadingWidget(message: 'Loading...')
+                    : _buildPieChart(provider),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPieChart(AnalyticsProvider provider) {
+    final distribution = provider.getViolationDistribution();
+    
+    if (distribution.isEmpty) {
+      return _buildEmptyChart('No distribution data');
+    }
+
+    final colors = {
+      'red_light': AppColors.error,
+      'speeding': AppColors.warning,
+      'parking': AppColors.info,
+      'no_parking': AppColors.info,
+      'lane_weaving': AppColors.riskMedium,
+      'lane_drift': AppColors.riskHigh,
+    };
+
+    final sections = distribution.entries.map((entry) {
+      final color = colors[entry.key] ?? AppColors.textSecondary;
+      return PieChartSectionData(
+        color: color,
+        value: entry.value,
+        title: '${entry.value.toStringAsFixed(0)}%',
+        radius: 60,
+        titleStyle: AppTypography.labelSmall.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }).toList();
+
+    return Column(
+      children: [
+        Expanded(
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              centerSpaceRadius: 40,
+              sectionsSpace: 2,
+            ),
+          ),
+        ),
+        
+        // Legend
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: distribution.entries.map((entry) {
+              final color = colors[entry.key] ?? AppColors.textSecondary;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _formatTypeName(entry.key),
+                    style: AppTypography.labelSmall,
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHotspotsSection() {
+    return Consumer<AnalyticsProvider>(
+      builder: (context, provider, _) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
