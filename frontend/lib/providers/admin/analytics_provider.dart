@@ -82,3 +82,16 @@ class AnalyticsProvider extends ChangeNotifier {
         ApiEndpoints.violationTrends,
         queryParams: {'days': _trendPeriod.toString()},
       );
+
+      if (response.success && response.data != null) {
+        _trends = ViolationTrendsResponse.fromJson(response.data!);
+        _trendsState = LoadingState.loaded;
+      } else {
+        _errorMessage = response.error ?? 'Failed to load trends';
+        _trendsState = LoadingState.error;
+      }
+    } on UnauthorizedException {
+      _errorMessage = 'Session expired. Please login again.';
+      _trendsState = LoadingState.error;
+      rethrow;
+    } catch (e) {
