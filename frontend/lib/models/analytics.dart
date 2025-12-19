@@ -88,3 +88,19 @@ class ViolationTrendsResponse {
     }
     return result;
   }
+}
+
+/// Hotspot location data
+class ViolationHotspot {
+  final String location;
+  final int violationCount;
+  final double totalFines;
+
+  ViolationHotspot({
+    required this.location,
+    required this.violationCount,
+    required this.totalFines,
+  });
+
+  factory ViolationHotspot.fromJson(Map<String, dynamic> json) {
+    return ViolationHotspot(
