@@ -86,3 +86,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
         Navigator.of(context).pushReplacementNamed('/admin/violations');
         break;
       case 3:
+        // Already here - Drivers
+        break;
+      case 4:
+        Navigator.of(context).pushReplacementNamed('/admin/analytics');
+        break;
+      case 5:
+        Navigator.of(context).pushReplacementNamed('/admin/logs');
+        break;
+      case 6:
+        Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
