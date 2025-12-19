@@ -104,3 +104,12 @@ class ViolationHotspot {
 
   factory ViolationHotspot.fromJson(Map<String, dynamic> json) {
     return ViolationHotspot(
+      location: json['location'] ?? 'Unknown',
+      violationCount: json['violation_count'] ?? 0,
+      totalFines: (json['total_fines'] ?? 0).toDouble(),
+    );
+  }
+}
+
+/// Hotspots response
+class HotspotsResponse {
