@@ -190,3 +190,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfileRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.textSecondary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
