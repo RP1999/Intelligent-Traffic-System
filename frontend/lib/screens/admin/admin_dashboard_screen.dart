@@ -349,3 +349,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: StatCard(
+              title: 'Violations Today',
+              value: _stats?['total_violations_today']?.toString() ?? '0',
+              icon: Icons.report_problem,
+              color: AppColors.error,
+              isLoading: _isLoading,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: StatCard(
+              title: 'Registered Drivers',
+              value: _stats?['total_drivers']?.toString() ?? '0',
+              icon: Icons.people,
+              color: AppColors.info,
+              isLoading: _isLoading,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: StatCard(
+              title: 'Pending Fines',
+              value: 'Rs. ${(_stats?['pending_fines'] ?? 0).toStringAsFixed(0)}',
+              icon: Icons.attach_money,
+              color: AppColors.warning,
+              isLoading: _isLoading,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainGrid() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Live Video Feed
+          Expanded(
+            flex: 3,
+            child: LiveVideoFeed(
+              onZoneEditorPressed: () {
+                Navigator.of(context).pushReplacementNamed('/admin/zones');
+              },
+            ),
+          ),
+          const SizedBox(width: 24),
+          
+          // Right panel
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                // Traffic Light Panel
