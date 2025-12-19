@@ -273,3 +273,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
                 ],
               ),
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRegisterLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          "Don't have an account? ",
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).pushNamed('/driver/register');
+          },
+          child: Text(
+            'Register',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w600,
