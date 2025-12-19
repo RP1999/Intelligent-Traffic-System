@@ -156,3 +156,24 @@ class ViolationsProvider extends ChangeNotifier {
     _searchQuery = '';
     _statusFilter = null;
     _typeFilter = null;
+    _dateFrom = null;
+    _dateTo = null;
+    loadViolations(refresh: true);
+  }
+
+  /// Load single violation details
+  Future<void> loadViolationDetail(String violationId) async {
+    _detailState = LoadingState.loading;
+    _selectedViolation = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.get(
+        ApiEndpoints.violationDetail(violationId),
+      );
+
+      if (response.success && response.data != null) {
+        _selectedViolation = Violation.fromJson(response.data!);
+        _detailState = LoadingState.loaded;
+      } else {
+        _errorMessage = response.error ?? 'Failed to load violation details';
