@@ -28,3 +28,6 @@ class Driver {
       currentScore: json['current_score'] ?? 100,
       totalViolations: json['total_violations'] ?? 0,
       totalFines: (json['total_fines'] ?? 0).toDouble(),
+      lastViolation: json['last_violation'] != null
+          ? DateTime.tryParse(json['last_violation'])
+          : null,
