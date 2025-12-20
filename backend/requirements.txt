@@ -24,3 +24,5 @@ numpy>=1.24.0
 # pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 # DO NOT add torch to requirements.txt (conflicts with CPU-only installation)
 
+# --- Object Tracking (DeepSORT) ---
+# Note: Uses built-in tracking from ultralytics
