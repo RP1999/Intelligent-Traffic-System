@@ -396,3 +396,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               },
             ),
           ),
+          const SizedBox(width: 24),
+          
+          // Right panel
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                // Traffic Light Panel
+                const TrafficLightPanel(),
+                const SizedBox(height: 24),
+                
+                // Quick Actions
+                _buildQuickActions(),
+              ],
+            ),
+          ),
+        ],
+      ),
