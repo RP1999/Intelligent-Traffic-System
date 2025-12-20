@@ -298,3 +298,28 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
             style: AppTypography.bodyMedium.copyWith(
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildFeatureChip(Icons.shield_outlined, 'Secure'),
+            const SizedBox(width: 16),
+            _buildFeatureChip(Icons.speed, 'Fast'),
+            const SizedBox(width: 16),
+            _buildFeatureChip(Icons.verified_outlined, 'Trusted'),
+          ],
+        ),
+        
+        const SizedBox(height: 24),
+        
+        Text(
+          'By signing in, you agree to our Terms of Service',
