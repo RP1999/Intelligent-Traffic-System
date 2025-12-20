@@ -97,3 +97,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
       case 6:
         Navigator.of(context).pushReplacementNamed('/admin/settings');
         break;
+    }
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
