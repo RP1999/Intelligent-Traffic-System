@@ -388,3 +388,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Live Video Feed
+          Expanded(
+            flex: 3,
+            child: LiveVideoFeed(
+              onZoneEditorPressed: () {
+                Navigator.of(context).pushReplacementNamed('/admin/zones');
+              },
+            ),
+          ),
