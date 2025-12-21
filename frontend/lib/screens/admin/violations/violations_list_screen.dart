@@ -110,3 +110,19 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Violation Management',
+                style: AppTypography.h1.copyWith(fontSize: 28),
+              ),
+              const SizedBox(height: 4),
+              Consumer<ViolationsProvider>(
+                builder: (context, provider, _) {
+                  return Text(
+                    '${provider.total} total violations',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  );
+                },
+              ),
