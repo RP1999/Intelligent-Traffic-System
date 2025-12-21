@@ -42,3 +42,7 @@ class DriversProvider extends ChangeNotifier {
   Driver? get selectedDriver => _selectedDriver;
   LoadingState get detailState => _detailState;
 
+  /// Load drivers with current sorting
+  Future<void> loadDrivers({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
