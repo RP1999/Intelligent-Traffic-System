@@ -46,3 +46,7 @@ class DriversProvider extends ChangeNotifier {
   Future<void> loadDrivers({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
+      _drivers = [];
+    }
+
+    _state = _drivers.isEmpty ? LoadingState.loading : _state;
