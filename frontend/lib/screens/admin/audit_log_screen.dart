@@ -294,3 +294,106 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
             ),
           ),
           
+          if (_dateRange != null || _selectedAction != null)
+            TextButton.icon(
+              onPressed: _clearFilters,
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear Filters'),
+            ),
+          
+          // Entries count at the end
+          Text(
+            '${_logs.length} entries',
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selectDateRange() async {
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now(),
+      initialDateRange: _dateRange,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.black,
+              surface: AppColors.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (range != null) {
+      setState(() {
+        _dateRange = range;
+        _currentPage = 1;
+      });
+      _loadLogs();
+    }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _selectedAction = null;
+      _dateRange = null;
+      _currentPage = 1;
+    });
+    _loadLogs();
+  }
+
+  Widget _buildDataTable() {
+    if (_logs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history,
+              size: 64,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No audit logs found',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Container(
+      margin: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(AppColors.background),
+            columns: const [
+              DataColumn(label: Text('Timestamp')),
+              DataColumn(label: Text('Admin')),
+              DataColumn(label: Text('Action')),
+              DataColumn(label: Text('Details')),
+              DataColumn(label: Text('IP Address')),
+            ],
+            rows: _logs.map((log) => _buildDataRow(log)).toList(),
+          ),
+        ),
