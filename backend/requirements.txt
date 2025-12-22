@@ -26,3 +26,5 @@ numpy>=1.24.0
 
 # --- Object Tracking (DeepSORT) ---
 # Note: Uses built-in tracking from ultralytics
+
+# --- OCR (License Plate Recognition) ---
