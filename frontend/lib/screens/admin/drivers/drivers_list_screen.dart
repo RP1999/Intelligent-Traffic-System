@@ -108,3 +108,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                'Driver Registry',
+                style: AppTypography.h1.copyWith(fontSize: 28),
+              ),
+              const SizedBox(height: 4),
+              Consumer<DriversProvider>(
+                builder: (context, provider, _) {
+                  return Text(
+                    '${provider.total} registered drivers',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
