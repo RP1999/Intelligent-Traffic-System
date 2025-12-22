@@ -84,3 +84,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 24),
+                
+                // Right side - Violation Timeline
+                Expanded(
+                  flex: 3,
+                  child: _buildViolationTimeline(driver),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(Driver driver) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header with avatar
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getRiskColor(driver.riskLevel),
+                  _getRiskColor(driver.riskLevel).withOpacity(0.6),
+                ],
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
