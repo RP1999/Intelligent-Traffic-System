@@ -569,3 +569,27 @@ class FourWayTrafficController:
                     'state': self.lane_states[lane],
                     'vehicle_count': self.lane_counts[lane],
                     'is_real': lane == 'north',
+                    'is_current_green': lane == self.current_green_lane
+                } for lane in self.LANES
+            },
+            'current_green': self.current_green_lane,
+            'green_remaining': max(0, self.green_remaining),
+            'yellow_remaining': max(0, self.yellow_remaining) if self.is_yellow_phase else 0,
+            'is_yellow_phase': self.is_yellow_phase,
+            'emergency_mode': self.emergency_mode,
+            'emergency_lane': self.emergency_lane,
+            'cycle_order': self.CYCLE_ORDER
+        }
+    
+    def get_status(self) -> Dict:
+        """Alias for get_all_states with auto-tick."""
+        return self.auto_tick()
+
+
+# Global 4-way controller instance
+_four_way_controller: FourWayTrafficController = None
+
+
+def get_four_way_controller() -> FourWayTrafficController:
+    """Get or create the global 4-way traffic controller instance."""
+    global _four_way_controller
