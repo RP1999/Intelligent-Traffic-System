@@ -349,3 +349,42 @@ def trigger_emergency_if_detected(detections: list) -> dict:
         detections: List of Detection objects from current frame.
         
     Returns:
+        Dict with emergency status or None if no emergency.
+    """
+    global _last_emergency_detection_time
+    
+    is_emergency, vehicle_type, track_id = check_for_emergency_vehicle(detections)
+    
+    if not is_emergency:
+        return None
+    
+    current_time = time.time()
+    
+    # Check cooldown
+    if (current_time - _last_emergency_detection_time) < EMERGENCY_COOLDOWN_SECONDS:
+        return {'status': 'cooldown', 'message': 'Emergency mode already active'}
+    
+    _last_emergency_detection_time = current_time
+    
+    # Trigger emergency on traffic controller
+    controller = get_traffic_controller()
+    if controller:
+        result = controller.activate_emergency_mode('north')  # Video = North lane
+        
+        # Play TTS alert
+        speak_warning(
+            f"Emergency! {vehicle_type.title()} detected. Clearing North lane.",
+            track_id=track_id,
+            warning_type="emergency"
+        )
+        
+        print(f"[EMERGENCY] {vehicle_type.upper()} detected (Track ID: {track_id}) - North lane forced GREEN!")
+        return result
+    
+    return {'status': 'error', 'message': 'Traffic controller not available'}
+
+
+def get_tts_service():
+    """Lazy load TTS service for voice warnings."""
+    global _tts_service
+    if _tts_service is None:
