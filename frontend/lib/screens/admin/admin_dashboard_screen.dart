@@ -428,3 +428,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Quick Actions',
+            style: AppTypography.h4,
+          ),
+          const SizedBox(height: 16),
+          
+          _buildActionButton(
+            icon: Icons.edit_location_alt,
+            label: 'Edit Zones',
+            onTap: () => Navigator.of(context).pushReplacementNamed('/admin/zones'),
+          ),
+          const SizedBox(height: 12),
+          _buildActionButton(
+            icon: Icons.history,
+            label: 'View Logs',
+            onTap: () => Navigator.of(context).pushReplacementNamed('/admin/logs'),
+          ),
+          const SizedBox(height: 12),
+          _buildActionButton(
+            icon: Icons.analytics,
+            label: 'Reports',
+            onTap: () {},
+          ),
+        ],
