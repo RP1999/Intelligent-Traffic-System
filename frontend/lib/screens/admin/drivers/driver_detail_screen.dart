@@ -41,3 +41,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           if (provider.detailState == LoadingState.loading) {
             return const LoadingWidget(message: 'Loading driver details...');
           }
+
+          if (provider.detailState == LoadingState.error) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                  const SizedBox(height: 16),
+                  Text(
+                    provider.errorMessage ?? 'Failed to load driver',
+                    style: AppTypography.bodyLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => provider.loadDriverDetail(widget.driverId),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final driver = provider.selectedDriver;
+          if (driver == null) {
+            return const Center(child: Text('No driver data'));
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left side - Profile Card
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    children: [
+                      _buildProfileCard(driver),
+                      const SizedBox(height: 24),
+                      _buildScoreCard(driver),
+                    ],
+                  ),
+                ),
