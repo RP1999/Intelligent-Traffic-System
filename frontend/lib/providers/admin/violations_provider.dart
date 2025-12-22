@@ -177,3 +177,16 @@ class ViolationsProvider extends ChangeNotifier {
         _detailState = LoadingState.loaded;
       } else {
         _errorMessage = response.error ?? 'Failed to load violation details';
+        _detailState = LoadingState.error;
+      }
+    } on UnauthorizedException {
+      _errorMessage = 'Session expired. Please login again.';
+      _detailState = LoadingState.error;
+      rethrow;
+    } catch (e) {
+      _errorMessage = 'Error loading violation: $e';
+      _detailState = LoadingState.error;
+    }
+
+    notifyListeners();
+  }
