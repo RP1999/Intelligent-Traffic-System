@@ -206,3 +206,19 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                value,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
