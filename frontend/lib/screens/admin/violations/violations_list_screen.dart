@@ -126,3 +126,19 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
                   );
                 },
               ),
+            ],
+          ),
+          const Spacer(),
+          
+          // Refresh button
+          IconButton(
+            onPressed: () {
+              context.read<ViolationsProvider>().loadViolations(refresh: true);
+            },
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+          const SizedBox(width: 8),
+          
+          // Analytics button
+          ElevatedButton.icon(
