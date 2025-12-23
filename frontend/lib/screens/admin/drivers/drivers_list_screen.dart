@@ -119,3 +119,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
                     '${provider.total} registered drivers',
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.textSecondary,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const Spacer(),
+          
+          // Refresh button
+          IconButton(
+            onPressed: () {
