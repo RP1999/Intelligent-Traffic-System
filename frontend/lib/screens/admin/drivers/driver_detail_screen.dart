@@ -170,3 +170,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
+                _buildProfileRow(Icons.phone, 'Phone', driver.phone ?? 'N/A'),
+                const SizedBox(height: 16),
+                _buildProfileRow(
+                  Icons.credit_card,
+                  'License Plate',
+                  driver.driverId,
+                ),
+                const SizedBox(height: 16),
+                _buildProfileRow(
+                  Icons.calendar_today,
+                  'Last Violation',
+                  driver.lastViolation != null
+                      ? DateFormat('MMM dd, yyyy').format(driver.lastViolation!)
+                      : 'None',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.textSecondary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
