@@ -593,3 +593,18 @@ _four_way_controller: FourWayTrafficController = None
 def get_four_way_controller() -> FourWayTrafficController:
     """Get or create the global 4-way traffic controller instance."""
     global _four_way_controller
+    if _four_way_controller is None:
+        _four_way_controller = FourWayTrafficController()
+    return _four_way_controller
+
+
+# =============================================================================
+# CLI for testing
+# =============================================================================
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("FUZZY TRAFFIC CONTROLLER TEST")
+    print("=" * 60)
+    
+    controller = FuzzyTrafficController()
