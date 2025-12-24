@@ -213,3 +213,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 label,
                 style: AppTypography.labelSmall.copyWith(
                   color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                value,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreCard(Driver driver) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.analytics, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text('Driver Statistics', style: AppTypography.h3),
+              ],
+            ),
+            const SizedBox(height: 24),
+            
+            // Score display
+            Center(
