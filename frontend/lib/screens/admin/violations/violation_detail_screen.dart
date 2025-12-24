@@ -286,3 +286,19 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
             Icons.image_not_supported,
             size: 48,
             color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViolationTypeBadge(String type) {
+    Color color;
+    IconData icon;
