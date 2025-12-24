@@ -33,3 +33,8 @@ class ViolationsProvider extends ChangeNotifier {
   LoadingState get state => _state;
   String? get errorMessage => _errorMessage;
   List<Violation> get violations => _violations;
+  int get total => _total;
+  int get currentPage => _currentPage;
+  int get totalPages => (_total / _pageSize).ceil();
+  bool get hasMore => _violations.length < _total;
+  String get searchQuery => _searchQuery;
