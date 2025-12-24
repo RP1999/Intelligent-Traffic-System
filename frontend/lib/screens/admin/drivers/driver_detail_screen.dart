@@ -256,3 +256,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             
             // Score display
             Center(
+              child: Column(
+                children: [
+                  _buildLargeScoreCircle(driver.currentScore, driver.riskLevel),
+                  const SizedBox(height: 12),
+                  Text(
+                    'LiveSafe Score',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildRiskBadge(driver.riskLevel),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            const Divider(color: AppColors.border),
+            const SizedBox(height: 16),
+            
+            // Stats
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatColumn(
+                  driver.totalViolations.toString(),
+                  'Violations',
+                  Icons.warning_amber,
+                  AppColors.warning,
+                ),
+                _buildStatColumn(
+                  '\$${driver.totalFines.toStringAsFixed(0)}',
+                  'Total Fines',
+                  Icons.attach_money,
+                  AppColors.error,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
