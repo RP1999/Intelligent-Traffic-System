@@ -127,3 +127,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
               ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.person,
+                    size: 40,
+                    color: AppColors.surfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  driver.name ?? 'Unknown Driver',
+                  style: AppTypography.h3.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  driver.driverId,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Profile details
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
