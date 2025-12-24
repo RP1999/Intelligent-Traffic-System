@@ -472,3 +472,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Row(
             children: [
               Icon(icon, color: AppColors.primary, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(label, style: AppTypography.bodyMedium),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: AppColors.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
