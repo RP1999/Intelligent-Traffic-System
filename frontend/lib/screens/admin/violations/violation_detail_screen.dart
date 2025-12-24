@@ -484,3 +484,54 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text(
+                  'Violation Details',
+                  style: AppTypography.h3,
+                ),
+              ],
+            ),
+          ),
+          
+          // Info rows
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildInfoRow('Violation ID', violation.violationId),
+                const SizedBox(height: 12),
+                _buildInfoRow('Driver ID', violation.driverId),
+                const SizedBox(height: 12),
+                _buildInfoRow('Date', dateFormat.format(violation.timestamp)),
+                const SizedBox(height: 12),
+                _buildInfoRow('Time', timeFormat.format(violation.timestamp)),
+                if (violation.location != null) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow('Location', violation.location!),
+                ],
+                const SizedBox(height: 12),
+                _buildInfoRow('Status', violation.status.toUpperCase()),
+                if (violation.notes != null && violation.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Divider(color: AppColors.border),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
