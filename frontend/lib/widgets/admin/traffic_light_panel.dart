@@ -356,3 +356,20 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
             style: AppTypography.caption.copyWith(
               color: AppColors.textSecondary,
               fontSize: 8,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLight({required Color color, required bool isActive, double size = 50}) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isActive 
+                ? color 
