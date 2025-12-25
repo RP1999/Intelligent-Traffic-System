@@ -299,3 +299,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
       ),
     );
   }
+
+  Widget _buildLargeScoreCircle(int score, String riskLevel) {
+    final color = _getRiskColor(riskLevel);
+    
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color,
+            color.withOpacity(0.5),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.4),
+            blurRadius: 20,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          score.toString(),
+          style: AppTypography.h1.copyWith(
+            color: Colors.white,
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRiskBadge(String riskLevel) {
+    final color = _getRiskColor(riskLevel);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
