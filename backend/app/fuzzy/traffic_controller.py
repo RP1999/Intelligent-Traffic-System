@@ -608,3 +608,26 @@ if __name__ == "__main__":
     print("=" * 60)
     
     controller = FuzzyTrafficController()
+    
+    # Test with different vehicle counts
+    test_counts = [0, 3, 5, 8, 10, 15, 20, 25, 30]
+    
+    print("\nVehicle Count | Traffic Level | Green Duration")
+    print("-" * 50)
+    
+    for count in test_counts:
+        rec = controller.get_signal_recommendation(count)
+        print(f"    {count:2d}        |    {rec['traffic_level']:6s}     |     {rec['green_duration_sec']:2d}s")
+    
+    print("\n" + "=" * 60)
+    print("4-WAY HYBRID JUNCTION TEST")
+    print("=" * 60)
+    
+    junction = FourWayTrafficController()
+    junction.update_north_count(12)  # Simulate YOLO detection
+    
+    print("\nInitial State:")
+    states = junction.get_all_states()
+    for lane, info in states['lanes'].items():
+        src = "REAL" if info['is_real'] else "SIM"
+        print(f"  {lane.upper():6s}: {info['state']:6s} | {info['vehicle_count']:2d} vehicles ({src})")
