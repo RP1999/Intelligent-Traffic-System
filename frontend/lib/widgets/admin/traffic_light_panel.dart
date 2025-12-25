@@ -342,3 +342,17 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
         const SizedBox(height: 2),
         // Show countdown only for current green lane
         if (isCurrentGreen)
+          Text(
+            '${_countdown}s',
+            style: AppTypography.caption.copyWith(
+              color: activeColor,
+              fontSize: 9,
+              fontFamily: 'monospace',
+            ),
+          )
+        else
+          Text(
+            state == TrafficLightState.red ? 'WAIT' : '',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 8,
