@@ -385,3 +385,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   Widget _buildViolationTimeline(Driver driver) {
     final violations = driver.recentViolations ?? [];
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text('Violation History', style: AppTypography.h3),
+                const Spacer(),
+                Text(
+                  '${violations.length} records',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Timeline
+          if (violations.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(40),
