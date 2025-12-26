@@ -378,4 +378,4 @@ async def reset_detector():
     detector = await get_detector()
     detector.reset()
     return {"status": "reset", "message": "Parking detector reset successfully"}
- 
+  
