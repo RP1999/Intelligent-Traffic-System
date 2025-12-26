@@ -428,3 +428,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           if (violations.isEmpty)
             Padding(
               padding: const EdgeInsets.all(40),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      size: 64,
+                      color: AppColors.success,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Clean Record',
+                      style: AppTypography.h4,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This driver has no violation history.',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: violations.length,
+              itemBuilder: (context, index) {
+                final violation = violations[index];
+                final isLast = index == violations.length - 1;
+                
+                return _buildTimelineItem(violation, isLast);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem(DriverViolation violation, bool isLast) {
+    final dateFormat = DateFormat('MMM dd, yyyy');
