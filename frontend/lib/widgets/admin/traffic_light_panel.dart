@@ -373,3 +373,14 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
             shape: BoxShape.circle,
             color: isActive 
                 ? color 
+                : color.withOpacity(0.2),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.6),
+                      blurRadius: 16 * _pulseAnimation.value,
+                      spreadRadius: 4 * _pulseAnimation.value,
+                    ),
+                  ]
+                : [],
+            border: Border.all(
