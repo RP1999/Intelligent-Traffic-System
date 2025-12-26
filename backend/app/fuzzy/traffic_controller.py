@@ -631,3 +631,18 @@ if __name__ == "__main__":
     for lane, info in states['lanes'].items():
         src = "REAL" if info['is_real'] else "SIM"
         print(f"  {lane.upper():6s}: {info['state']:6s} | {info['vehicle_count']:2d} vehicles ({src})")
+    
+    print(f"\nCurrent Green: {states['current_green'].upper()}")
+    print(f"Green Remaining: {states['green_remaining']}s")
+    
+    print("\nTesting Emergency Mode...")
+    result = junction.activate_emergency_mode('north')
+    print(f"  {result['message']}")
+    
+    states = junction.get_all_states()
+    print(f"  Emergency Mode: {states['emergency_mode']}")
+    for lane, info in states['lanes'].items():
+        print(f"  {lane.upper()}: {info['state']}")
+    
+    print("\n[OK] Fuzzy controller test complete!")
+
