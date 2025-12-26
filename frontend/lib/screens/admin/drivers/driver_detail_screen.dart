@@ -471,3 +471,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   Widget _buildTimelineItem(DriverViolation violation, bool isLast) {
     final dateFormat = DateFormat('MMM dd, yyyy');
+    final timeFormat = DateFormat('HH:mm');
+    final color = _getViolationColor(violation.violationType);
+    
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline indicator
+          SizedBox(
+            width: 60,
+            child: Column(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color,
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.4),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: AppColors.border,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          // Content
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
