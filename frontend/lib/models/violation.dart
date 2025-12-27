@@ -52,3 +52,12 @@ class Violation {
       'violation_type': violationType,
       'fine_amount': fineAmount,
       'points_deducted': pointsDeducted,
+      'timestamp': timestamp.toIso8601String(),
+      'status': status,
+      'location': location,
+      'snapshot_path': snapshotPath,
+      'evidence_path': evidencePath,
+      'notes': notes,
+    };
+  }
+}
