@@ -113,3 +113,11 @@ class ViolationHotspot {
 
 /// Hotspots response
 class HotspotsResponse {
+  final List<ViolationHotspot> hotspots;
+
+  HotspotsResponse({required this.hotspots});
+
+  factory HotspotsResponse.fromJson(Map<String, dynamic> json) {
+    return HotspotsResponse(
+      hotspots: ((json['hotspots'] ?? []) as List)
+          .map((h) => ViolationHotspot.fromJson(h))
