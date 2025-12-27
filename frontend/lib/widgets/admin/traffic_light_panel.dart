@@ -384,3 +384,12 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
                   ]
                 : [],
             border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
