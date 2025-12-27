@@ -393,3 +393,12 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
     );
   }
 
+  Widget _buildTimer() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
