@@ -402,3 +402,23 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.timer,
+            color: _getStateColor(),
+            size: 18,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${_countdown}s',
+            style: AppTypography.h3.copyWith(
+              color: _getStateColor(),
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStateColor() {
