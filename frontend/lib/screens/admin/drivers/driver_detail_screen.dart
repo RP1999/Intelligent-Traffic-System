@@ -600,3 +600,54 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   Color _getViolationColor(String type) {
     switch (type.toLowerCase()) {
+      case 'red_light':
+        return AppColors.error;
+      case 'speeding':
+        return AppColors.warning;
+      case 'parking':
+      case 'no_parking':
+        return AppColors.info;
+      case 'lane_weaving':
+      case 'lane_drift':
+        return AppColors.riskMedium;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  IconData _getViolationIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'red_light':
+        return Icons.traffic;
+      case 'speeding':
+        return Icons.speed;
+      case 'parking':
+      case 'no_parking':
+        return Icons.local_parking;
+      case 'lane_weaving':
+      case 'lane_drift':
+        return Icons.swap_horiz;
+      default:
+        return Icons.warning;
+    }
+  }
+
+  String _getViolationDisplayName(String type) {
+    switch (type.toLowerCase()) {
+      case 'red_light':
+        return 'Red Light Violation';
+      case 'speeding':
+        return 'Speeding';
+      case 'parking':
+        return 'Illegal Parking';
+      case 'no_parking':
+        return 'No Parking Zone';
+      case 'lane_weaving':
+        return 'Lane Weaving';
+      case 'lane_drift':
+        return 'Lane Drift';
+      default:
+        return type.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+}
