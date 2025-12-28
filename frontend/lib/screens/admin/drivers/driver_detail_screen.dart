@@ -557,3 +557,46 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                   ),
                   
                   // Fine amount
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '\$${violation.fineAmount.toStringAsFixed(0)}',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 20),
+        ],
+      ),
+    );
+  }
+
+  Color _getRiskColor(String riskLevel) {
+    switch (riskLevel.toLowerCase()) {
+      case 'excellent':
+        return AppColors.success;
+      case 'good':
+        return AppColors.riskLow;
+      case 'fair':
+        return AppColors.warning;
+      case 'poor':
+        return AppColors.riskHigh;
+      case 'critical':
+        return AppColors.error;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  Color _getViolationColor(String type) {
+    switch (type.toLowerCase()) {
