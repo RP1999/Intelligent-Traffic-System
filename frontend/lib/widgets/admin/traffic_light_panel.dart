@@ -422,3 +422,12 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
   }
 
   Color _getStateColor() {
+    switch (_currentState) {
+      case TrafficLightState.red:
+        return Colors.red;
+      case TrafficLightState.yellow:
+        return Colors.amber;
+      case TrafficLightState.green:
+        return Colors.green;
+    }
+  }
