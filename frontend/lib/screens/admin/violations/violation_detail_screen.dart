@@ -591,3 +591,42 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
 
   Future<void> _verifyViolation(Violation violation) async {
     final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Verify Violation'),
+        content: Text(
+          'Confirm that this violation for ${violation.licensePlate ?? violation.driverId} is valid?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+            ),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Violation verified successfully'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _dismissViolation(Violation violation) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
