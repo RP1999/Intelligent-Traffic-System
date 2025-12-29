@@ -237,3 +237,204 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
                   value: _selectedType,
                   hint: const Text('Violation Type'),
                   isExpanded: true,
+                  dropdownColor: AppColors.surface,
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('All Types')),
+                    DropdownMenuItem(value: 'red_light', child: Text('Red Light')),
+                    DropdownMenuItem(value: 'speeding', child: Text('Speeding')),
+                    DropdownMenuItem(value: 'parking', child: Text('Parking')),
+                    DropdownMenuItem(value: 'lane_weaving', child: Text('Lane Weaving')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedType = value);
+                    context.read<ViolationsProvider>().setTypeFilter(value);
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Clear filters button
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _selectedStatus = null;
+                _selectedType = null;
+                _searchController.clear();
+              });
+              context.read<ViolationsProvider>().clearFilters();
+            },
+            icon: const Icon(Icons.clear_all),
+            label: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViolationsTable() {
+    return Consumer<ViolationsProvider>(
+      builder: (context, provider, _) {
+        if (provider.state == LoadingState.loading && provider.violations.isEmpty) {
+          return const LoadingWidget(message: 'Loading violations...');
+        }
+
+        if (provider.state == LoadingState.error && provider.violations.isEmpty) {
+          return EmptyStateWidget(
+            icon: Icons.error_outline,
+            title: 'Error Loading Violations',
+            message: provider.errorMessage ?? 'An unknown error occurred',
+            actionLabel: 'Retry',
+            onAction: () => provider.loadViolations(refresh: true),
+          );
+        }
+
+        if (provider.violations.isEmpty) {
+          return const EmptyStateWidget(
+            icon: Icons.check_circle_outline,
+            title: 'No Violations Found',
+            message: 'There are no violations matching your filters.',
+          );
+        }
+
+        return Container(
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Table header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    _buildHeaderCell('License Plate', flex: 2),
+                    _buildHeaderCell('Type', flex: 2),
+                    _buildHeaderCell('Fine', flex: 1),
+                    _buildHeaderCell('Time', flex: 2),
+                    _buildHeaderCell('Status', flex: 1),
+                    _buildHeaderCell('Actions', flex: 1),
+                  ],
+                ),
+              ),
+              
+              // Table body
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: provider.violations.length + (provider.hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index >= provider.violations.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      );
+                    }
+                    
+                    final violation = provider.violations[index];
+                    return _buildViolationRow(violation, index);
+                  },
+                ),
+              ),
+              
+              // Pagination info
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: AppColors.border),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Showing ${provider.violations.length} of ${provider.total} violations',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      'Page ${provider.currentPage} of ${provider.totalPages}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeaderCell(String text, {int flex = 1}) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        text,
+        style: AppTypography.labelLarge.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViolationRow(Violation violation, int index) {
+    final isEven = index % 2 == 0;
+    final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
+
+    return InkWell(
+      onTap: () => _openViolationDetail(violation),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        color: isEven ? AppColors.surface : AppColors.surfaceVariant.withOpacity(0.3),
+        child: Row(
+          children: [
+            // License Plate
+            Expanded(
+              flex: 2,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      violation.licensePlate ?? violation.driverId,
+                      style: AppTypography.labelLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
