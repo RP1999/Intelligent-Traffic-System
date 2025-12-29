@@ -404,3 +404,51 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: Column(
               children: [
                 // Traffic Light Panel
+                const TrafficLightPanel(),
+                const SizedBox(height: 24),
+                
+                // Quick Actions
+                _buildQuickActions(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Actions',
+            style: AppTypography.h4,
+          ),
+          const SizedBox(height: 16),
+          
+          _buildActionButton(
+            icon: Icons.edit_location_alt,
+            label: 'Edit Zones',
+            onTap: () => Navigator.of(context).pushReplacementNamed('/admin/zones'),
+          ),
+          const SizedBox(height: 12),
+          _buildActionButton(
+            icon: Icons.history,
+            label: 'View Logs',
+            onTap: () => Navigator.of(context).pushReplacementNamed('/admin/logs'),
+          ),
+          const SizedBox(height: 12),
+          _buildActionButton(
+            icon: Icons.analytics,
+            label: 'Reports',
+            onTap: () {},
+          ),
+        ],
