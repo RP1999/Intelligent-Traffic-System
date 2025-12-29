@@ -397,3 +397,107 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
             rows: _logs.map((log) => _buildDataRow(log)).toList(),
           ),
         ),
+      ),
+    );
+  }
+
+  DataRow _buildDataRow(AuditLogEntry log) {
+    return DataRow(
+      cells: [
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.access_time,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                DateFormat('MMM d, yyyy HH:mm').format(log.timestamp),
+                style: AppTypography.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: AppColors.primary.withOpacity(0.2),
+                child: Text(
+                  log.adminUsername.isNotEmpty ? log.adminUsername[0].toUpperCase() : '?',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(log.adminUsername),
+            ],
+          ),
+        ),
+        DataCell(_buildActionBadge(log.action)),
+        DataCell(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 300),
+            child: Text(
+              log.details ?? '-',
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+        DataCell(
+          Text(
+            log.ipAddress ?? '-',
+            style: AppTypography.bodySmall.copyWith(
+              fontFamily: 'monospace',
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionBadge(String action) {
+    Color color;
+    IconData icon;
+    
+    switch (action) {
+      case 'login':
+        color = AppColors.success;
+        icon = Icons.login;
+        break;
+      case 'logout':
+        color = AppColors.info;
+        icon = Icons.logout;
+        break;
+      case 'zone_create':
+        color = AppColors.primary;
+        icon = Icons.add_location;
+        break;
+      case 'zone_update':
+        color = AppColors.warning;
+        icon = Icons.edit_location;
+        break;
+      case 'zone_delete':
+        color = AppColors.error;
+        icon = Icons.location_off;
+        break;
+      case 'violation_create':
+        color = AppColors.error;
+        icon = Icons.warning;
+        break;
+      default:
+        color = AppColors.textSecondary;
+        icon = Icons.info;
+    }
+    
