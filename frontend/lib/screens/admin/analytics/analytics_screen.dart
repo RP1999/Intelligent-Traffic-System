@@ -642,3 +642,76 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
     return Padding(
       padding: const EdgeInsets.all(20),
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 16,
+        children: hotspots.map((hotspot) {
+          final intensity = hotspot.violationCount / maxCount;
+          final color = Color.lerp(
+            AppColors.success,
+            AppColors.error,
+            intensity,
+          )!;
+
+          return Container(
+            width: 200,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        hotspot.location,
+                        style: AppTypography.labelMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hotspot.violationCount.toString(),
+                          style: AppTypography.h4.copyWith(color: color),
+                        ),
+                        Text(
+                          'Violations',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '\$${hotspot.totalFines.toStringAsFixed(0)}',
+                          style: AppTypography.h4.copyWith(color: AppColors.error),
+                        ),
+                        Text(
+                          'Fines',
+                          style: AppTypography.labelSmall.copyWith(
