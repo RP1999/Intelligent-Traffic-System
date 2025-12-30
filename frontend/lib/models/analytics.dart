@@ -121,3 +121,7 @@ class HotspotsResponse {
     return HotspotsResponse(
       hotspots: ((json['hotspots'] ?? []) as List)
           .map((h) => ViolationHotspot.fromJson(h))
+          .toList(),
+    );
+  }
+}
