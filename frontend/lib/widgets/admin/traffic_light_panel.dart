@@ -469,3 +469,18 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
                   () => _setManualState(TrafficLightState.red),
                 ),
               ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _buildManualButton(
+                  'Y',
+                  Colors.amber,
+                  () => _setManualState(TrafficLightState.yellow),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _buildManualButton(
+                  'G',
+                  Colors.green,
+                  () => _setManualState(TrafficLightState.green),
+                ),
