@@ -431,3 +431,19 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
         return Colors.green;
     }
   }
+
+  Widget _buildControls() {
+    return Column(
+      children: [
+        // Manual override toggle
+        Row(
+          children: [
+            Text(
+              'Manual Override',
+              style: AppTypography.bodySmall,
+            ),
+            const Spacer(),
+            Transform.scale(
+              scale: 0.8,
+              child: Switch(
+                value: _isManualOverride,
