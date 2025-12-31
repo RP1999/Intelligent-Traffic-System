@@ -447,3 +447,25 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
               scale: 0.8,
               child: Switch(
                 value: _isManualOverride,
+                onChanged: (value) {
+                  setState(() {
+                    _isManualOverride = value;
+                  });
+                },
+                activeColor: AppColors.warning,
+              ),
+            ),
+          ],
+        ),
+        
+        if (_isManualOverride) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildManualButton(
+                  'R',
+                  Colors.red,
+                  () => _setManualState(TrafficLightState.red),
+                ),
+              ),
