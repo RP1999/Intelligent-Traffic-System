@@ -199,3 +199,70 @@ flutter pub get
 2. Go to **Languages & Frameworks** → **Android SDK**
 3. **SDK Platforms** tab:
    - ✅ Check **Android 14.0 (API 34)**
+4. **SDK Tools** tab:
+   - ✅ Click **Show Package Details** (bottom right)
+   - ✅ Expand **NDK (Side by side)**
+   - ✅ Select exactly **23.1.7779620**
+   - ✅ Check **Android SDK Build-Tools 34.0.0**
+5. Click **Apply** and wait for installation
+
+#### 3.3 Accept Licenses
+```powershell
+flutter doctor --android-licenses
+# Press 'y' for all prompts
+```
+
+---
+
+## 🚀 Running the System
+
+### Full Stack (Backend + Frontend)
+
+**Terminal 1 - Start Backend:**
+```powershell
+cd D:\Intelligent-Traffic-Management-System
+.\.venv\Scripts\Activate.ps1
+cd backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+✅ **Success:** `Uvicorn running on http://0.0.0.0:8000`
+
+**Terminal 2 - Start Frontend (new PowerShell window):**
+```powershell
+cd D:\Intelligent-Traffic-Management-System\frontend
+flutter run -d chrome --web-port 8080
+```
+
+✅ **Success:** Admin dashboard opens at http://localhost:8080
+
+### Run Mobile App (Optional)
+```powershell
+cd D:\Intelligent-Traffic-Management-System\frontend
+flutter run
+```
+
+Select your Android device when prompted.
+
+---
+
+### 📍 Access Points
+
+| URL | Description |
+|-----|-------------|
+| http://localhost:8080 | 🖥️ Admin Dashboard |
+| http://localhost:8000/docs | 📡 API Documentation |
+| http://localhost:8000/detect | 🎥 Live Detection Stream |
+
+### 🔐 Default Admin Login
+
+- **Username:** `admin`
+- **Password:** `admin123`
+
+---
+
+## 🔧 Troubleshooting
+
+### ❌ First Flutter Build Fails
+
+If the first `flutter run` fails, clean and rebuild:
