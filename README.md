@@ -132,3 +132,70 @@ python -m pip install --upgrade pip
 #### 1.5 Install Backend Dependencies
 ```powershell
 cd backend
+pip install -r requirements.txt
+```
+
+**⏱️ Duration:** 2-3 minutes
+
+#### 1.6 Install PyTorch (CPU Version)
+
+> ⚠️ **IMPORTANT:** Run this command SEPARATELY after requirements.txt
+
+```powershell
+pip install torch==2.2.0+cpu torchvision==0.17.0+cpu --index-url https://download.pytorch.org/whl/cpu
+```
+
+**⏱️ Duration:** 3-5 minutes (large download ~200MB)
+
+#### 1.7 Verify Installation
+```powershell
+python check_db.py
+```
+
+✅ **Expected Output:**
+```
+✅ Database connection OK
+✅ TTS warnings folder found
+✅ 5 audio files ready
+```
+
+---
+
+### Step 2: Frontend Setup (Web)
+
+#### 2.1 Install Flutter SDK
+
+1. Download Flutter from: https://docs.flutter.dev/get-started/install/windows
+2. Extract to `C:\flutter`
+3. Add `C:\flutter\bin` to your system PATH
+
+#### 2.2 Verify Flutter Installation
+```powershell
+flutter --version
+```
+
+✅ **Expected:** `Flutter 3.16.x • Dart 3.2.x`
+
+#### 2.3 Install Flutter Dependencies
+```powershell
+cd D:\Intelligent-Traffic-Management-System\frontend
+flutter pub get
+```
+
+---
+
+### Step 3: Mobile App Setup (Optional)
+
+> ⚠️ Only needed if you want to run the mobile app on Android
+
+#### 3.1 Install Android Studio
+
+1. Download from: https://developer.android.com/studio
+2. Install and complete the setup wizard
+
+#### 3.2 Install Required SDK Components
+
+1. Open **Android Studio** → **File** → **Settings**
+2. Go to **Languages & Frameworks** → **Android SDK**
+3. **SDK Platforms** tab:
+   - ✅ Check **Android 14.0 (API 34)**
