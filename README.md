@@ -65,3 +65,70 @@ This project demonstrates an intelligent traffic management system with:
 ### 🔄 In Progress (Mobile App)
 
 | Feature | Description | Status |
+|---------|-------------|--------|
+| 🔐 Authentication | Driver login with phone + plate | ✅ Complete |
+| 📊 Dashboard | Score and violations | 🔄 In Progress |
+| 💳 Payments | Fine payments | 📅 Planned |
+
+---
+
+## 📋 Prerequisites
+
+### For Backend
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Python** | 3.11 or 3.12 | Required |
+| **Windows** | 10 or 11 | PowerShell recommended |
+
+### For Frontend (Web)
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Flutter SDK** | 3.16+ | With Dart 3.2+ |
+| **Chrome** | Latest | For web development |
+
+### For Mobile App (Android) ⚠️ IMPORTANT
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Flutter SDK** | 3.16+ | With Dart 3.2+ |
+| **Android Studio** | 2023.1+ | Required for SDK tools |
+| **Android SDK** | API Level 34 | Required |
+| **Android NDK** | **23.1.7779620** | ⚠️ **EXACT VERSION** |
+| **Java** | 17 | Bundled with Android Studio |
+
+---
+
+## 📦 Setup Instructions
+
+> **Note:** This project is provided as a ZIP file. Extract it to `D:\Intelligent-Traffic-Management-System\`
+
+---
+
+### Step 1: Backend Setup
+
+Open **PowerShell** and follow these steps:
+
+#### 1.1 Navigate to Project
+```powershell
+cd D:\Intelligent-Traffic-Management-System
+```
+
+#### 1.2 Create Virtual Environment
+```powershell
+python -m venv .venv
+```
+
+#### 1.3 Activate Virtual Environment
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+✅ **Success:** You should see `(.venv)` prefix in your terminal
+
+#### 1.4 Upgrade pip
+```powershell
+python -m pip install --upgrade pip
+```
+
+#### 1.5 Install Backend Dependencies
+```powershell
+cd backend
