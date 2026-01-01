@@ -323,3 +323,155 @@ def detect_lane_drift(
         first_half_avg = sum(distances_from_center[:len(distances_from_center)//2]) / (len(distances_from_center)//2)
         second_half_avg = sum(distances_from_center[len(distances_from_center)//2:]) / (len(distances_from_center)//2)
         
+        # Drift detected: variance high AND moving away from center
+        if x_variance > DRIFT_VARIANCE_THRESHOLD and second_half_avg > first_half_avg * 1.3:
+            behavior.last_behavior_time = time.time()
+            behavior.behaviors_detected.append('lane_drift')
+            
+            event = BehaviorEvent(
+                vehicle_id=track_id,
+                behavior_type=BehaviorType.LANE_DRIFT,
+                severity=SeverityLevel.MEDIUM,
+                plate_number=plate_text,
+                details={
+                    'x_variance': round(x_variance, 1),
+                    'drift_from_center': round(second_half_avg - first_half_avg, 1),
+                }
+            )
+            
+            _behavior_events.append(event)
+            print(f"[BEHAVIOR] ↔️ Vehicle {track_id} LANE DRIFT: variance={x_variance:.1f}")
+            
+            return event
+    
+    return None
+
+
+def analyze_vehicle_behavior(
+    track_id: int,
+    centroid: Tuple[int, int],
+    speed_pixels: float,
+    plate_text: Optional[str] = None
+) -> List[BehaviorEvent]:
+    """
+    Comprehensive behavior analysis for a vehicle.
+    Runs all detection algorithms.
+    
+    Args:
+        track_id: Vehicle tracking ID
+        centroid: Current (x, y) position
+        speed_pixels: Current speed in pixels/second
+        plate_text: License plate if available
+    
+    Returns:
+        List of detected behavior events
+    """
+    events = []
+    
+    # Update position and speed
+    if track_id not in _vehicle_behaviors:
+        _vehicle_behaviors[track_id] = VehicleBehavior(track_id=track_id)
+    
+    behavior = _vehicle_behaviors[track_id]
+    behavior.add_position(centroid[0], centroid[1], speed_pixels)
+    
+    # Run detections
+    event = detect_sudden_stop(track_id, speed_pixels, plate_text)
+    if event:
+        events.append(event)
+    
+    event = detect_harsh_brake(track_id, speed_pixels, plate_text)
+    if event:
+        events.append(event)
+    
+    event = detect_lane_drift(track_id, centroid, plate_text=plate_text)
+    if event:
+        events.append(event)
+    
+    return events
+
+
+# ============================================================================
+# API FUNCTIONS
+# ============================================================================
+
+def get_vehicle_behavior(track_id: int) -> Optional[Dict]:
+    """Get behavior summary for a vehicle."""
+    if track_id not in _vehicle_behaviors:
+        return None
+    
+    behavior = _vehicle_behaviors[track_id]
+    return {
+        'track_id': track_id,
+        'sudden_stop_count': behavior.sudden_stop_count,
+        'harsh_brake_count': behavior.harsh_brake_count,
+        'drift_score': round(behavior.drift_score, 1),
+        'behaviors_detected': behavior.behaviors_detected[-10:],
+    }
+
+
+def get_recent_behavior_events(limit: int = 20) -> List[dict]:
+    """Get recent behavior events."""
+    return [e.to_dict() for e in _behavior_events[-limit:]]
+
+
+def get_high_risk_vehicles() -> List[Dict]:
+    """Get vehicles with concerning behavior patterns."""
+    high_risk = []
+    
+    for track_id, behavior in _vehicle_behaviors.items():
+        risk_count = behavior.sudden_stop_count + behavior.harsh_brake_count
+        if risk_count >= 2 or behavior.drift_score > DRIFT_VARIANCE_THRESHOLD * 1.5:
+            high_risk.append({
+                'track_id': track_id,
+                'risk_events': risk_count,
+                'drift_score': round(behavior.drift_score, 1),
+                'behaviors': behavior.behaviors_detected[-5:],
+            })
+    
+    return sorted(high_risk, key=lambda x: x['risk_events'], reverse=True)
+
+
+def cleanup_old_behaviors(max_age_seconds: float = 60.0):
+    """Remove old behavior records."""
+    global _vehicle_behaviors
+    current_time = time.time()
+    stale_ids = []
+    
+    for track_id, behavior in _vehicle_behaviors.items():
+        if behavior.positions and (current_time - behavior.positions[-1].timestamp) > max_age_seconds:
+            stale_ids.append(track_id)
+    
+    for track_id in stale_ids:
+        del _vehicle_behaviors[track_id]
+
+
+def reset_behaviors():
+    """Reset all behavior tracking."""
+    global _vehicle_behaviors, _behavior_events
+    _vehicle_behaviors.clear()
+    _behavior_events.clear()
+
+
+# ============================================================================
+# DATABASE INTEGRATION
+# ============================================================================
+
+async def save_behavior_event_to_db(event: BehaviorEvent):
+    """Save a behavior event to the database."""
+    try:
+        import aiosqlite
+        from app.config import get_settings
+        
+        settings = get_settings()
+        db_path = settings.data_dir / "traffic.db"
+        
+        async with aiosqlite.connect(db_path) as db:
+            await db.execute("""
+                INSERT INTO abnormal_behavior_log 
+                (vehicle_id, behavior_type, severity, plate_number, timestamp)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (
+                event.vehicle_id,
+                event.behavior_type.value,
+                event.severity.value,
