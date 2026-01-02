@@ -481,3 +481,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 size: 14,
                 color: AppColors.textMuted,
               ),
+            ],
+          ),
+        ),
+      ),
