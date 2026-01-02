@@ -266,3 +266,71 @@ Select your Android device when prompted.
 ### ❌ First Flutter Build Fails
 
 If the first `flutter run` fails, clean and rebuild:
+
+```powershell
+cd D:\Intelligent-Traffic-Management-System\frontend
+flutter clean
+flutter pub get
+flutter run -d chrome --web-port 8080
+```
+
+### ❌ "flutter pub get" Fails
+
+```powershell
+Remove-Item pubspec.lock
+flutter pub get
+```
+
+### ❌ Backend Errors
+
+**"Torch not found" or CUDA errors:**
+```powershell
+cd D:\Intelligent-Traffic-Management-System\backend
+pip uninstall torch torchvision -y
+pip install torch==2.2.0+cpu torchvision==0.17.0+cpu --index-url https://download.pytorch.org/whl/cpu
+```
+
+**"EasyOCR not installed":**
+```powershell
+pip install easyocr==1.7.1
+```
+
+### ❌ Android Build Fails
+
+**"NDK not found":**
+1. Open **Android Studio** → **SDK Manager** → **SDK Tools**
+2. Check **Show Package Details**
+3. Install exactly **NDK 23.1.7779620**
+
+**"Gradle build failed":**
+```powershell
+cd D:\Intelligent-Traffic-Management-System\frontend\android
+.\gradlew clean
+cd ..
+flutter clean
+flutter pub get
+flutter run
+```
+
+### ❌ Port Already in Use
+
+```powershell
+# Kill process using port 8000
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess | Stop-Process -Force
+```
+
+---
+
+## 👥 Team Members
+
+| ID | Focus Area |
+|----|------------|
+| IT22900890 | Parking Detection, License Plate OCR |
+| IT22337580 | Lane Safety, Driver Scoring System |
+| IT22925572 | Traffic Signals, Fuzzy Logic Controller |
+| IT22363848 | Speed Detection, Risk Prediction |
+
+---
+
+**Version:** 1.0 (First Evaluation)  
+**Date:** January 3, 2026
