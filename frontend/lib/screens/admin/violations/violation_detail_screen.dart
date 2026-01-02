@@ -630,3 +630,23 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
+        title: const Text('Dismiss Violation'),
+        content: Text(
+          'Are you sure you want to dismiss this violation? This indicates the AI made an error.\n\nViolation: ${violation.licensePlate ?? violation.driverId}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Dismiss'),
+          ),
+        ],
+      ),
+    );
+    
