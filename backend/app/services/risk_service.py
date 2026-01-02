@@ -433,3 +433,24 @@ if __name__ == "__main__":
         {"speed": 60, "limit": 60, "violations": 2, "expected": "MEDIUM"},
         {"speed": 75, "limit": 60, "violations": 3, "expected": "HIGH"},
         {"speed": 90, "limit": 60, "violations": 5, "expected": "CRITICAL"},
+        {"speed": 55, "limit": 60, "violations": 8, "expected": "MEDIUM-HIGH"},
+    ]
+    
+    print("-" * 70)
+    print(f"{'Speed':<8} {'Limit':<8} {'Violations':<12} {'Risk Score':<12} {'Level':<10}")
+    print("-" * 70)
+    
+    for case in test_cases:
+        risk = calculate_risk(
+            speed=case["speed"],
+            speed_limit=case["limit"],
+            violation_history_count=case["violations"],
+            vehicle_id=1
+        )
+        
+        print(f"{case['speed']:>5} km/h {case['limit']:>5} km/h {case['violations']:>8}       {risk.risk_score:>8.1f}     {risk.risk_level:<10}")
+    
+    print("-" * 70)
+    print()
+    
+    # Detailed breakdown
