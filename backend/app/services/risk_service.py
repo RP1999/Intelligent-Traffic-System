@@ -391,3 +391,45 @@ def calculate_and_save_risk(
         
     Returns:
         Dict with risk score details.
+    """
+    # Get violation history from database
+    violations = get_recent_violations(vehicle_id=vehicle_id, plate_number=plate_number)
+    violation_count = len(violations)
+    
+    # Calculate risk
+    risk = calculate_risk(
+        speed=speed,
+        speed_limit=speed_limit,
+        violation_history_count=violation_count,
+        vehicle_id=vehicle_id,
+        plate_number=plate_number
+    )
+    
+    # Save to database
+    risk_id = save_risk_score_to_database(risk)
+    
+    result = risk.to_dict()
+    result['risk_id'] = risk_id
+    
+    return result
+
+
+# =============================================================================
+# CLI TESTING
+# =============================================================================
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("ACCIDENT RISK PREDICTION SERVICE TEST")
+    print("=" * 60)
+    print()
+    print("Formula: Risk_Score = (Speed_Factor × 0.6) + (History_Factor × 0.4)")
+    print("Note: Weather factor REMOVED per supervisor decision.")
+    print()
+    
+    # Test cases with different speed/history combinations
+    test_cases = [
+        {"speed": 40, "limit": 60, "violations": 0, "expected": "LOW"},
+        {"speed": 60, "limit": 60, "violations": 2, "expected": "MEDIUM"},
+        {"speed": 75, "limit": 60, "violations": 3, "expected": "HIGH"},
+        {"speed": 90, "limit": 60, "violations": 5, "expected": "CRITICAL"},
