@@ -190,3 +190,21 @@ class ViolationsProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// Delete a violation (dismiss)
+  Future<bool> deleteViolation(String violationId) async {
+    try {
+      final response = await _apiClient.delete(
+        ApiEndpoints.violationDetail(violationId),
+      );
+
+      if (response.success) {
+        _violations.removeWhere((v) => v.violationId == violationId);
+        _total = (_total - 1).clamp(0, _total);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = 'Failed to delete violation: $e';
+      notifyListeners();
