@@ -650,3 +650,12 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
       ),
     );
     
+    if (confirmed == true && mounted) {
+      final success = await context.read<ViolationsProvider>().deleteViolation(
+        violation.violationId,
+      );
+      
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Violation dismissed'),
