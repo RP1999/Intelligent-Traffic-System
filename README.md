@@ -1,4 +1,4 @@
-   # 🚦 Intelligent Traffic Management System (ITMS)
+# 🚦 Intelligent Traffic Management System (ITMS)
 
 An AI-powered system designed to reduce traffic congestion and improve road safety through real-time violation detection, adaptive traffic signals, and driver scoring.
 

@@ -1,4 +1,4 @@
- """
+"""
 Intelligent Traffic Management System - Parking API Router
 Endpoints for managing parking zones and violations.
 """
@@ -150,7 +150,7 @@ class ViolationResponse(BaseModel):
     license_plate: Optional[str]
     snapshot_path: Optional[str]
     fine_amount: float
-     status: str
+    status: str
 
 
 class ZoneStatsResponse(BaseModel):
@@ -340,7 +340,7 @@ async def get_violation(violation_id: str):
     detector = await get_detector()
     for v in detector.get_all_violations():
         if v.violation_id == violation_id:
-             return ViolationResponse(**v.to_dict())
+            return ViolationResponse(**v.to_dict())
     
     raise HTTPException(status_code=404, detail=f"Violation not found: {violation_id}")
 
@@ -378,4 +378,3 @@ async def reset_detector():
     detector = await get_detector()
     detector.reset()
     return {"status": "reset", "message": "Parking detector reset successfully"}
-  

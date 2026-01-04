@@ -1,4 +1,4 @@
- """
+"""
 Intelligent Traffic Management System - Parking Violation Detection
 Detects vehicles parked illegally in no-parking zones using ROI polygons and dwell-time tracking.
 """
@@ -331,7 +331,7 @@ class ParkingDetector:
         stale_keys = set(self.tracked_vehicles.keys()) - active_keys
         stale_timeout = 2.0  # seconds before removing stale tracking
         
-         for key in stale_keys:
+        for key in stale_keys:
             tracked = self.tracked_vehicles[key]
             if current_time - tracked.last_seen > stale_timeout:
                 # Finalize any active violation

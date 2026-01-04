@@ -1,0 +1,663 @@
+"""
+Intelligent Traffic Management System - Fuzzy Logic Traffic Controller
+4-WAY HYBRID JUNCTION: 1 Real Lane (YOLO) + 3 Simulated Lanes
+
+Research Component for University Grading
+==========================================
+This module demonstrates fuzzy inference systems for traffic signal optimization.
+Uses scikit-fuzzy for fuzzy set operations and rule-based inference.
+
+Architecture:
+- Lane North: REAL data from YOLO video detection
+- Lane South/East/West: SIMULATED (random density, updates every 10 seconds)
+- Round-robin cycle: N -> E -> S -> W with fuzzy-computed green durations
+- Emergency mode: Triggered by ambulance detection (YOLO class_id=8)
+"""
+
+import time
+import asyncio
+import random
+import numpy as np
+from typing import Dict, Optional, List
+
+try:
+    import skfuzzy as fuzz
+    from skfuzzy import control as ctrl
+    FUZZY_AVAILABLE = True
+except ImportError:
+    FUZZY_AVAILABLE = False
+    print("[WARNING] scikit-fuzzy not installed. Run: pip install scikit-fuzzy")
+
+
+class FuzzyTrafficController:
+    """
+    Fuzzy logic controller for adaptive traffic signal timing.
+    
+    Input: Vehicle count at intersection
+    Output: Green light duration in seconds
+    
+    Fuzzy Rules:
+    - Low traffic (0-5 vehicles) → Short green (10-20s)
+    - Medium traffic (5-15 vehicles) → Medium green (20-40s)
+    - High traffic (15+ vehicles) → Long green (40-60s)
+    """
+    
+    def __init__(self, min_green: int = 10, max_green: int = 60):
+        """
+        Initialize the fuzzy controller.
+        
+        Args:
+            min_green: Minimum green light duration (seconds)
+            max_green: Maximum green light duration (seconds)
+        """
+        self.min_green = min_green
+        self.max_green = max_green
+        self.simulation = None
+        
+        if FUZZY_AVAILABLE:
+            self._setup_fuzzy_system()
+        else:
+            print("⚠️ Running in fallback mode (linear interpolation)")
+    
+    def _setup_fuzzy_system(self):
+        """Set up the fuzzy inference system."""
+        # Define fuzzy variables
+        
+        # Input: Vehicle count (0 to 30)
+        self.vehicle_count = ctrl.Antecedent(np.arange(0, 31, 1), 'vehicle_count')
+        
+        # Output: Green light duration (10 to 60 seconds)
+        self.green_duration = ctrl.Consequent(np.arange(self.min_green, self.max_green + 1, 1), 'green_duration')
+        
+        # Define membership functions for vehicle count (shifted lower for demo)
+        # Low: mostly 0-4, Medium: 2-12, High: 8-30
+        self.vehicle_count['low'] = fuzz.trimf(self.vehicle_count.universe, [0, 0, 4])
+        self.vehicle_count['medium'] = fuzz.trimf(self.vehicle_count.universe, [2, 6, 12])
+        self.vehicle_count['high'] = fuzz.trimf(self.vehicle_count.universe, [8, 15, 30])
+        
+        # Define membership functions for green duration
+        self.green_duration['short'] = fuzz.trimf(self.green_duration.universe, 
+                                                   [self.min_green, self.min_green, 25])
+        self.green_duration['medium'] = fuzz.trimf(self.green_duration.universe, 
+                                                    [20, 35, 50])
+        self.green_duration['long'] = fuzz.trimf(self.green_duration.universe, 
+                                                  [40, self.max_green, self.max_green])
+        
+        # Define fuzzy rules
+        rule1 = ctrl.Rule(self.vehicle_count['low'], self.green_duration['short'])
+        rule2 = ctrl.Rule(self.vehicle_count['medium'], self.green_duration['medium'])
+        rule3 = ctrl.Rule(self.vehicle_count['high'], self.green_duration['long'])
+        
+        # Create control system
+        self.traffic_ctrl = ctrl.ControlSystem([rule1, rule2, rule3])
+        self.simulation = ctrl.ControlSystemSimulation(self.traffic_ctrl)
+        
+        print("✅ Fuzzy traffic controller initialized")
+    
+    def compute_green_duration(self, vehicle_count: int) -> int:
+        """
+        Compute optimal green light duration based on vehicle count.
+        
+        Args:
+            vehicle_count: Number of vehicles waiting at intersection
+            
+        Returns:
+            Green light duration in seconds
+        """
+        # Clamp vehicle count to valid range
+        vehicle_count = max(0, min(30, vehicle_count))
+        
+        if self.simulation is not None:
+            try:
+                self.simulation.input['vehicle_count'] = vehicle_count
+                self.simulation.compute()
+                duration = int(self.simulation.output['green_duration'])
+                return max(self.min_green, min(self.max_green, duration))
+            except Exception as e:
+                print(f"⚠️ Fuzzy computation error: {e}")
+        
+        # Fallback: Linear interpolation
+        return self._linear_fallback(vehicle_count)
+    
+    def _linear_fallback(self, vehicle_count: int) -> int:
+        """Fallback linear interpolation if fuzzy system unavailable."""
+        # Map 0-30 vehicles to min_green-max_green seconds
+        ratio = vehicle_count / 30.0
+        duration = self.min_green + ratio * (self.max_green - self.min_green)
+        return int(duration)
+    
+    def get_traffic_level(self, vehicle_count: int) -> str:
+        """
+        Get traffic level classification.
+        
+        Args:
+            vehicle_count: Number of vehicles
+            
+        Returns:
+            Traffic level: 'low', 'medium', or 'high'
+        """
+        # Make thresholds lower for demo so green appears with fewer vehicles
+        if vehicle_count <= 2:
+            return 'low'
+        elif vehicle_count <= 8:
+            return 'medium'
+        else:
+            return 'high'
+    
+    def get_signal_recommendation(self, vehicle_count: int) -> dict:
+        """
+        Get full signal recommendation with all details.
+        
+        Args:
+            vehicle_count: Number of vehicles at intersection
+            
+        Returns:
+            Dictionary with duration, traffic_level, and recommendation details
+        """
+        duration = self.compute_green_duration(vehicle_count)
+        traffic_level = self.get_traffic_level(vehicle_count)
+        
+        return {
+            "vehicle_count": vehicle_count,
+            "traffic_level": traffic_level,
+            "green_duration_sec": duration,
+            "yellow_duration_sec": 3,  # Standard yellow light
+            "red_duration_sec": max(10, 70 - duration),  # Remaining time for cross traffic
+            "cycle_time_sec": duration + 3 + max(10, 70 - duration),
+            "fuzzy_available": FUZZY_AVAILABLE,
+        }
+
+
+# =============================================================================
+# Traffic Signal State Machine
+# =============================================================================
+
+class TrafficSignal:
+    """
+    Traffic signal state machine with timing control.
+    Auto-advances based on elapsed time.
+    """
+    
+    STATES = ['red', 'yellow', 'green']
+    
+    def __init__(self, signal_id: str = "main"):
+        self.signal_id = signal_id
+        self.state = 'red'
+        self.remaining_time = 30  # Default red duration
+        self.green_duration = 30
+        self.yellow_duration = 3
+        self.red_duration = 30
+        self.controller = FuzzyTrafficController()
+        self.last_update = time.time()
+        self.last_tick_time = time.time()
+        self.vehicle_count = 0
+        self.auto_tick_enabled = True
+    
+    def update_timing(self, vehicle_count: int):
+        """Update signal timing based on vehicle count."""
+        self.vehicle_count = vehicle_count
+        recommendation = self.controller.get_signal_recommendation(vehicle_count)
+        
+        self.green_duration = recommendation['green_duration_sec']
+        self.red_duration = recommendation['red_duration_sec']
+        
+        return recommendation
+    
+    def set_state(self, state: str, duration: int = None):
+        """Set signal state with optional duration override."""
+        if state not in self.STATES:
+            raise ValueError(f"Invalid state: {state}. Must be one of {self.STATES}")
+        
+        self.state = state
+        
+        if duration is not None:
+            self.remaining_time = duration
+        else:
+            if state == 'green':
+                self.remaining_time = self.green_duration
+            elif state == 'yellow':
+                self.remaining_time = self.yellow_duration
+            else:
+                self.remaining_time = self.red_duration
+        
+        import time
+        self.last_update = time.time()
+    
+    def auto_tick(self) -> bool:
+        """
+        Automatically advance signal based on actual elapsed time.
+        Call this periodically to keep signal synchronized with real time.
+        
+        Returns:
+            True if state changed, False otherwise
+        """
+        if not self.auto_tick_enabled:
+            return False
+        
+        current_time = time.time()
+        elapsed = int(current_time - self.last_tick_time)
+        
+        if elapsed >= 1:
+            self.last_tick_time = current_time
+            return self.tick(elapsed)
+        
+        return False
+    
+    def tick(self, elapsed_seconds: int = 1) -> bool:
+        """
+        Advance the signal timer.
+        
+        Args:
+            elapsed_seconds: Time elapsed since last tick
+            
+        Returns:
+            True if state changed, False otherwise
+        """
+        self.remaining_time -= elapsed_seconds
+        
+        if self.remaining_time <= 0:
+            # State transition
+            if self.state == 'green':
+                self.set_state('yellow')
+            elif self.state == 'yellow':
+                self.set_state('red')
+            else:  # red
+                self.set_state('green')
+            return True
+        
+        return False
+    
+    def get_status(self) -> dict:
+        """Get current signal status with auto-tick update."""
+        # Auto-advance based on elapsed time
+        state_changed = self.auto_tick()
+        
+        # Log status for debugging (only when state changes or every 5 polls)
+        if state_changed:
+            print(f"[SIGNAL] State changed to {self.state.upper()} | Remaining: {self.remaining_time}s | Vehicles: {self.vehicle_count}")
+        
+        return {
+            "signal_id": self.signal_id,
+            "state": self.state,
+            "remaining_time": max(0, self.remaining_time),  # Never show negative
+            "green_duration": self.green_duration,
+            "yellow_duration": self.yellow_duration,
+            "red_duration": self.red_duration,
+            "vehicle_count": self.vehicle_count,
+            "traffic_level": self.controller.get_traffic_level(self.vehicle_count),
+        }
+
+
+# Global signal instance
+_signal: TrafficSignal = None
+
+
+def get_signal() -> TrafficSignal:
+    """Get or create the global traffic signal instance."""
+    global _signal
+    if _signal is None:
+        _signal = TrafficSignal()
+    return _signal
+
+
+# =============================================================================
+# 4-WAY HYBRID JUNCTION CONTROLLER
+# =============================================================================
+
+class FourWayTrafficController:
+    """
+    4-Way Junction Controller with Hybrid Data Sources.
+    
+    Architecture:
+    - North Lane: REAL vehicle count from YOLO video detection
+    - South/East/West Lanes: SIMULATED traffic density (random, updates every 10s)
+    
+    Cycle: Round-robin (N -> E -> S -> W) with fuzzy-computed green durations.
+    Emergency: Ambulance detection forces one lane GREEN, others RED.
+    """
+    
+    LANES = ['north', 'south', 'east', 'west']
+    CYCLE_ORDER = ['north', 'east', 'south', 'west']  # Round-robin order
+    COLORS = ['red', 'yellow', 'green']
+    
+    def __init__(self):
+        """Initialize the 4-way controller."""
+        # Vehicle counts per lane
+        self.lane_counts: Dict[str, int] = {
+            'north': 0, 'south': 0, 'east': 0, 'west': 0
+        }
+        
+        # Light states per lane
+        self.lane_states: Dict[str, str] = {
+            'north': 'red', 'south': 'red', 'east': 'red', 'west': 'red'
+        }
+        
+        # Current green lane and timing
+        self.current_green_lane: str = 'north'
+        self.green_remaining: int = 30
+        self.yellow_remaining: int = 0
+        self.is_yellow_phase: bool = False
+        
+        # Simulation timing
+        self.last_sim_update: float = time.time()
+        self.sim_update_interval: int = 10  # seconds between simulated data updates
+        
+        # Emergency mode
+        self.emergency_mode: bool = False
+        self.emergency_lane: Optional[str] = None
+        self.emergency_start_time: Optional[float] = None
+        self.emergency_duration: int = 30  # seconds
+        
+        # Fuzzy controller for computing green durations
+        self.fuzzy_controller = FuzzyTrafficController()
+        
+        # Auto-tick timing
+        self.last_tick_time: float = time.time()
+        self.auto_tick_enabled: bool = True
+        
+        # Initialize with north green
+        self.lane_states['north'] = 'green'
+        self._update_simulated_lanes()
+        
+        print("[OK] 4-Way Hybrid Traffic Controller initialized")
+    
+    def _update_simulated_lanes(self):
+        """Generate random traffic density for simulated lanes (S, E, W)."""
+        current_time = time.time()
+        
+        if current_time - self.last_sim_update >= self.sim_update_interval:
+            self.lane_counts['south'] = random.randint(0, 20)
+            self.lane_counts['east'] = random.randint(0, 20)
+            self.lane_counts['west'] = random.randint(0, 20)
+            self.last_sim_update = current_time
+    
+    def get_simulated_density(self) -> Dict[str, int]:
+        """
+        Get current simulated traffic density for virtual lanes.
+        
+        Returns:
+            Dict with vehicle counts for south, east, west lanes.
+        """
+        self._update_simulated_lanes()
+        return {
+            'south': self.lane_counts['south'],
+            'east': self.lane_counts['east'],
+            'west': self.lane_counts['west']
+        }
+    
+    def update_north_count(self, yolo_count: int):
+        """
+        Update North lane with real YOLO detection count.
+        
+        Args:
+            yolo_count: Number of vehicles detected by YOLO in video feed.
+        """
+        self.lane_counts['north'] = yolo_count
+    
+    def activate_emergency_mode(self, lane: str = 'north') -> Dict:
+        """
+        Activate emergency mode for a specific lane.
+        Forces that lane GREEN immediately, ALL others RED.
+        Called when ambulance is detected by YOLO.
+        
+        SAFETY: Only ONE lane can be green at a time.
+        
+        Args:
+            lane: Lane to set GREEN (default 'north' since video = north)
+            
+        Returns:
+            Status dict with emergency info.
+        """
+        if lane not in self.LANES:
+            lane = 'north'
+        
+        self.emergency_mode = True
+        self.emergency_lane = lane
+        self.emergency_start_time = time.time()
+        
+        # SAFETY: Force ALL lanes to RED first, then set target to GREEN
+        for l in self.LANES:
+            self.lane_states[l] = 'red'
+        self.lane_states[lane] = 'green'
+        
+        self.current_green_lane = lane
+        self.is_yellow_phase = False
+        self.green_remaining = self.emergency_duration
+        self.yellow_remaining = 0
+        
+        print(f"[EMERGENCY] 🚑 Lane {lane.upper()} forced GREEN - ALL others RED!")
+        
+        return {
+            'status': 'emergency_activated',
+            'green_lane': lane,
+            'duration': self.emergency_duration,
+            'message': f'Emergency mode: {lane.upper()} lane forced GREEN'
+        }
+    
+    def deactivate_emergency_mode(self) -> Dict:
+        """
+        Deactivate emergency mode and resume normal round-robin cycle.
+        
+        Returns:
+            Status dict confirming deactivation.
+        """
+        self.emergency_mode = False
+        self.emergency_lane = None
+        self.emergency_start_time = None
+        
+        # Resume from current green lane
+        self.green_remaining = 30
+        
+        print("[OK] Emergency mode deactivated - Resuming normal cycle")
+        
+        return {
+            'status': 'emergency_deactivated',
+            'message': 'Resuming normal round-robin cycle'
+        }
+    
+    def _check_emergency_timeout(self):
+        """Check if emergency mode should auto-deactivate."""
+        if self.emergency_mode and self.emergency_start_time:
+            elapsed = time.time() - self.emergency_start_time
+            if elapsed >= self.emergency_duration:
+                self.deactivate_emergency_mode()
+    
+    def _advance_to_next_lane(self):
+        """
+        Move to the next lane in the round-robin cycle.
+        
+        SAFETY: Ensures only ONE lane is green at a time.
+        All other lanes are explicitly set to RED.
+        """
+        current_idx = self.CYCLE_ORDER.index(self.current_green_lane)
+        next_idx = (current_idx + 1) % len(self.CYCLE_ORDER)
+        next_lane = self.CYCLE_ORDER[next_idx]
+        
+        # Calculate green duration for next lane using fuzzy logic
+        vehicle_count = self.lane_counts[next_lane]
+        self.green_remaining = self.fuzzy_controller.compute_green_duration(vehicle_count)
+        
+        # SAFETY: Set ALL lanes to RED first, then set the next lane to GREEN
+        for lane in self.LANES:
+            self.lane_states[lane] = 'red'
+        self.lane_states[next_lane] = 'green'
+        
+        self.current_green_lane = next_lane
+        self.is_yellow_phase = False
+        self.yellow_remaining = 0
+
+    def _set_single_lane_state(self, target_lane: str, state: str):
+        """
+        SAFETY HELPER: Set one lane to a specific state, all others to RED.
+        
+        This ensures only ONE lane can ever be non-red at a time.
+        
+        Args:
+            target_lane: The lane to set to the given state
+            state: 'green', 'yellow', or 'red'
+        """
+        for lane in self.LANES:
+            if lane == target_lane:
+                self.lane_states[lane] = state
+            else:
+                self.lane_states[lane] = 'red'
+
+    def tick(self, elapsed_seconds: int = 1) -> Dict:
+        """
+        Advance the signal cycle by elapsed seconds.
+        
+        SAFETY: Only ONE lane can be green or yellow at any time.
+        All other lanes are always RED.
+        
+        Args:
+            elapsed_seconds: Time elapsed since last tick (default 1)
+            
+        Returns:
+            Current state of all 4 lanes.
+        """
+        # Check emergency timeout
+        self._check_emergency_timeout()
+        
+        # Update simulated lane data
+        self._update_simulated_lanes()
+        
+        # Don't advance if in emergency mode
+        if self.emergency_mode:
+            # SAFETY: Ensure emergency lane is green, all others red
+            self._set_single_lane_state(self.emergency_lane, 'green')
+            return self.get_all_states()
+        
+        # Handle yellow phase
+        if self.is_yellow_phase:
+            self.yellow_remaining -= elapsed_seconds
+            if self.yellow_remaining <= 0:
+                self._advance_to_next_lane()
+            else:
+                # SAFETY: Keep current lane yellow, all others red
+                self._set_single_lane_state(self.current_green_lane, 'yellow')
+        else:
+            # Green phase countdown
+            self.green_remaining -= elapsed_seconds
+            
+            if self.green_remaining <= 0:
+                # Transition to yellow
+                self.is_yellow_phase = True
+                self.yellow_remaining = 3  # 3 second yellow
+                # SAFETY: Set current lane to yellow, all others red
+                self._set_single_lane_state(self.current_green_lane, 'yellow')
+            else:
+                # SAFETY: Keep current lane green, all others red
+                self._set_single_lane_state(self.current_green_lane, 'green')
+        return self.get_all_states()
+    
+    def auto_tick(self) -> Dict:
+        """
+        Automatically advance signal based on actual elapsed time.
+        Call this periodically (e.g., from API endpoint).
+        
+        Returns:
+            Current state of all 4 lanes.
+        """
+        if not self.auto_tick_enabled:
+            return self.get_all_states()
+        
+        current_time = time.time()
+        elapsed = int(current_time - self.last_tick_time)
+        
+        if elapsed >= 1:
+            self.last_tick_time = current_time
+            return self.tick(elapsed)
+        
+        return self.get_all_states()
+    
+    def get_all_states(self) -> Dict:
+        """
+        Get current state of all 4 lanes.
+        
+        Returns:
+            Complete junction status including all lanes, timing, and mode.
+        """
+        self._update_simulated_lanes()
+        
+        return {
+            'lanes': {
+                lane: {
+                    'state': self.lane_states[lane],
+                    'vehicle_count': self.lane_counts[lane],
+                    'is_real': lane == 'north',
+                    'is_current_green': lane == self.current_green_lane
+                } for lane in self.LANES
+            },
+            'current_green': self.current_green_lane,
+            'green_remaining': max(0, self.green_remaining),
+            'yellow_remaining': max(0, self.yellow_remaining) if self.is_yellow_phase else 0,
+            'is_yellow_phase': self.is_yellow_phase,
+            'emergency_mode': self.emergency_mode,
+            'emergency_lane': self.emergency_lane,
+            'cycle_order': self.CYCLE_ORDER
+        }
+    
+    def get_status(self) -> Dict:
+        """Alias for get_all_states with auto-tick."""
+        return self.auto_tick()
+
+
+# Global 4-way controller instance
+_four_way_controller: FourWayTrafficController = None
+
+
+def get_four_way_controller() -> FourWayTrafficController:
+    """Get or create the global 4-way traffic controller instance."""
+    global _four_way_controller
+    if _four_way_controller is None:
+        _four_way_controller = FourWayTrafficController()
+    return _four_way_controller
+
+
+# =============================================================================
+# CLI for testing
+# =============================================================================
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("FUZZY TRAFFIC CONTROLLER TEST")
+    print("=" * 60)
+    
+    controller = FuzzyTrafficController()
+    
+    # Test with different vehicle counts
+    test_counts = [0, 3, 5, 8, 10, 15, 20, 25, 30]
+    
+    print("\nVehicle Count | Traffic Level | Green Duration")
+    print("-" * 50)
+    
+    for count in test_counts:
+        rec = controller.get_signal_recommendation(count)
+        print(f"    {count:2d}        |    {rec['traffic_level']:6s}     |     {rec['green_duration_sec']:2d}s")
+    
+    print("\n" + "=" * 60)
+    print("4-WAY HYBRID JUNCTION TEST")
+    print("=" * 60)
+    
+    junction = FourWayTrafficController()
+    junction.update_north_count(12)  # Simulate YOLO detection
+    
+    print("\nInitial State:")
+    states = junction.get_all_states()
+    for lane, info in states['lanes'].items():
+        src = "REAL" if info['is_real'] else "SIM"
+        print(f"  {lane.upper():6s}: {info['state']:6s} | {info['vehicle_count']:2d} vehicles ({src})")
+    
+    print(f"\nCurrent Green: {states['current_green'].upper()}")
+    print(f"Green Remaining: {states['green_remaining']}s")
+    
+    print("\nTesting Emergency Mode...")
+    result = junction.activate_emergency_mode('north')
+    print(f"  {result['message']}")
+    
+    states = junction.get_all_states()
+    print(f"  Emergency Mode: {states['emergency_mode']}")
+    for lane, info in states['lanes'].items():
+        print(f"  {lane.upper()}: {info['state']}")
+    
+    print("\n[OK] Fuzzy controller test complete!")

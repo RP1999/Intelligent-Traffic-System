@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Detection - Live Vehicle & Plate Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 0.9em;
+            color: #00ff88;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+        }
+
+        .video-section {
+            background: #262632;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-container img {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
+        }
+
+        .video-container .placeholder {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        .video-container .placeholder h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+        }
+
+        .video-info {
+            padding: 20px;
+            background: #1a1a24;
+            border-top: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .info-label {
+            color: #00ff88;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.active {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-indicator.inactive {
+            background: #ff6464;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel {
+            background: #262632;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #00ff88;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 0.9em;
+        }
+
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border: 2px solid;
+            border-radius: 2px;
+        }
+
+        .vehicle-box {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .plate-box {
+            border-color: #00ccff;
+            background: rgba(0, 204, 255, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.stop-btn {
+            background: linear-gradient(45deg, #ff6464, #ff8888);
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .error-msg {
+            color: #ff6464;
+            padding: 10px;
+            background: rgba(255, 100, 100, 0.1);
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+
+        .success-msg {
+            color: #00ff88;
+            padding: 10px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚗 Live Traffic Detection</h1>
+            <p class="subtitle">Real-time YOLOv8 Vehicle & License Plate Detection</p>
+        </header>
+
+        <div class="content">
+            <div class="video-section">
+                <div class="video-container" id="videoContainer">
+                    <div class="placeholder" id="placeholder">
+                        <h3>📹 Video Stream</h3>
+                        <p>Click "Start Stream" to begin live detection</p>
+                        <p style="margin-top: 10px; font-size: 0.85em; color: #888;">
+                            Uses traffic_sample.mp4 with dual-model detection
+                        </p>
+                    </div>
+                    <img id="streamImg" style="display: none;" alt="Live Detection Stream">
+                </div>
+                <div class="video-info">
+                    <div class="info-row">
+                        <span class="info-label">📹 Source:</span>
+                        <span>traffic_sample.mp4</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">🔄 Status:</span>
+                        <span id="streamStatus">
+                            <span class="status-indicator inactive"></span>
+                            Stopped
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">⏱️ Frame Skip:</span>
+                        <span>2 (for performance)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel">
+                    <div class="panel-title">📋 Detection Legend</div>
+                    <div class="legend-item">
+                        <div class="legend-box vehicle-box"></div>
+                        <span>Vehicle Detection (Green)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box plate-box"></div>
+                        <span>License Plate (Cyan)</span>
+                    </div>
+                    <p style="font-size: 0.8em; color: #888; margin-top: 10px;">
+                        Vehicles with plates show "[Plate Detected]" in label
+                    </p>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">⚙️ Stream Controls</div>
+                    <div class="controls">
+                        <button id="startBtn" onclick="startStream()">▶ Start Stream</button>
+                        <button id="stopBtn" class="stop-btn" onclick="stopStream()" disabled>⏹ Stop Stream</button>
+                    </div>
+                    <div id="msgBox"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">ℹ️ Model Info</div>
+                    <p style="font-size: 0.85em; line-height: 1.6; color: #ccc;">
+                        <strong>Vehicle Model:</strong> yolov8n.pt<br>
+                        <strong>Plate Model:</strong> best_plate.pt (custom)<br>
+                        <strong>Confidence:</strong> 0.5+<br>
+                        <strong>Processing:</strong> CPU
+                    </p>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">🔗 Quick Links</div>
+                    <div class="controls">
+                        <button onclick="window.open('/simulation', '_blank')" style="font-size: 0.85em;">
+                            🚦 Traffic Signal Simulation
+                        </button>
+                        <button onclick="window.open('/docs', '_blank')" style="font-size: 0.85em;">
+                            📚 API Documentation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const streamImg = document.getElementById('streamImg');
+        const placeholder = document.getElementById('placeholder');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const streamStatus = document.getElementById('streamStatus');
+        const msgBox = document.getElementById('msgBox');
+
+        let isStreaming = false;
+
+        function startStream() {
+            // Use the MJPEG stream endpoint with plate detection enabled
+            // Sprint G: Using Sri Lankan traffic video with two-stage "Zoom" detection
+            const streamUrl = '/video/stream?detect_plates=true&skip=2&source=D:/Intelligent-Traffic-Management-System/data/videos/SriLankan_Traffic_Video.mp4';
+            
+            streamImg.src = streamUrl;
+            streamImg.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            isStreaming = true;
+            
+            streamStatus.innerHTML = '<span class="status-indicator active"></span> Streaming...';
+            msgBox.innerHTML = '<div class="success-msg">🎬 Stream started! Processing frames...</div>';
+
+            // Handle image load error - only trigger once
+            streamImg.onerror = function() {
+                if (isStreaming) {
+                    msgBox.innerHTML = '<div class="error-msg">⚠️ Stream error. Check server logs.</div>';
+                    // Don't auto-stop to prevent loops
+                }
+            };
+        }
+
+        function stopStream() {
+            if (!isStreaming) return;  // Prevent multiple calls
+            
+            streamImg.src = '';
+            streamImg.style.display = 'none';
+            placeholder.style.display = 'block';
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            isStreaming = false;
+            
+            streamStatus.innerHTML = '<span class="status-indicator inactive"></span> Stopped';
+            msgBox.innerHTML = '';
+
+            // Call server to stop stream (single call)
+            fetch('/video/stop', { method: 'POST' }).catch(() => {});
+        }
+
+        // Check if server is running on load
+        fetch('/health')
+            .then(r => r.json())
+            .then(data => {
+                msgBox.innerHTML = '<div class="success-msg">✅ Server connected. Ready to stream.</div>';
+                setTimeout(() => { msgBox.innerHTML = ''; }, 3000);
+            })
+            .catch(() => {
+                msgBox.innerHTML = '<div class="error-msg">⚠️ Server not responding. Start the backend first.</div>';
+            });
+    </script>
+</body>
+</html>

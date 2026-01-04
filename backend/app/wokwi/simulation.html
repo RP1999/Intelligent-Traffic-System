@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Signal Simulation - ITS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2rem;
+            text-shadow: 0 0 10px rgba(0,255,255,0.5);
+        }
+
+        .subtitle {
+            color: #0ff;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* Traffic Light */
+        .traffic-light {
+            background: #333;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 3px solid #555;
+        }
+
+        .light-housing {
+            background: #222;
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .light {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #333;
+            border: 3px solid #444;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .light.red {
+            background: #8b0000;
+        }
+        .light.red.active {
+            background: #ff0000;
+            box-shadow: 0 0 30px #ff0000, 0 0 60px #ff0000, inset 0 0 20px rgba(255,255,255,0.3);
+        }
+
+        .light.yellow {
+            background: #8b8b00;
+        }
+        .light.yellow.active {
+            background: #ffff00;
+            box-shadow: 0 0 30px #ffff00, 0 0 60px #ffff00, inset 0 0 20px rgba(255,255,255,0.3);
+        }
+
+        .light.green {
+            background: #006400;
+        }
+        .light.green.active {
+            background: #00ff00;
+            box-shadow: 0 0 30px #00ff00, 0 0 60px #00ff00, inset 0 0 20px rgba(255,255,255,0.3);
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            min-width: 350px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-panel h2 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: #0ff;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status-label {
+            color: #aaa;
+        }
+
+        .status-value {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .status-value.low { color: #00ff00; }
+        .status-value.medium { color: #ffff00; }
+        .status-value.high { color: #ff6600; }
+
+        .timer {
+            font-size: 3rem;
+            text-align: center;
+            padding: 20px;
+            margin: 20px 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .timer.red { color: #ff0000; }
+        .timer.yellow { color: #ffff00; }
+        .timer.green { color: #00ff00; }
+
+        /* Vehicle Count Control */
+        .vehicle-control {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .vehicle-control label {
+            display: block;
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #444;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #0ff;
+            cursor: pointer;
+        }
+
+        .vehicle-count-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        button {
+            background: #0ff;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #00cccc;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #666;
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #777;
+        }
+
+        /* Fuzzy Info */
+        .fuzzy-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,255,255,0.1);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .fuzzy-info h3 {
+            color: #0ff;
+            margin-bottom: 10px;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .connection-status.connected {
+            background: rgba(0,255,0,0.2);
+            color: #0f0;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(255,0,0,0.2);
+            color: #f00;
+        }
+
+        .error-message {
+            color: #ff6666;
+            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚦 Traffic Signal Simulation</h1>
+    <p class="subtitle">Intelligent Traffic Management System - Fuzzy Logic Controller</p>
+
+    <div class="connection-status" id="connectionStatus">⚪ Connecting...</div>
+
+    <div class="container">
+        <!-- Traffic Light -->
+        <div class="traffic-light">
+            <div class="light-housing">
+                <div class="light red" id="redLight"></div>
+                <div class="light yellow" id="yellowLight"></div>
+                <div class="light green" id="greenLight"></div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h2>📊 Signal Status</h2>
+            
+            <div class="timer" id="timer">--</div>
+
+            <div class="status-row">
+                <span class="status-label">Current State:</span>
+                <span class="status-value" id="stateValue">--</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Traffic Level:</span>
+                <span class="status-value" id="trafficLevel">--</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Green Duration:</span>
+                <span class="status-value" id="greenDuration">--s</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Red Duration:</span>
+                <span class="status-value" id="redDuration">--s</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Vehicles Detected:</span>
+                <span class="status-value" id="vehicleCount">0</span>
+            </div>
+
+            <!-- Vehicle Count Control -->
+            <div class="vehicle-control">
+                <label>🚗 Simulate Vehicle Count:</label>
+                <div class="slider-container">
+                    <input type="range" id="vehicleSlider" min="0" max="30" value="5">
+                    <span class="vehicle-count-display" id="sliderValue">5</span>
+                </div>
+                <button id="updateBtn" onclick="updateSignal()">Update Signal Timing</button>
+            </div>
+
+            <!-- Fuzzy Logic Info -->
+            <div class="fuzzy-info">
+                <h3>🧠 Fuzzy Logic Rules</h3>
+                <p>• Low traffic (0-5): 10-20s green</p>
+                <p>• Medium traffic (5-15): 20-40s green</p>
+                <p>• High traffic (15+): 40-60s green</p>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let pollInterval = null;
+
+        // Update slider display
+        document.getElementById('vehicleSlider').addEventListener('input', function() {
+            document.getElementById('sliderValue').textContent = this.value;
+        });
+
+        // Fetch signal status
+        async function fetchStatus() {
+            try {
+                // Fetch 4-way junction status
+                const response = await fetch(`${API_BASE}/signal/4way/status`);
+                if (!response.ok) throw new Error('API error');
+                
+                const data = await response.json();
+                updateUI4Way(data);
+                setConnectionStatus(true);
+            } catch (error) {
+                console.error('Error fetching 4-way status, falling back to legacy:', error);
+                // Fallback to legacy single signal
+                try {
+                    const response = await fetch(`${API_BASE}/signal/status`);
+                    if (!response.ok) throw new Error('API error');
+                    const data = await response.json();
+                    updateUI(data);
+                    setConnectionStatus(true);
+                } catch (e) {
+                    setConnectionStatus(false);
+                    document.getElementById('errorMessage').textContent = 'Failed to connect to API';
+                }
+            }
+        }
+
+        // Update signal timing (4-way)
+        async function updateSignal() {
+            const vehicleCount = parseInt(document.getElementById('vehicleSlider').value);
+            
+            try {
+                // Update North lane count via 4-way API
+                const response = await fetch(`${API_BASE}/signal/4way/update?vehicle_count=${vehicleCount}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) throw new Error('API error');
+                
+                const data = await response.json();
+                updateUI4Way(data.junction_status);
+                document.getElementById('errorMessage').textContent = '';
+            } catch (error) {
+                console.error('Error updating signal:', error);
+                // Fallback to legacy
+                try {
+                    const response = await fetch(`${API_BASE}/signal/update`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ vehicle_count: vehicleCount })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        updateUI(data.signal_status);
+                    }
+                } catch (e) {
+                    document.getElementById('errorMessage').textContent = 'Failed to update signal';
+                }
+            }
+        }
+
+        // Update UI with 4-way data
+        function updateUI4Way(data) {
+            // Find the current green lane
+            const currentGreen = data.current_green;
+            const greenLane = data.lanes[currentGreen];
+            const state = greenLane.state;
+            
+            // Update lights based on current green lane's state
+            const lights = ['red', 'yellow', 'green'];
+            lights.forEach(light => {
+                const el = document.getElementById(light + 'Light');
+                if (state === light) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+            // Update timer
+            const timer = document.getElementById('timer');
+            const remaining = data.is_yellow_phase ? data.yellow_remaining : data.green_remaining;
+            timer.textContent = remaining + 's';
+            timer.className = 'timer ' + state;
+
+            // Update status values
+            document.getElementById('stateValue').textContent = state.toUpperCase() + ' (' + currentGreen.toUpperCase() + ')';
+            document.getElementById('stateValue').style.color = getStateColor(state);
+            
+            // Show traffic level based on north lane
+            const northCount = data.lanes.north.vehicle_count;
+            let trafficLevel = 'low';
+            if (northCount > 8) trafficLevel = 'high';
+            else if (northCount > 2) trafficLevel = 'medium';
+            
+            const trafficLevelEl = document.getElementById('trafficLevel');
+            trafficLevelEl.textContent = trafficLevel.toUpperCase() + (data.emergency_mode ? ' [EMERGENCY]' : '');
+            trafficLevelEl.className = 'status-value ' + trafficLevel;
+            if (data.emergency_mode) trafficLevelEl.style.color = '#ff0000';
+
+            document.getElementById('greenDuration').textContent = data.green_remaining + 's';
+            document.getElementById('redDuration').textContent = '~' + (30 - data.green_remaining) + 's';
+            document.getElementById('vehicleCount').textContent = northCount + ' (N)';
+            
+            // Log to console for debugging
+            console.log(`[4WAY] Green=${currentGreen.toUpperCase()} State=${state} Remaining=${remaining}s North=${northCount}`);
+        }
+
+        // Update UI with signal data
+        function updateUI(data) {
+            // Update lights
+            const lights = ['red', 'yellow', 'green'];
+            lights.forEach(light => {
+                const el = document.getElementById(light + 'Light');
+                if (data.state === light) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+            // Update timer
+            const timer = document.getElementById('timer');
+            timer.textContent = data.remaining_time + 's';
+            timer.className = 'timer ' + data.state;
+
+            // Update status values
+            document.getElementById('stateValue').textContent = data.state.toUpperCase();
+            document.getElementById('stateValue').style.color = getStateColor(data.state);
+            
+            const trafficLevel = document.getElementById('trafficLevel');
+            trafficLevel.textContent = data.traffic_level.toUpperCase();
+            trafficLevel.className = 'status-value ' + data.traffic_level;
+
+            document.getElementById('greenDuration').textContent = data.green_duration + 's';
+            document.getElementById('redDuration').textContent = data.red_duration + 's';
+            document.getElementById('vehicleCount').textContent = data.vehicle_count;
+        }
+
+        function getStateColor(state) {
+            switch(state) {
+                case 'red': return '#ff0000';
+                case 'yellow': return '#ffff00';
+                case 'green': return '#00ff00';
+                default: return '#ffffff';
+            }
+        }
+
+        function setConnectionStatus(connected) {
+            const el = document.getElementById('connectionStatus');
+            if (connected) {
+                el.textContent = '🟢 Connected';
+                el.className = 'connection-status connected';
+            } else {
+                el.textContent = '🔴 Disconnected';
+                el.className = 'connection-status disconnected';
+            }
+        }
+
+        // Start polling
+        function startPolling() {
+            fetchStatus(); // Initial fetch
+            pollInterval = setInterval(fetchStatus, 500); // Poll every 500ms for real-time updates
+        }
+
+        // Stop polling
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', startPolling);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopPolling);
+    </script>
+</body>
+</html>

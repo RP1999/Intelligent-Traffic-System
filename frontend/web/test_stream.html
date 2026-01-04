@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITS - Live Traffic Stream</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #00d9ff;
+            text-align: center;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .stream-container {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .stream-container img {
+            width: 100%;
+            border-radius: 5px;
+            border: 2px solid #00d9ff;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #00d9ff;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00b8d4;
+        }
+        button.stop {
+            background: #ff4757;
+            color: white;
+        }
+        .status {
+            background: #16213e;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: monospace;
+        }
+        .status-item {
+            margin: 5px 0;
+        }
+        .label {
+            color: #00d9ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚦 Intelligent Traffic Management System</h1>
+        
+        <div class="controls">
+            <button onclick="startStream()">▶ Start Stream</button>
+            <button onclick="stopStream()" class="stop">⏹ Stop</button>
+            <button onclick="refreshStatus()">🔄 Refresh Status</button>
+        </div>
+        
+        <div class="stream-container">
+            <img id="stream" src="" alt="Video stream will appear here">
+        </div>
+        
+        <div class="status" id="status">
+            <div class="status-item"><span class="label">Status:</span> Not started</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        
+        function startStream() {
+            document.getElementById('stream').src = `${API_BASE}/video/stream`;
+            refreshStatus();
+        }
+        
+        function stopStream() {
+            document.getElementById('stream').src = '';
+            fetch(`${API_BASE}/video/stop`, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    console.log('Stop response:', data);
+                    refreshStatus();
+                });
+        }
+        
+        function refreshStatus() {
+            fetch(`${API_BASE}/video/status`)
+                .then(r => r.json())
+                .then(data => {
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.innerHTML = `
+                        <div class="status-item"><span class="label">Running:</span> ${data.running ? '✅ Yes' : '❌ No'}</div>
+                        <div class="status-item"><span class="label">Source:</span> ${data.video_source || 'None'}</div>
+                        <div class="status-item"><span class="label">Frames Processed:</span> ${data.frames_processed}</div>
+                        <div class="status-item"><span class="label">Total Detections:</span> ${data.total_detections}</div>
+                        <div class="status-item"><span class="label">Avg Detections/Frame:</span> ${data.avg_detections_per_frame?.toFixed(2) || 0}</div>
+                        <div class="status-item"><span class="label">Uptime:</span> ${data.uptime_seconds?.toFixed(1) || 0}s</div>
+                    `;
+                })
+                .catch(err => {
+                    document.getElementById('status').innerHTML = `<div class="status-item"><span class="label">Error:</span> ${err.message}</div>`;
+                });
+        }
+        
+        // Refresh status every 5 seconds
+        setInterval(refreshStatus, 5000);
+    </script>
+</body>
+</html>

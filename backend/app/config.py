@@ -1,4 +1,4 @@
- """
+"""
 Intelligent Traffic Management System - Configuration
 Environment variables and application settings
 """
