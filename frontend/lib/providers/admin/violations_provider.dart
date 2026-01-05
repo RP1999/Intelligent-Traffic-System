@@ -208,3 +208,9 @@ class ViolationsProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Failed to delete violation: $e';
       notifyListeners();
+      return false;
+    }
+  }
+
+  /// Clear selected violation
+  void clearSelection() {
