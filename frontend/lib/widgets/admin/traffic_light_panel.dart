@@ -499,3 +499,54 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
       color: isSelected ? color : color.withOpacity(0.2),
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTypography.caption.copyWith(
+              color: isSelected ? Colors.black : color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  TrafficLightState _stateFromColor(Color color) {
+    if (color == Colors.red) return TrafficLightState.red;
+    if (color == Colors.amber) return TrafficLightState.yellow;
+    return TrafficLightState.green;
+  }
+
+  void _setManualState(TrafficLightState state) {
+    setState(() {
+      _currentState = state;
+      _countdown = 999; // Hold indefinitely in manual mode
+    });
+    
+    // Send to backend
+    _sendManualOverride(state);
+  }
+  
+  Future<void> _sendManualOverride(TrafficLightState state) async {
+    try {
+      final stateStr = state == TrafficLightState.red ? 'red' 
+          : state == TrafficLightState.yellow ? 'yellow' : 'green';
+      await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/signal/4way/override'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'state': stateStr}),
+      );
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+}
+
+enum TrafficLightState { red, yellow, green }
+
+
