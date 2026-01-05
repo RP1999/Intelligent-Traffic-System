@@ -119,7 +119,7 @@ graph TB
 
 | Component | Member Name | Student ID |
 |-----------|-------------|------------|
-| **Component 1**<br>Parking Behaviour & Traffic Impact Analysis | **Gunarathna R.P** | - |
+| **Component 1**<br>Parking Behaviour & Traffic Impact Analysis | **Gunarathna R.P** | IT22925572 |
 | **Component 2**<br>Smart Traffic Violation Detection | **Randima K.M.G.D** | IT22900890 |
 | **Component 3**<br>Fuzzy Logic Controller | **Tennakoon I.M.S.R** | IT22363848 |
 | **Component 4**<br>Accident Risk Prediction | **Palihakkara P.I** | IT22337580 |
