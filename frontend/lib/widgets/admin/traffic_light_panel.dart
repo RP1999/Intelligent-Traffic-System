@@ -484,3 +484,18 @@ class _TrafficLightPanelState extends State<TrafficLightPanel>
                   Colors.green,
                   () => _setManualState(TrafficLightState.green),
                 ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildManualButton(String label, Color color, VoidCallback onTap) {
+    final isSelected = _currentState == _stateFromColor(color);
+    
+    return Material(
+      color: isSelected ? color : color.withOpacity(0.2),
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
