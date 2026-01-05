@@ -475,3 +475,19 @@ async def save_behavior_event_to_db(event: BehaviorEvent):
                 event.vehicle_id,
                 event.behavior_type.value,
                 event.severity.value,
+                event.plate_number,
+            ))
+            await db.commit()
+            print(f"[DB] Saved behavior event: {event.behavior_type.value} for vehicle {event.vehicle_id}")
+    except Exception as e:
+        print(f"[DB] Error saving behavior event: {e}")
+
+
+# ============================================================================
+# TEST
+# ============================================================================
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("Abnormal Behavior Detection Test")
+    print("=" * 60)
