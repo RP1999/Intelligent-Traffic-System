@@ -134,6 +134,8 @@ graph TB
 | **Traffic Police** | Real-time violation alerts & automated evidence collection. | **Medium**: Integration with law enforcement systems. |
 | **Urban Planners** | Data-driven insights into parking and traffic bottlenecks. | **High**: Valuable for long-term infrastructure ROI. |
 | **Emergency Services** | Priority routing for ambulances and fire trucks. | **Critical**: Essential for public safety services. |
+| **Smart Traffic Management Providers** | Real-time risk analytics for proactive accident prevention. | **High**: Can be offered as a subscription-based analytics service. |
+
 
 ---
 
