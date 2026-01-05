@@ -214,3 +214,8 @@ class ViolationsProvider extends ChangeNotifier {
 
   /// Clear selected violation
   void clearSelection() {
+    _selectedViolation = null;
+    _detailState = LoadingState.initial;
+    notifyListeners();
+  }
+}

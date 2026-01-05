@@ -659,3 +659,11 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Violation dismissed'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        Navigator.of(context).pop();
+      }
+    }
+  }
+}

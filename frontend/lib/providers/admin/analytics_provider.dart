@@ -129,3 +129,35 @@ class AnalyticsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set trend period and reload
+  void setTrendPeriod(int days) {
+    if (days != _trendPeriod) {
+      loadViolationTrends(days: days);
+    }
+  }
+
+  /// Get violation type distribution for pie chart
+  Map<String, double> getViolationDistribution() {
+    if (_trends == null) return {};
+    
+    final aggregated = _trends!.aggregatedByType;
+    final total = aggregated.values.fold<int>(0, (sum, v) => sum + v);
+    
+    if (total == 0) return {};
+    
+    return aggregated.map((key, value) => 
+      MapEntry(key, (value / total) * 100)
+    );
+  }
+
+  /// Get trend data for line chart
+  List<Map<String, dynamic>> getTrendChartData() {
+    if (_trends == null) return [];
+    
+    return _trends!.trends.map((t) => {
+      'date': t.date,
+      'total': t.total,
+      ...t.byType,
+    }).toList();
+  }
+}

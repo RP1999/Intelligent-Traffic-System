@@ -491,3 +491,18 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Abnormal Behavior Detection Test")
     print("=" * 60)
+    
+    # Simulate sudden stop
+    track_id = 1
+    for speed in [100, 100, 100, 95, 90, 80, 60, 30, 10, 5]:
+        detect_sudden_stop(track_id, speed, "TEST-001")
+    
+    # Simulate lane drift
+    track_id = 2
+    for i in range(40):
+        x = 640 + i * 3  # Gradually drifting right
+        y = 300 + i * 5
+        detect_lane_drift(track_id, (x, y), lane_center_x=640, plate_text="TEST-002")
+    
+    print(f"\nRecent Events: {get_recent_behavior_events()}")
+    print(f"High Risk Vehicles: {get_high_risk_vehicles()}")

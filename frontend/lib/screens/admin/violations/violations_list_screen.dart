@@ -544,3 +544,107 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
   }
 
   Color _getFineColor(double amount) {
+    if (amount >= 200) return AppColors.error;
+    if (amount >= 100) return AppColors.warning;
+    return AppColors.success;
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color bgColor;
+    Color textColor;
+    String displayText;
+    
+    switch (status.toLowerCase()) {
+      case 'paid':
+        bgColor = AppColors.success.withOpacity(0.2);
+        textColor = AppColors.success;
+        displayText = 'Paid';
+        break;
+      case 'disputed':
+        bgColor = AppColors.warning.withOpacity(0.2);
+        textColor = AppColors.warning;
+        displayText = 'Disputed';
+        break;
+      case 'verified':
+        bgColor = AppColors.info.withOpacity(0.2);
+        textColor = AppColors.info;
+        displayText = 'Verified';
+        break;
+      case 'dismissed':
+        bgColor = AppColors.textSecondary.withOpacity(0.2);
+        textColor = AppColors.textSecondary;
+        displayText = 'Dismissed';
+        break;
+      default:
+        bgColor = AppColors.error.withOpacity(0.2);
+        textColor = AppColors.error;
+        displayText = 'Unpaid';
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        displayText,
+        style: AppTypography.labelSmall.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  void _openViolationDetail(Violation violation) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ViolationDetailScreen(
+          violationId: violation.violationId,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(Violation violation) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Dismiss Violation'),
+        content: Text(
+          'Are you sure you want to dismiss this violation for ${violation.licensePlate ?? violation.driverId}?\n\nThis action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Dismiss'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true && mounted) {
+      final success = await context.read<ViolationsProvider>().deleteViolation(
+        violation.violationId,
+      );
+      
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Violation dismissed successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    }
+  }
+}

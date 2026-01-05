@@ -715,3 +715,58 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         Text(
                           'Fines',
                           style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildEmptyChart(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.bar_chart,
+            size: 48,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTypeName(String type) {
+    switch (type.toLowerCase()) {
+      case 'red_light':
+        return 'Red Light';
+      case 'speeding':
+        return 'Speeding';
+      case 'parking':
+      case 'no_parking':
+        return 'Parking';
+      case 'lane_weaving':
+        return 'Lane Weaving';
+      case 'lane_drift':
+        return 'Lane Drift';
+      default:
+        return type.replaceAll('_', ' ');
+    }
+  }
+}

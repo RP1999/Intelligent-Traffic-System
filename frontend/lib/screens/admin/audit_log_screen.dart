@@ -624,3 +624,42 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     );
   }
 
+  void _showExportSuccess(String format) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Audit logs exported as $format'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+class AuditLogEntry {
+  final int id;
+  final String adminUsername;
+  final String action;
+  final String? details;
+  final String? ipAddress;
+  final DateTime timestamp;
+  
+  AuditLogEntry({
+    required this.id,
+    required this.adminUsername,
+    required this.action,
+    this.details,
+    this.ipAddress,
+    required this.timestamp,
+  });
+  
+  factory AuditLogEntry.fromJson(Map<String, dynamic> json) {
+    return AuditLogEntry(
+      id: json['id'],
+      adminUsername: json['admin_username'] ?? 'Unknown',
+      action: json['action'] ?? '',
+      details: json['details'],
+      ipAddress: json['ip_address'],
+      timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+    );
+  }
+}

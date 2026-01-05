@@ -454,3 +454,22 @@ if __name__ == "__main__":
     print()
     
     # Detailed breakdown
+    risk = calculate_risk(
+        speed=75,
+        speed_limit=60,
+        violation_history_count=3,
+        vehicle_id=1,
+        plate_number="ABC-1234"
+    )
+    
+    print("Detailed Breakdown (75 km/h in 60 zone, 3 violations):")
+    print(f"  Speed Ratio:       {75/60:.2f}x limit")
+    print(f"  Speed Factor:      {risk.speed_factor:>6.1f} (0-100)")
+    print(f"  History Factor:    {risk.violation_history_factor:>6.1f} (0-100)")
+    print(f"  ─────────────────────────────")
+    print(f"  Weighted Score:    ({risk.speed_factor:.1f} × 0.6) + ({risk.violation_history_factor:.1f} × 0.4)")
+    print(f"                   = {risk.speed_factor * 0.6:.1f} + {risk.violation_history_factor * 0.4:.1f}")
+    print(f"  RISK SCORE:        {risk.risk_score:>6.1f}")
+    print(f"  RISK LEVEL:        {risk.risk_level}")
+    print()
+    print("[OK] Risk prediction service test complete!")
