@@ -95,3 +95,37 @@ class AnalyticsProvider extends ChangeNotifier {
       _trendsState = LoadingState.error;
       rethrow;
     } catch (e) {
+      _errorMessage = 'Error loading trends: $e';
+      _trendsState = LoadingState.error;
+    }
+
+    notifyListeners();
+  }
+
+  /// Load violation hotspots
+  Future<void> loadHotspots() async {
+    _hotspotsState = LoadingState.loading;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.get(ApiEndpoints.violationHotspots);
+
+      if (response.success && response.data != null) {
+        _hotspots = HotspotsResponse.fromJson(response.data!);
+        _hotspotsState = LoadingState.loaded;
+      } else {
+        _errorMessage = response.error ?? 'Failed to load hotspots';
+        _hotspotsState = LoadingState.error;
+      }
+    } on UnauthorizedException {
+      _errorMessage = 'Session expired. Please login again.';
+      _hotspotsState = LoadingState.error;
+      rethrow;
+    } catch (e) {
+      _errorMessage = 'Error loading hotspots: $e';
+      _hotspotsState = LoadingState.error;
+    }
+
+    notifyListeners();
+  }
+
