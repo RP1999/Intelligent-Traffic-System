@@ -584,3 +584,43 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                     setState(() => _currentPage++);
                     _loadLogs();
                   }
+                : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _exportLogs() {
+    // Show export options dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Export Logs'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: const Text('Export as CSV'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showExportSuccess('CSV');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.code),
+              title: const Text('Export as JSON'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showExportSuccess('JSON');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
