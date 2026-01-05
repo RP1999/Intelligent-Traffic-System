@@ -438,3 +438,109 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
               ),
             ),
             
+            // Type
+            Expanded(
+              flex: 2,
+              child: Row(
+                children: [
+                  _buildViolationTypeIcon(violation.violationType),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      violation.displayType,
+                      style: AppTypography.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Fine
+            Expanded(
+              flex: 1,
+              child: Text(
+                '\$${violation.fineAmount.toStringAsFixed(0)}',
+                style: AppTypography.labelLarge.copyWith(
+                  color: _getFineColor(violation.fineAmount),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            
+            // Time
+            Expanded(
+              flex: 2,
+              child: Text(
+                dateFormat.format(violation.timestamp),
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            
+            // Status
+            Expanded(
+              flex: 1,
+              child: _buildStatusBadge(violation.status),
+            ),
+            
+            // Actions
+            Expanded(
+              flex: 1,
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _openViolationDetail(violation),
+                    icon: const Icon(Icons.visibility),
+                    tooltip: 'View Details',
+                    iconSize: 20,
+                  ),
+                  IconButton(
+                    onPressed: () => _showDeleteConfirmation(violation),
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Dismiss',
+                    iconSize: 20,
+                    color: AppColors.error,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViolationTypeIcon(String type) {
+    IconData icon;
+    Color color;
+    
+    switch (type.toLowerCase()) {
+      case 'red_light':
+        icon = Icons.traffic;
+        color = AppColors.error;
+        break;
+      case 'speeding':
+        icon = Icons.speed;
+        color = AppColors.warning;
+        break;
+      case 'parking':
+      case 'no_parking':
+        icon = Icons.local_parking;
+        color = AppColors.info;
+        break;
+      case 'lane_weaving':
+      case 'lane_drift':
+        icon = Icons.swap_horiz;
+        color = AppColors.riskMedium;
+        break;
+      default:
+        icon = Icons.warning;
+        color = AppColors.textSecondary;
+    }
+    
+    return Icon(icon, color: color, size: 20);
+  }
+
+  Color _getFineColor(double amount) {
