@@ -1,92 +1,199 @@
-# 🚦 Intelligent Traffic Management System (ITMS)
+# Intelligent Traffic Management System for Sri Lanka
 
-An AI-powered system designed to reduce traffic congestion and improve road safety through real-time violation detection, adaptive traffic signals, and driver scoring.
+An intelligent system using Machine Learning and Fuzzy Logic to improve traffic flow and safety in Sri Lankan cities.
 
----
-
-## 📋 Table of Contents
-
-- [Overview](#-overview)
-- [Current Progress](#-current-progress)
-- [Prerequisites](#-prerequisites)
-- [Setup Instructions](#-setup-instructions)
-  - [Step 1: Backend Setup](#step-1-backend-setup)
-  - [Step 2: Frontend Setup (Web)](#step-2-frontend-setup-web)
-  - [Step 3: Mobile App Setup (Optional)](#step-3-mobile-app-setup-optional)
-- [Running the System](#-running-the-system)
-- [Troubleshooting](#-troubleshooting)
-- [Team Members](#-team-members)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Flutter 3.0+](https://img.shields.io/badge/flutter-3.0+-02569B.svg)](https://flutter.dev/)
 
 ---
 
-## 🎯 Overview
+## 📑 Table of Contents
 
-**Version:** 1.0 (First Evaluation)  
-**Date:** January 3, 2026  
-
-This project demonstrates an intelligent traffic management system with:
-- Real-time vehicle detection using YOLOv8
-- License plate recognition with custom-trained models
-- Parking and speeding violation detection
-- Driver scoring system (LiveSafe Score)
-- Adaptive traffic signals using fuzzy logic
-- Admin dashboard for monitoring
-
----
-
-## 📊 Current Progress
-
-### ✅ Completed (Backend)
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 🚗 Vehicle Detection | YOLOv8n with DeepSORT tracking | ✅ Complete |
-| 🔍 License Plate Detection | Custom YOLOv8 model (281 Sri Lankan plates) | ✅ Complete |
-| 📝 OCR Integration | EasyOCR with preprocessing pipeline | ✅ Complete |
-| 🅿️ Parking Violations | No-parking zone monitoring with warnings | ✅ Complete |
-| ⚡ Speed Detection | Real-time speed estimation | ✅ Complete |
-| 📊 Driver Scoring | 100-point LiveSafe Score system | ✅ Complete |
-| 🚦 Traffic Signals | Fuzzy logic adaptive timing | ✅ Complete |
-| 🔊 Voice Warnings | edge-tts + pyttsx3 audio alerts | ✅ Complete |
-| 🚨 Emergency Mode | Admin-triggered emergency override | ✅ Complete |
-
-### 🔄 In Progress (Frontend)
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 📺 Live Video Feed | Real-time detection display | ✅ Complete |
-| 🚦 Traffic Light Panel | 4-way signal visualization | ✅ Complete |
-| 🗺️ Zone Editor | Draw no-parking zones on map | ✅ Complete |
-| 🚨 Emergency Button | Trigger emergency mode | ✅ Complete |
-| 📋 Violations List | View and manage violations | 🔄 In Progress |
-| 👥 Drivers List | View driver scores | 🔄 In Progress |
-| 📈 Analytics | Charts and trends | 🔄 In Progress |
-
-### 🔄 In Progress (Mobile App)
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 🔐 Authentication | Driver login with phone + plate | ✅ Complete |
-| 📊 Dashboard | Score and violations | 🔄 In Progress |
-| 💳 Payments | Fine payments | 📅 Planned |
+- [Project Overview](#-project-overview)
+- [System Architecture](#%EF%B8%8F-system-architecture)
+- [Team Contributions](#-team-contributions)
+- [Commercial Potential](#-commercial-potential)
+- [Features](#-features)
+- [Dependencies](#-dependencies)
+- [Installation](#-installation)
+- [Project Structure](#-project-structure)
+- [License](#-license)
 
 ---
 
-## 📋 Prerequisites
+## 🎯 Project Overview
 
-### For Backend
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| **Python** | 3.11 or 3.12 | Required |
-| **Windows** | 10 or 11 | PowerShell recommended |
+Sri Lanka's cities face severe traffic congestion from outdated signal systems unable to adapt to unique local traffic patterns, such as the mix of tuk-tuks and buses. This project introduces a prototype system that uses real-time video analysis to create an adaptive, efficient, and safe traffic management solution.
 
-### For Frontend (Web)
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| **Flutter SDK** | 3.16+ | With Dart 3.2+ |
-| **Chrome** | Latest | For web development |
+### Key Objectives
 
-### For Mobile App (Android) ⚠️ IMPORTANT
+1.  **Real-time Vehicle Detection and Classification** - Custom YOLOv8 models trained on Sri Lankan traffic images.
+2.  **Adaptive Traffic Signal Control** - Fuzzy logic-driven signal timing optimization.
+3.  **Traffic Violation and Risk Monitoring** - Behavioral analysis and parking violation detection.
+4.  **Integrated Dashboard and Alert System** - Real-time monitoring and physical alerts.
+
+### Problem Statement
+
+-   **Outdated Systems**: Static traffic signals unable to adapt to changing conditions.
+-   **Foreign Algorithms**: Failing to detect local vehicle mix (tuk-tuks, overloaded buses).
+-   **No Real-time Adaptation**: Absence of dynamic response to traffic patterns.
+-   **Safety Concerns**: Increased accident rates due to congestion and unregulated parking.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TB
+    subgraph "Data Input Layer"
+        A[Public CCTV Records]
+        B[Real-time Traffic Streams]
+        C[Open Datasets]
+    end
+   
+    subgraph "AI Processing Core"
+        D[YOLOv8 Vehicle Detection<br/>Custom-trained for SL vehicles]
+        E[Computer Vision Module<br/>Frame processing]
+        F[Machine Learning Engine<br/>Pattern analysis]
+    end
+   
+    subgraph "Intelligent Control Systems"
+        G[Fuzzy Logic Controller<br/>Adaptive signal timing]
+        H[Traffic Violation Detection<br/>Lane sorting/wrong-way]
+        I[Parking Behavior Analysis<br/>Duration & impact]
+        J[Accident Risk Prediction<br/>Real-time scoring]
+    end
+   
+    subgraph "Decision Making Layer"
+        K[Risk Assessment Engine]
+        L[Signal Timing Optimization]
+        M[Alert Generation System]
+        N[Traffic Flow Analysis]
+    end
+   
+    subgraph "Output Systems"
+        O[Arduino Traffic Lights<br/>Physical control]
+        P[LED/Buzzer Alerts<br/>Violation warnings]
+        Q[Streamlit Dashboard<br/>Monitoring interface]
+        R[Real-time Monitoring<br/>Data visualization]
+    end
+   
+    A --> E
+    B --> E
+    C --> E
+    E --> D
+    D --> F
+    F --> G
+    F --> H
+    F --> I
+    F --> J
+   
+    G --> L
+    H --> K
+    I --> N
+    J --> K
+   
+    K --> M
+    L --> O
+    M --> P
+    N --> Q
+    K --> R
+    L --> R
+   
+    style D fill:#FFD700,color:#000000,stroke:#333,stroke-width:2px
+    style G fill:#90EE90,color:#000000,stroke:#333,stroke-width:2px
+    style Q fill:#87CEEB,color:#000000,stroke:#333,stroke-width:2px
+```
+
+### Architecture Overview
+
+1.  **Data Acquisition**: Live camera feeds capture real-time traffic conditions at junctions.
+2.  **Vehicle Detection**: YOLOv8 models identify and classify vehicles, violations, and parking behavior.
+3.  **Fuzzy Logic Processing**: Controller analyzes traffic patterns and determines optimal signal timings.
+4.  **Signal Control & Alerts**: Adaptive signaling implemented with Arduino-based warning systems.
+
+---
+
+## 👥 Team Contributions
+
+| Component | Member Name | Student ID |
+|-----------|-------------|------------|
+| **Component 1**<br>Parking Behaviour & Traffic Impact Analysis | **Gunarathna R.P** | - |
+| **Component 2**<br>Smart Traffic Violation Detection | **Randima K.M.G.D** | IT22900890 |
+| **Component 3**<br>Fuzzy Logic Controller | **Tennakoon I.M.S.R** | IT22363848 |
+| **Component 4**<br>Accident Risk Prediction | **Palihakkara P.I** | IT22337580 |
+
+---
+
+## 📊 Commercial Potential
+
+| User Type | Benefits | Commercial Potential |
+|-----------|----------|----------------------|
+| **Municipal Councils** | Reduced congestion & automated traffic flow management. | **High**: Scalable for smart city infrastructure. |
+| **Traffic Police** | Real-time violation alerts & automated evidence collection. | **Medium**: Integration with law enforcement systems. |
+| **Urban Planners** | Data-driven insights into parking and traffic bottlenecks. | **High**: Valuable for long-term infrastructure ROI. |
+| **Emergency Services** | Priority routing for ambulances and fire trucks. | **Critical**: Essential for public safety services. |
+
+---
+
+## ✨ Features
+
+### Component 1: Parking Behaviour & Traffic Impact Analysis
+**Lead:** Gunarathna R.P
+
+-   **Real-time Parking Detection**: Custom YOLOv8 model detects parked vehicles and roadside activity.
+-   **Duration Tracking**: DeepSORT algorithm estimates parking duration.
+-   **Illegal Parking Detection**: Identifies violations in designated no-parking zones.
+-   **Traffic Impact Analysis**: Calculates flow disruption from roadside parking.
+-   **Dashboard Integration**: Real-time data feed to central monitoring.
+
+### Component 2: Smart Traffic Violation Detection
+**Lead:** Randima K.M.G.D (IT22900890)
+
+-   **Behavioral Detection**: Lane weaving, wrong-way driving, improper stopping.
+-   **Risk Assessment**: Context-aware severity scoring.
+-   **Pattern Recognition**: Repeat offender identification.
+
+### Component 3: Fuzzy Logic Controller
+**Lead:** Tennakoon I.M.S.R (IT22363848)
+
+-   **Real-time Optimization**: Dynamic signal timing based on vehicle density.
+-   **Emergency Priority**: Instant routing for ambulances/fire trucks.
+-   **Multi-input Processing**: Vehicle counts, parking data, violations.
+
+### Component 4: Accident Risk Prediction
+**Lead:** Palihakkara P.I (IT22337580)
+
+-   **Predictive Risk Scoring**: Multi-factor accident likelihood calculation.
+-   **Traffic Heatmaps**: Visual congestion and risk mapping.
+-   **Weather Adaptation**: Adjusts parameters based on environmental conditions.
+
+---
+
+## 📦 Dependencies
+
+### Backend (Python/AI)
+```txt
+# Core
+python==3.11+
+fastapi==0.104.1
+uvicorn==0.24.0
+
+# Computer Vision & ML
+opencv-python==4.8.1.78
+ultralytics==8.0.208            # YOLOv8
+torch==2.1.0
+torchvision==0.16.0
+
+# Tracking & Processing
+deep-sort-realtime==1.3.2
+scikit-fuzzy==0.4.2
+numpy==1.26.2
+pillow==10.1.0
+```
+
+### Mobile App (Android) ⚠️ IMPORTANT
 | Requirement | Version | Notes |
 |-------------|---------|-------|
 | **Flutter SDK** | 3.16+ | With Dart 3.2+ |
@@ -97,240 +204,94 @@ This project demonstrates an intelligent traffic management system with:
 
 ---
 
-## 📦 Setup Instructions
+## 🚀 Installation
 
-> **Note:** This project is provided as a ZIP file. Extract it to `D:\Intelligent-Traffic-Management-System\`
+### Prerequisites
 
----
+-   **Python 3.10+**
+-   **Flutter SDK 3.16+**
+-   **Git**
 
-### Step 1: Backend Setup
+### Setup Instructions
 
-Open **PowerShell** and follow these steps:
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/RP1999/Intelligent-Traffic-System.git
+    cd Intelligent-Traffic-System
+    ```
 
-#### 1.1 Navigate to Project
-```powershell
-cd D:\Intelligent-Traffic-Management-System
-```
+2.  **Backend Setup**
+    ```bash
+    # Create virtual environment
+    python -m venv .venv
+    
+    # Activate (Windows)
+    .\.venv\Scripts\Activate.ps1
+    # Activate (Mac/Linux)
+    source .venv/bin/activate
 
-#### 1.2 Create Virtual Environment
-```powershell
-python -m venv .venv
-```
+    # Install dependencies
+    cd backend
+    pip install -r requirements.txt
+    ```
 
-#### 1.3 Activate Virtual Environment
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
+3.  **Frontend Setup**
+    ```bash
+    cd ../frontend
+    flutter pub get
+    ```
 
-✅ **Success:** You should see `(.venv)` prefix in your terminal
+4.  **Run the System**
+    
+    *Backend:*
+    ```bash
+    # From project root
+    ./start_backend.sh
+    # OR manually
+    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    ```
 
-#### 1.4 Upgrade pip
-```powershell
-python -m pip install --upgrade pip
-```
-
-#### 1.5 Install Backend Dependencies
-```powershell
-cd backend
-pip install -r requirements.txt
-```
-
-**⏱️ Duration:** 2-3 minutes
-
-#### 1.6 Install PyTorch (CPU Version)
-
-> ⚠️ **IMPORTANT:** Run this command SEPARATELY after requirements.txt
-
-```powershell
-pip install torch==2.2.0+cpu torchvision==0.17.0+cpu --index-url https://download.pytorch.org/whl/cpu
-```
-
-**⏱️ Duration:** 3-5 minutes (large download ~200MB)
-
-#### 1.7 Verify Installation
-```powershell
-python check_db.py
-```
-
-✅ **Expected Output:**
-```
-✅ Database connection OK
-✅ TTS warnings folder found
-✅ 5 audio files ready
-```
+    *Frontend:*
+    ```bash
+    # From frontend directory
+    flutter run -d chrome --web-port 3000
+    ```
 
 ---
 
-### Step 2: Frontend Setup (Web)
+## 📂 Project Structure
 
-#### 2.1 Install Flutter SDK
-
-1. Download Flutter from: https://docs.flutter.dev/get-started/install/windows
-2. Extract to `C:\flutter`
-3. Add `C:\flutter\bin` to your system PATH
-
-#### 2.2 Verify Flutter Installation
-```powershell
-flutter --version
 ```
-
-✅ **Expected:** `Flutter 3.16.x • Dart 3.2.x`
-
-#### 2.3 Install Flutter Dependencies
-```powershell
-cd D:\Intelligent-Traffic-Management-System\frontend
-flutter pub get
+Intelligent-Traffic-System/
+├── backend/
+│   ├── app/
+│   │   ├── main.py                # API Entry point
+│   │   ├── detection/             # YOLO & DeepSORT logic
+│   │   ├── parking/               # Parking analysis module
+│   │   └── routers/               # API endpoints
+│   ├── requirements.txt           # Python dependencies
+│   └── check_db.py                # Database verification
+├── frontend/
+│   ├── lib/
+│   │   ├── main.dart              # App Entry point
+│   │   ├── screens/               # UI Screens (Dashboard, Login)
+│   │   ├── widgets/               # Reusable components
+│   │   └── providers/             # State management
+│   ├── pubspec.yaml               # Flutter dependencies
+│   └── web/                       # Web build artifacts
+├── data/                          # Models and sample footage
+└── README.md                      # This documentation
 ```
 
 ---
 
-### Step 3: Mobile App Setup (Optional)
+## 📄 License
 
-> ⚠️ Only needed if you want to run the mobile app on Android
-
-#### 3.1 Install Android Studio
-
-1. Download from: https://developer.android.com/studio
-2. Install and complete the setup wizard
-
-#### 3.2 Install Required SDK Components
-
-1. Open **Android Studio** → **File** → **Settings**
-2. Go to **Languages & Frameworks** → **Android SDK**
-3. **SDK Platforms** tab:
-   - ✅ Check **Android 14.0 (API 34)**
-4. **SDK Tools** tab:
-   - ✅ Click **Show Package Details** (bottom right)
-   - ✅ Expand **NDK (Side by side)**
-   - ✅ Select exactly **23.1.7779620**
-   - ✅ Check **Android SDK Build-Tools 34.0.0**
-5. Click **Apply** and wait for installation
-
-#### 3.3 Accept Licenses
-```powershell
-flutter doctor --android-licenses
-# Press 'y' for all prompts
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🚀 Running the System
+## 📧 Contact
 
-### Full Stack (Backend + Frontend)
-
-**Terminal 1 - Start Backend:**
-```powershell
-cd D:\Intelligent-Traffic-Management-System
-.\.venv\Scripts\Activate.ps1
-cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-✅ **Success:** `Uvicorn running on http://0.0.0.0:8000`
-
-**Terminal 2 - Start Frontend (new PowerShell window):**
-```powershell
-cd D:\Intelligent-Traffic-Management-System\frontend
-flutter run -d chrome --web-port 8080
-```
-
-✅ **Success:** Admin dashboard opens at http://localhost:8080
-
-### Run Mobile App (Optional)
-```powershell
-cd D:\Intelligent-Traffic-Management-System\frontend
-flutter run
-```
-
-Select your Android device when prompted.
-
----
-
-### 📍 Access Points
-
-| URL | Description |
-|-----|-------------|
-| http://localhost:8080 | 🖥️ Admin Dashboard |
-| http://localhost:8000/docs | 📡 API Documentation |
-| http://localhost:8000/detect | 🎥 Live Detection Stream |
-
-### 🔐 Default Admin Login
-
-- **Username:** `admin`
-- **Password:** `admin123`
-
----
-
-## 🔧 Troubleshooting
-
-### ❌ First Flutter Build Fails
-
-If the first `flutter run` fails, clean and rebuild:
-
-```powershell
-cd D:\Intelligent-Traffic-Management-System\frontend
-flutter clean
-flutter pub get
-flutter run -d chrome --web-port 8080
-```
-
-### ❌ "flutter pub get" Fails
-
-```powershell
-Remove-Item pubspec.lock
-flutter pub get
-```
-
-### ❌ Backend Errors
-
-**"Torch not found" or CUDA errors:**
-```powershell
-cd D:\Intelligent-Traffic-Management-System\backend
-pip uninstall torch torchvision -y
-pip install torch==2.2.0+cpu torchvision==0.17.0+cpu --index-url https://download.pytorch.org/whl/cpu
-```
-
-**"EasyOCR not installed":**
-```powershell
-pip install easyocr==1.7.1
-```
-
-### ❌ Android Build Fails
-
-**"NDK not found":**
-1. Open **Android Studio** → **SDK Manager** → **SDK Tools**
-2. Check **Show Package Details**
-3. Install exactly **NDK 23.1.7779620**
-
-**"Gradle build failed":**
-```powershell
-cd D:\Intelligent-Traffic-Management-System\frontend\android
-.\gradlew clean
-cd ..
-flutter clean
-flutter pub get
-flutter run
-```
-
-### ❌ Port Already in Use
-
-```powershell
-# Kill process using port 8000
-Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess | Stop-Process -Force
-```
-
----
-
-## 👥 Team Members
-
-| ID | Focus Area |
-|----|------------|
-| IT22900890 | Parking Detection, License Plate OCR |
-| IT22337580 | Lane Safety, Driver Scoring System |
-| IT22925572 | Traffic Signals, Fuzzy Logic Controller |
-| IT22363848 | Speed Detection, Risk Prediction |
-
----
-
-**Version:** 1.0 (First Evaluation)  
-**Date:** January 3, 2026
+**Project Lead:** Gunarathna R.P  
+**Institution:** Sri Lanka Institute of Information Technology (SLIIT)
