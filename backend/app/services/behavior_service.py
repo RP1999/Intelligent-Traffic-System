@@ -36,3 +36,34 @@ HARSH_BRAKE_DECELERATION = 8.0  # m/s² equivalent in pixels
 HARSH_BRAKE_PIXEL_THRESHOLD = 12.0  # pixels per frame deceleration (lowered for 3 FPS analysis)
 
 # Lane drifting detection
+DRIFT_VARIANCE_THRESHOLD = 8.0  # pixels variance from center (lowered for 3 FPS)
+DRIFT_WINDOW_FRAMES = 10  # frames (= ~3.3 seconds at 3 FPS)
+
+# Speed estimation (pixels per second to approximate km/h)
+PIXEL_TO_KMH_FACTOR = 0.5
+
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+class BehaviorType(str, Enum):
+    SUDDEN_STOP = 'sudden_stop'
+    HARSH_BRAKE = 'harsh_brake'
+    LANE_DRIFT = 'lane_drift'
+    WRONG_WAY = 'wrong_way'
+    ERRATIC_MOVEMENT = 'erratic_movement'
+
+
+class SeverityLevel(str, Enum):
+    LOW = 'low'
+    MEDIUM = 'medium'
+    HIGH = 'high'
+    CRITICAL = 'critical'
+
+
+# ============================================================================
+# DATA CLASSES
+# ============================================================================
+
+@dataclass
