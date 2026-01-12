@@ -23,3 +23,12 @@ def get_ocr_reader():
             import easyocr
             print("🔤 Initializing EasyOCR reader (English)...")
             _ocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+            print("✅ EasyOCR initialized successfully")
+        except ImportError:
+            print("⚠️ EasyOCR not installed. Run: pip install easyocr")
+            return None
+        except Exception as e:
+            print(f"⚠️ EasyOCR initialization failed: {e}")
+            return None
+    return _ocr_reader
+
