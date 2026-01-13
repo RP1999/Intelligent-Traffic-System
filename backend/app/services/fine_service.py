@@ -40,3 +40,24 @@ DURATION_RATE = 5
 
 # Traffic impact multiplier: LKR per affected vehicle
 TRAFFIC_MULTIPLIER = 50
+
+
+# =============================================================================
+# DATA CLASSES
+# =============================================================================
+
+@dataclass
+class FineBreakdown:
+    """Container for dynamic fine calculation result."""
+    violation_id: int
+    zone_type: str
+    duration_seconds: int
+    traffic_impact: int
+    base_penalty: float
+    duration_penalty: float
+    impact_penalty: float
+    total_fine: float
+    
+    def to_dict(self) -> dict:
+        return {
+            'violation_id': self.violation_id,
