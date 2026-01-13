@@ -35,3 +35,26 @@ def set_tts_paused(paused: bool):
     global _tts_paused
     _tts_paused = paused
     if paused:
+        # Clear the queue when pausing to stop pending announcements
+        while not _tts_queue.empty():
+            try:
+                _tts_queue.get_nowait()
+                _tts_queue.task_done()
+            except:
+                break
+        print("[TTS] ⏸️ TTS paused - no active stream")
+    else:
+        print("[TTS] ▶️ TTS resumed - stream active")
+
+
+def is_tts_paused() -> bool:
+    """Check if TTS is currently paused."""
+    return _tts_paused
+
+# Pre-cached common warning messages (text -> filename)
+COMMON_WARNINGS: Dict[str, str] = {
+    "parking_warning": "Warning. Vehicle detected in no parking zone.",
+    "parking_violation": "Parking violation confirmed. Fine will be issued.",
+    "speeding_warning": "Speed violation detected. Please slow down.",
+    "general_warning": "Traffic violation detected.",
+}
