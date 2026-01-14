@@ -61,3 +61,9 @@ class FineBreakdown:
     def to_dict(self) -> dict:
         return {
             'violation_id': self.violation_id,
+            'zone_type': self.zone_type,
+            'duration_seconds': self.duration_seconds,
+            'traffic_impact': self.traffic_impact,
+            'base_penalty': self.base_penalty,
+            'duration_penalty': self.duration_penalty,
+            'impact_penalty': self.impact_penalty,
