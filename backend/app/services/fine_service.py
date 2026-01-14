@@ -67,3 +67,24 @@ class FineBreakdown:
             'base_penalty': self.base_penalty,
             'duration_penalty': self.duration_penalty,
             'impact_penalty': self.impact_penalty,
+            'total_fine': self.total_fine,
+            'formula': 'Base + (Duration × 5) + (Traffic_Impact × 50)'
+        }
+
+
+# =============================================================================
+# CORE FUNCTIONS
+# =============================================================================
+
+def calculate_dynamic_fine(
+    violation_type: str,
+    duration_seconds: int,
+    vehicle_count_in_frame: int,
+    violation_id: Optional[int] = None
+) -> FineBreakdown:
+    """
+    Calculate dynamic fine based on the finalized formula.
+    
+    Formula: Fine = Base + (Duration × 5) + (Traffic_Impact × 50)
+    
+    Args:

@@ -10,3 +10,8 @@ This module demonstrates custom object detection model training using:
 - CPU-based training for accessibility
 
 Usage:
+    python -m app.training.train
+
+Output:
+    Trained model saved to: runs/detect/plate_detector/weights/best.pt
+"""
