@@ -67,3 +67,37 @@ class SeverityLevel(str, Enum):
 # ============================================================================
 
 @dataclass
+class PositionRecord:
+    """A single position and timestamp record."""
+    x: int
+    y: int
+    timestamp: float
+    speed_pixels: float = 0.0
+
+
+@dataclass
+class VehicleBehavior:
+    """Tracks a vehicle's behavior history."""
+    track_id: int
+    positions: deque = field(default_factory=lambda: deque(maxlen=120))  # 4 seconds at 30fps
+    speeds: deque = field(default_factory=lambda: deque(maxlen=60))
+    behaviors_detected: List[str] = field(default_factory=list)
+    last_behavior_time: float = 0.0
+    # Per-behavior-type cooldown to prevent duplicate detections
+    _last_type_time: Dict[str, float] = field(default_factory=dict)
+    sudden_stop_count: int = 0
+    harsh_brake_count: int = 0
+    drift_score: float = 0.0
+
+    def can_fire(self, behavior_type: str, cooldown: float = 30.0) -> bool:
+        """Check if a behavior type can fire (per-type cooldown)."""
+        last = self._last_type_time.get(behavior_type, 0.0)
+        return (time.time() - last) >= cooldown
+
+    def mark_fired(self, behavior_type: str):
+        """Record that a behavior type just fired."""
+        self._last_type_time[behavior_type] = time.time()
+        self.last_behavior_time = time.time()
+    
+    def add_position(self, x: int, y: int, speed_pixels: float = 0.0):
+        """Add a new position record."""
