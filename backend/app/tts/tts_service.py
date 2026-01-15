@@ -58,3 +58,28 @@ COMMON_WARNINGS: Dict[str, str] = {
     "speeding_warning": "Speed violation detected. Please slow down.",
     "general_warning": "Traffic violation detected.",
 }
+
+
+class TTSService:
+    """
+    Text-to-Speech service with multiple backends.
+    
+    Primary: edge-tts (natural Microsoft voices, requires internet)
+    Fallback: pyttsx3 (offline, uses system TTS)
+    """
+    
+    def __init__(self, voice: str = "en-US-AriaNeural"):
+        """
+        Initialize TTS service.
+        
+        Args:
+            voice: Edge TTS voice name
+        """
+        self.voice = voice
+        self._ensure_directories()
+        self._edge_tts_available = self._check_edge_tts()
+        self._pyttsx3_available = self._check_pyttsx3()
+        self._pyttsx3_engine = None
+        self._pyttsx3_lock = threading.Lock()  # Lock for pyttsx3 engine access
+        self._warning_cache: Dict[str, Path] = {}  # text_hash -> filepath
+        self._last_play_time = 0  # Track last audio play time

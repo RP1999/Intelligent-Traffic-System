@@ -22,3 +22,25 @@ from dataclasses import dataclass
 
 from app.db.firestore_client import get_sync_db, Collections
 
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+# Weight factors (must sum to 1.0)
+SPEED_WEIGHT = 0.6
+HISTORY_WEIGHT = 0.4
+
+# Violation weights for history factor
+VIOLATION_WEIGHTS = {
+    'speeding': 15,
+    'parking_violation': 5,
+    'lane_weaving': 20,
+    'wrong_way_driving': 40,
+    'running_red_light': 35,
+    'improper_stopping': 10,
+    'default': 10,
+}
+
+# Risk level thresholds
+RISK_LEVELS = {
