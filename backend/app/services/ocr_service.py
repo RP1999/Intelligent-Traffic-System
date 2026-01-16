@@ -32,3 +32,16 @@ def get_ocr_reader():
             return None
     return _ocr_reader
 
+
+def preprocess_plate_image(image: np.ndarray) -> np.ndarray:
+    """
+    Preprocess license plate image for better OCR accuracy.
+    
+    Pipeline:
+    1. Convert to grayscale
+    2. Apply Gaussian blur to reduce noise
+    3. Apply Otsu's thresholding to make text pop
+    
+    Args:
+        image: BGR image of the license plate crop
+    
