@@ -83,3 +83,37 @@ class TTSService:
         self._pyttsx3_lock = threading.Lock()  # Lock for pyttsx3 engine access
         self._warning_cache: Dict[str, Path] = {}  # text_hash -> filepath
         self._last_play_time = 0  # Track last audio play time
+        
+        print(f"🔊 TTS Service initialized")
+        print(f"   Voice: {self.voice}")
+        print(f"   Warnings dir: {WARNINGS_DIR}")
+        print(f"   edge-tts: {self._edge_tts_available}")
+        print(f"   pyttsx3: {self._pyttsx3_available}")
+        
+        # Start the TTS worker thread
+        self._start_tts_worker()
+        
+        # Pre-load cached warning files
+        self._preload_common_warnings()
+    
+    def _start_tts_worker(self):
+        """Start the background TTS worker thread (singleton pattern)."""
+        global _tts_worker_started
+        
+        with _tts_lock:
+            if _tts_worker_started:
+                return
+            _tts_worker_started = True
+        
+        def _worker():
+            """Process TTS requests from the queue sequentially."""
+            global _tts_worker_stop
+            
+            def _speak_with_pyttsx3(text_to_speak):
+                """Speak text using a FRESH pyttsx3 engine each time (fixes Windows SAPI5 hanging)."""
+                try:
+                    import pyttsx3
+                    # Create a NEW engine for each message - this prevents SAPI5 from hanging
+                    engine = pyttsx3.init()
+                    engine.setProperty('rate', 150)
+                    engine.setProperty('volume', 0.9)
