@@ -117,3 +117,33 @@ class TTSService:
                     engine = pyttsx3.init()
                     engine.setProperty('rate', 150)
                     engine.setProperty('volume', 0.9)
+                    engine.say(text_to_speak)
+                    engine.runAndWait()
+                    engine.stop()  # Explicitly stop
+                    del engine  # Clean up
+                    return True
+                except Exception as e:
+                    print(f"[TTS Worker] pyttsx3 speak failed: {e}")
+                    return False
+            
+            while not _tts_worker_stop:
+                try:
+                    # Short timeout for responsive shutdown
+                    try:
+                        request = _tts_queue.get(timeout=1)
+                    except queue.Empty:
+                        continue
+                    
+                    if request is None:  # Shutdown signal
+                        break
+                    
+                    # Skip TTS if paused (no active stream)
+                    if _tts_paused:
+                        _tts_queue.task_done()
+                        continue
+                    
+                    text, filename, play_immediately, service_ref = request
+                    
+                    spoken = False
+                    filepath = None
+                    
