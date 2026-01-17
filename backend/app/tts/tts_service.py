@@ -147,3 +147,22 @@ class TTSService:
                     spoken = False
                     filepath = None
                     
+                    # Try edge-tts first (in a new event loop for this thread)
+                    if service_ref._edge_tts_available and play_immediately:
+                        try:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            try:
+                                filepath = loop.run_until_complete(
+                                    service_ref.generate_warning_async(text, filename)
+                                )
+                                # Check both existence AND meaningful size (>100 bytes)
+                                if filepath and filepath.exists() and filepath.stat().st_size > 100:
+                                    service_ref.play_audio(filepath)
+                                    spoken = True
+                                    time.sleep(3.0)  # Wait for audio to finish
+                                else:
+                                    print(f"[TTS Worker] edge-tts produced no audio, falling back to pyttsx3")
+                            finally:
+                                loop.close()
+                        except Exception as edge_err:
