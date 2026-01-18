@@ -88,3 +88,25 @@ def calculate_dynamic_fine(
     Formula: Fine = Base + (Duration × 5) + (Traffic_Impact × 50)
     
     Args:
+        violation_type: Type of parking zone ('no_parking', 'handicap_zone', etc.)
+        duration_seconds: How long the vehicle was parked illegally
+        vehicle_count_in_frame: Count of OTHER moving vehicles in frame
+        violation_id: Optional ID if linked to existing violation record
+        
+    Returns:
+        FineBreakdown object with detailed calculation.
+    """
+    # Get base penalty for zone type
+    base_penalty = BASE_PENALTIES.get(violation_type.lower(), BASE_PENALTIES['default'])
+    
+    # Calculate duration penalty: Duration × Rate (5 LKR/second)
+    duration_penalty = duration_seconds * DURATION_RATE
+    
+    # Calculate traffic impact penalty: Vehicle_Count × Multiplier (50 LKR/vehicle)
+    impact_penalty = vehicle_count_in_frame * TRAFFIC_MULTIPLIER
+    
+    # Total fine
+    total_fine = base_penalty + duration_penalty + impact_penalty
+    
+    return FineBreakdown(
+        violation_id=violation_id or 0,

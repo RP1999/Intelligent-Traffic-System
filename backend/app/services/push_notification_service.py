@@ -18,3 +18,13 @@ Setup:
     2. Or set FIREBASE_SERVICE_ACCOUNT_PATH env variable.
     3. Install: pip install firebase-admin
 """
+
+import json
+import logging
+import os
+from pathlib import Path
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# Firebase Admin SDK (lazy-loaded)
