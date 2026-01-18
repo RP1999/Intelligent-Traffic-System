@@ -110,3 +110,25 @@ def calculate_dynamic_fine(
     
     return FineBreakdown(
         violation_id=violation_id or 0,
+        zone_type=violation_type,
+        duration_seconds=duration_seconds,
+        traffic_impact=vehicle_count_in_frame,
+        base_penalty=base_penalty,
+        duration_penalty=duration_penalty,
+        impact_penalty=impact_penalty,
+        total_fine=total_fine
+    )
+
+
+def save_fine_to_database(fine: FineBreakdown) -> str:
+    """
+    Save the calculated fine to the dynamic_fines collection.
+    
+    Args:
+        fine: FineBreakdown object with calculation details.
+        
+    Returns:
+        ID of the inserted document.
+    """
+    db = get_sync_db()
+    doc_ref = db.collection(Collections.DYNAMIC_FINES).add({
