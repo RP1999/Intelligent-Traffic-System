@@ -71,3 +71,10 @@ def preprocess_plate_image(image: np.ndarray) -> np.ndarray:
 
 def clean_plate_text(text: str) -> str:
     """
+    Clean and normalize recognized plate text.
+    
+    - Remove special characters except hyphen and space
+    - Convert to uppercase
+    - Normalize spacing
+    
+    Args:
