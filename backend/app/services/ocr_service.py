@@ -65,3 +65,9 @@ def preprocess_plate_image(image: np.ndarray) -> np.ndarray:
     mean_val = np.mean(binary)
     if mean_val < 127:
         binary = cv2.bitwise_not(binary)
+    
+    return binary
+
+
+def clean_plate_text(text: str) -> str:
+    """
