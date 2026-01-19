@@ -45,3 +45,23 @@ def preprocess_plate_image(image: np.ndarray) -> np.ndarray:
     Args:
         image: BGR image of the license plate crop
     
+    Returns:
+        Preprocessed binary image ready for OCR
+    """
+    # Convert to grayscale
+    if len(image.shape) == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image.copy()
+    
+    # Apply Gaussian blur to reduce noise
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+    # Apply Otsu's thresholding for automatic binary conversion
+    _, binary = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
+    # Optional: Invert if background is dark (white text on dark plate)
+    # Check if the image is mostly dark
+    mean_val = np.mean(binary)
+    if mean_val < 127:
+        binary = cv2.bitwise_not(binary)

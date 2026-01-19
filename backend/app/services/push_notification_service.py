@@ -28,3 +28,12 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Firebase Admin SDK (lazy-loaded)
+_firebase_app = None
+
+# Service account path
+SERVICE_ACCOUNT_PATH = os.getenv(
+    "FIREBASE_SERVICE_ACCOUNT_PATH",
+    str(Path(__file__).parent.parent.parent / "firebase-service-account.json"),
+)
+
+
