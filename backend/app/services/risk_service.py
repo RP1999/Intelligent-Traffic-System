@@ -44,3 +44,32 @@ VIOLATION_WEIGHTS = {
 
 # Risk level thresholds
 RISK_LEVELS = {
+    'LOW': (0, 30),
+    'MEDIUM': (30, 60),
+    'HIGH': (60, 80),
+    'CRITICAL': (80, 101),
+}
+
+
+# =============================================================================
+# DATA CLASSES
+# =============================================================================
+
+@dataclass
+class RiskScore:
+    """Container for risk score calculation result."""
+    vehicle_id: int
+    plate_number: Optional[str]
+    risk_score: float
+    speed_factor: float
+    violation_history_factor: float
+    risk_level: str
+    current_speed: float
+    speed_limit: float
+    violation_count: int
+    
+    def to_dict(self) -> dict:
+        return {
+            'vehicle_id': self.vehicle_id,
+            'plate_number': self.plate_number,
+            'risk_score': round(self.risk_score, 1),

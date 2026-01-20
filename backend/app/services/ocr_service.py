@@ -78,3 +78,21 @@ def clean_plate_text(text: str) -> str:
     - Normalize spacing
     
     Args:
+        text: Raw OCR output
+    
+    Returns:
+        Cleaned plate text
+    """
+    if not text:
+        return ""
+    
+    # Convert to uppercase
+    text = text.upper()
+    
+    # Keep only alphanumeric, hyphen, and space
+    text = re.sub(r'[^A-Z0-9\-\s]', '', text)
+    
+    # Normalize multiple spaces to single space
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Common OCR corrections for Sri Lankan plates
