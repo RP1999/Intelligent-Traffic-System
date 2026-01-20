@@ -37,3 +37,23 @@ def get_data_yaml_path() -> Path:
         raise FileNotFoundError(
             f"data.yaml not found at: {data_yaml}\n"
             "Please ensure the dataset is downloaded to data/plates/"
+        )
+    
+    return data_yaml
+
+
+def train_plate_detector(
+    epochs: int = 10,
+    imgsz: int = 640,
+    device: str = "cpu",
+    batch: int = 8,
+    pretrained_model: str = "yolov8n.pt",
+    project_name: str = "plate_detector",
+):
+    """
+    Train YOLOv8 Nano model for license plate detection.
+    
+    Args:
+        epochs: Number of training epochs (default: 10 for POC)
+        imgsz: Image size for training (default: 640)
+        device: Training device - 'cpu' or 'cuda:0' (default: 'cpu')

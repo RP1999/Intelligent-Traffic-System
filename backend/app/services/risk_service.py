@@ -73,3 +73,27 @@ class RiskScore:
             'vehicle_id': self.vehicle_id,
             'plate_number': self.plate_number,
             'risk_score': round(self.risk_score, 1),
+            'speed_factor': round(self.speed_factor, 1),
+            'violation_history_factor': round(self.violation_history_factor, 1),
+            'risk_level': self.risk_level,
+            'current_speed': round(self.current_speed, 1),
+            'speed_limit': self.speed_limit,
+            'violation_count': self.violation_count,
+            'formula': '(Speed_Factor × 0.6) + (History_Factor × 0.4)',
+            'weights': {
+                'speed': SPEED_WEIGHT,
+                'history': HISTORY_WEIGHT
+            }
+        }
+
+
+# =============================================================================
+# CORE FUNCTIONS
+# =============================================================================
+
+def calculate_speed_factor(current_speed: float, speed_limit: float) -> float:
+    """
+    Calculate the speed factor component of risk score.
+    
+    Scale: 0-100 based on how fast relative to limit.
+    
