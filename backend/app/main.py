@@ -55,3 +55,21 @@ class TeeStream:
         self.original.write(data)
         try:
             self.file.write(data)
+            self.file.flush()
+        except Exception:
+            pass  # Ignore file write errors
+    
+    def flush(self):
+        self.original.flush()
+        try:
+            self.file.flush()
+        except Exception:
+            pass
+
+# Redirect stdout and stderr to also write to log file
+sys.stdout = TeeStream(LOG_FILE, sys.__stdout__)
+sys.stderr = TeeStream(LOG_FILE, sys.__stderr__)
+
+# Configure uvicorn/fastapi loggers to also write to log file
+file_handler = logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
