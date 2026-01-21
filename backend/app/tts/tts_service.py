@@ -166,3 +166,22 @@ class TTSService:
                             finally:
                                 loop.close()
                         except Exception as edge_err:
+                            print(f"[TTS Worker] edge-tts error: {edge_err}, falling back to pyttsx3")
+                    
+                    # Fallback to pyttsx3 direct speech
+                    if not spoken and play_immediately and service_ref._pyttsx3_available:
+                        print(f"[TTS Worker] 🔊 Speaking: {text[:45]}...")
+                        if _speak_with_pyttsx3(text):
+                            print(f"[TTS Worker] ✅ Spoke successfully")
+                            spoken = True
+                            service_ref._last_play_time = time.time()
+                    
+                    _tts_queue.task_done()
+                    
+                except Exception as e:
+                    print(f"[TTS Worker] Error: {e}")
+                    traceback.print_exc()
+        
+        worker_thread = threading.Thread(target=_worker, daemon=True, name="TTSWorker")
+        worker_thread.start()
+        print("   🧵 TTS Worker thread started")
