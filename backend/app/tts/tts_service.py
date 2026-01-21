@@ -185,3 +185,32 @@ class TTSService:
         worker_thread = threading.Thread(target=_worker, daemon=True, name="TTSWorker")
         worker_thread.start()
         print("   🧵 TTS Worker thread started")
+    
+    def _preload_common_warnings(self):
+        """Load existing warning files into cache for instant playback."""
+        if not WARNINGS_DIR.exists():
+            return
+        
+        # Look for common warning files (support multiple formats for cross-platform)
+        audio_extensions = ['.mp3', '.aiff', '.wav']
+        for warning_key, text in COMMON_WARNINGS.items():
+            for ext in audio_extensions:
+                filepath = WARNINGS_DIR / f"{warning_key}{ext}"
+                if filepath.exists():
+                    text_hash = self._hash_text(text)
+                    self._warning_cache[text_hash] = filepath
+                    self._warning_cache[warning_key] = filepath
+                    print(f"   📦 Cached: {filepath.name}")
+                    break  # Use first found format
+    
+    def _hash_text(self, text: str) -> str:
+        """Generate a hash for caching text-based lookups."""
+        return hashlib.md5(text.lower().strip().encode()).hexdigest()[:16]
+    
+    def play_cached_warning(self, warning_key: str) -> bool:
+        """
+        Play a pre-generated cached warning instantly (non-blocking).
+        
+        Args:
+            warning_key: One of 'parking_warning', 'parking_violation', 
+                        'speeding_warning', 'general_warning'
