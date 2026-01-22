@@ -37,3 +37,18 @@ SERVICE_ACCOUNT_PATH = os.getenv(
 )
 
 
+def _init_firebase():
+    """Initialize Firebase Admin SDK if not already done."""
+    global _firebase_app
+    if _firebase_app is not None:
+        return True
+
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+
+        # Check if Firebase was already initialized by another module
+        # (e.g. firestore_client.py initializes it at startup)
+        if firebase_admin._apps:
+            _firebase_app = firebase_admin.get_app()
+            logger.info("Firebase Admin SDK already initialized – reusing existing app.")
