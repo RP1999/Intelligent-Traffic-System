@@ -124,3 +124,32 @@ def calculate_speed_factor(current_speed: float, speed_limit: float) -> float:
     elif speed_ratio <= 1.5:
         # Significantly over (120-150%)
         # Linear scale: 50-100
+        speed_factor = 50 + (speed_ratio - 1.2) * 166.67  # 50 at 1.2, 100 at 1.5
+    else:
+        # Extremely over (>150%)
+        speed_factor = 100
+    
+    return min(100, max(0, speed_factor))
+
+
+def calculate_history_factor(violation_history_count: int = None, violations: List[Dict] = None) -> float:
+    """
+    Calculate the violation history factor component of risk score.
+    
+    Scale: 0-100 based on past violations.
+    
+    Args:
+        violation_history_count: Simple count of violations (if no details available)
+        violations: List of violation dicts with 'type' key (for weighted calculation)
+        
+    Returns:
+        History factor (0-100)
+    """
+    history_score = 0
+    
+    if violations:
+        # Weighted calculation based on violation types
+        for v in violations:
+            violation_type = v.get('type', v.get('violation_type', 'default'))
+            weight = VIOLATION_WEIGHTS.get(violation_type.lower(), VIOLATION_WEIGHTS['default'])
+            history_score += weight
