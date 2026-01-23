@@ -153,3 +153,14 @@ def calculate_history_factor(violation_history_count: int = None, violations: Li
             violation_type = v.get('type', v.get('violation_type', 'default'))
             weight = VIOLATION_WEIGHTS.get(violation_type.lower(), VIOLATION_WEIGHTS['default'])
             history_score += weight
+    elif violation_history_count is not None:
+        # Simple calculation: 10 points per violation
+        history_score = violation_history_count * 10
+    
+    # Cap at 100
+    return min(100, history_score)
+
+
+def get_risk_level(score: float) -> str:
+    """
+    Get risk level classification from score.
