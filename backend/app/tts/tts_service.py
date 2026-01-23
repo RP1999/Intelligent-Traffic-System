@@ -214,3 +214,23 @@ class TTSService:
         Args:
             warning_key: One of 'parking_warning', 'parking_violation', 
                         'speeding_warning', 'general_warning'
+        
+        Returns:
+            True if played successfully
+        """
+        # First check direct key lookup
+        if warning_key in self._warning_cache:
+            return self.play_audio(self._warning_cache[warning_key])
+        
+        # Try to find the file with various extensions (cross-platform support)
+        audio_extensions = ['.mp3', '.aiff', '.wav']
+        for ext in audio_extensions:
+            filepath = WARNINGS_DIR / f"{warning_key}{ext}"
+            if filepath.exists():
+                self._warning_cache[warning_key] = filepath
+                return self.play_audio(filepath)
+        
+        # Try alternative naming patterns
+        alt_patterns = [
+            f"{warning_key}_test",
+            f"warning_{warning_key}",

@@ -156,3 +156,31 @@ _vehicle_behaviors: Dict[int, VehicleBehavior] = {}
 # Recent behavior events
 _behavior_events: List[BehaviorEvent] = []
 
+# Behavior cooldown to prevent spam (per-type minimum gap)
+BEHAVIOR_COOLDOWN = 30.0  # seconds between same-type detections for same vehicle
+
+# Queue for DB saving
+_db_save_queue: List[BehaviorEvent] = []
+
+
+def _queue_event_for_db_save(event: BehaviorEvent):
+    """Queue an event for sync DB saving in a background thread."""
+    _db_save_queue.append(event)
+    
+    # Save to DB in background thread using sync Firestore client
+    import threading
+    
+    def _save_in_thread():
+        try:
+            _save_behavior_event_sync(event)
+        except Exception as e:
+            print(f"[BEHAVIOR] ⚠️ Failed to save event to DB: {e}")
+    
+    # Fire and forget - save to DB in background thread
+    thread = threading.Thread(target=_save_in_thread, daemon=True)
+    thread.start()
+
+
+def _send_behavior_warning(event: BehaviorEvent):
+    """Fire-and-forget: send a warning push notification for a behavior event.
+    Uses vehicle tracking ID as fallback when plate is not available,
