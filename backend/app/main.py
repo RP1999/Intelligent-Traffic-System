@@ -73,3 +73,26 @@ sys.stderr = TeeStream(LOG_FILE, sys.__stderr__)
 # Configure uvicorn/fastapi loggers to also write to log file
 file_handler = logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8')
 file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+# Add file handler to uvicorn and fastapi loggers
+for logger_name in ['uvicorn', 'uvicorn.error', 'uvicorn.access', 'fastapi']:
+    logger = logging.getLogger(logger_name)
+    logger.addHandler(file_handler)
+    logger.setLevel(logging.DEBUG)
+
+print(f"📝 Server logs: {LOG_FILE}")
+
+# --- Event Queue for SSE ---
+# Simple in-memory queue for broadcasting events to connected clients
+event_queue: asyncio.Queue = asyncio.Queue()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager - startup and shutdown events."""
+    # Startup
+    print(f"🚦 {settings.app_name} v{settings.app_version} starting...")
+    print(f"📁 Data directory: {settings.data_dir}")
+    print(f"🎯 Vehicle model: {settings.vehicle_model}")
+    print(f"🔖 Plate model: {settings.plate_model}")
