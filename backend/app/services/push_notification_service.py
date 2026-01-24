@@ -52,3 +52,16 @@ def _init_firebase():
         if firebase_admin._apps:
             _firebase_app = firebase_admin.get_app()
             logger.info("Firebase Admin SDK already initialized – reusing existing app.")
+            return True
+
+        if not os.path.exists(SERVICE_ACCOUNT_PATH):
+            logger.warning(
+                "Firebase service account not found at %s. "
+                "Push notifications are disabled.",
+                SERVICE_ACCOUNT_PATH,
+            )
+            return False
+
+        cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+        _firebase_app = firebase_admin.initialize_app(cred)
+        logger.info("Firebase Admin SDK initialized for push notifications.")

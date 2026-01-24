@@ -132,3 +132,25 @@ def save_fine_to_database(fine: FineBreakdown) -> str:
     """
     db = get_sync_db()
     doc_ref = db.collection(Collections.DYNAMIC_FINES).add({
+        "violation_id": fine.violation_id,
+        "zone_type": fine.zone_type,
+        "base_penalty": fine.base_penalty,
+        "duration_seconds": fine.duration_seconds,
+        "duration_penalty": fine.duration_penalty,
+        "traffic_impact": fine.traffic_impact,
+        "impact_penalty": fine.impact_penalty,
+        "total_fine": fine.total_fine,
+        "payment_status": "unpaid",
+        "created_at": datetime.now().isoformat(),
+    })
+    # doc_ref is a tuple (update_time, doc_ref) for sync add
+    fine_id = doc_ref[1].id if isinstance(doc_ref, tuple) else doc_ref.id
+    print(f"[FINE] Saved fine #{fine_id}: {fine.total_fine} LKR (Zone: {fine.zone_type})")
+    return fine_id
+
+
+def get_fine_by_violation(violation_id: int) -> Optional[Dict]:
+    """
+    Get fine breakdown for a specific violation.
+    
+    Args:
