@@ -107,3 +107,19 @@ async def lifespan(app: FastAPI):
 
             # Initialize dynamic fine calculator with saved settings
             from app.routers.settings import initialize_fine_calculator
+            await initialize_fine_calculator()
+            break  # success
+        except Exception as e:
+            if "429" in str(e) and _attempt < 2:
+                wait = 2 ** (_attempt + 1)  # 2s, 4s
+                print(f"⚠️ Firestore quota hit, retrying in {wait}s...")
+                await asyncio.sleep(wait)
+            else:
+                print(f"⚠️ Database init failed: {e}")
+
+    # Pre-load YOLO models, EasyOCR, TTS, and scoring engine at startup
+    # so they're ready before the first video starts
+    import threading
+    def _preload_models():
+        try:
+            from app.detection.yolo_detector import (

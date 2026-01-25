@@ -96,3 +96,26 @@ def clean_plate_text(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
     
     # Common OCR corrections for Sri Lankan plates
+    replacements = {
+        'O': '0',  # Sometimes O is read as 0 (context-dependent)
+
+        'I': '1',  # I can be 1
+        'S': '5',  # S can be 5
+        'B': '8',  # B can be 8
+    }
+    # Only apply these in the numeric portion (after letters)
+    # This is a simplified approach
+    
+    return text
+
+
+def validate_plate_text(text: str) -> bool:
+    """
+    Validate if text looks like a Sri Lankan license plate.
+    
+    Common Sri Lankan plate formats:
+    - Province code + letters + numbers: WP ABC-1234, CP XY-5678
+    - Old format: 123-4567
+    - Bike format: WP AB-1234
+    
+    Args:
