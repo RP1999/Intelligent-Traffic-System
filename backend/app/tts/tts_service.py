@@ -234,3 +234,25 @@ class TTSService:
         alt_patterns = [
             f"{warning_key}_test",
             f"warning_{warning_key}",
+        ]
+        for pattern in alt_patterns:
+            for ext in audio_extensions:
+                alt_path = WARNINGS_DIR / f"{pattern}{ext}"
+                if alt_path.exists():
+                    self._warning_cache[warning_key] = alt_path
+                    return self.play_audio(alt_path)
+        
+        print(f"[TTS] ⚠️ No cached audio for: {warning_key}")
+        return False
+    
+    def play_any_warning(self) -> bool:
+        """Play any available warning file (for testing)."""
+        if WARNINGS_DIR.exists():
+            # Search for any audio file (cross-platform)
+            for ext in ['*.mp3', '*.aiff', '*.wav']:
+                files = list(WARNINGS_DIR.glob(ext))
+                if files:
+                    return self.play_audio(files[0])
+        return False
+    
+    def _ensure_directories(self):

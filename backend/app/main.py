@@ -96,3 +96,14 @@ async def lifespan(app: FastAPI):
     print(f"📁 Data directory: {settings.data_dir}")
     print(f"🎯 Vehicle model: {settings.vehicle_model}")
     print(f"🔖 Plate model: {settings.plate_model}")
+    # Initialize database tables (retry on Firestore 429 quota errors)
+    for _attempt in range(3):
+        try:
+            await init_db()
+            print("✅ Database initialized")
+            # Seed default admin user if Firestore is empty
+            from app.routers.auth import ensure_tables_exist
+            await ensure_tables_exist()
+
+            # Initialize dynamic fine calculator with saved settings
+            from app.routers.settings import initialize_fine_calculator
