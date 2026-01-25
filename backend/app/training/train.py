@@ -57,3 +57,25 @@ def train_plate_detector(
         epochs: Number of training epochs (default: 10 for POC)
         imgsz: Image size for training (default: 640)
         device: Training device - 'cpu' or 'cuda:0' (default: 'cpu')
+        batch: Batch size (default: 8, reduced for CPU training)
+        pretrained_model: Base model to use (default: 'yolov8n.pt')
+        project_name: Name for the training run
+    
+    Returns:
+        Path to the best trained model weights
+    """
+    print("=" * 60)
+    print("🚗 INTELLIGENT TRAFFIC MANAGEMENT SYSTEM")
+    print("📋 License Plate Detection Model Training")
+    print("=" * 60)
+    print(f"⏰ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print()
+    
+    # Get data path
+    data_yaml = get_data_yaml_path()
+    print(f"📁 Dataset: {data_yaml}")
+    print(f"🔧 Base Model: {pretrained_model}")
+    print(f"🖥️  Device: {device}")
+    print(f"📊 Epochs: {epochs}")
+    print(f"📐 Image Size: {imgsz}")
+    print(f"📦 Batch Size: {batch}")
