@@ -65,3 +65,15 @@ def _init_firebase():
         cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
         _firebase_app = firebase_admin.initialize_app(cred)
         logger.info("Firebase Admin SDK initialized for push notifications.")
+        return True
+    except Exception as e:
+        logger.error("Failed to initialize Firebase Admin SDK: %s", e)
+        return False
+
+
+def _get_fcm_token(plate_number: str) -> Optional[str]:
+    """Look up the FCM token for a driver by plate number from Firestore (sync)."""
+    try:
+        from app.db.firestore_client import get_sync_db, Collections
+        from app.utils.plate_utils import normalize_plate
+
