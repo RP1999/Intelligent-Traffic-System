@@ -79,3 +79,20 @@ def train_plate_detector(
     print(f"📊 Epochs: {epochs}")
     print(f"📐 Image Size: {imgsz}")
     print(f"📦 Batch Size: {batch}")
+    print()
+    
+    # Load pretrained model
+    print("⏳ Loading pretrained YOLOv8 Nano model...")
+    model = YOLO(pretrained_model)
+    print("✅ Model loaded successfully!")
+    print()
+    
+    # Configure output directory
+    output_dir = PROJECT_ROOT / "runs" / "detect"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Start training
+    print("🚀 Starting training...")
+    print("-" * 60)
+    
+    results = model.train(

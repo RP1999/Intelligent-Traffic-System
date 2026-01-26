@@ -164,3 +164,22 @@ def calculate_history_factor(violation_history_count: int = None, violations: Li
 def get_risk_level(score: float) -> str:
     """
     Get risk level classification from score.
+    
+    Args:
+        score: Risk score (0-100)
+        
+    Returns:
+        Risk level string: 'LOW', 'MEDIUM', 'HIGH', or 'CRITICAL'
+    """
+    for level, (low, high) in RISK_LEVELS.items():
+        if low <= score < high:
+            return level
+    return 'CRITICAL'
+
+
+def calculate_risk(
+    speed: float,
+    speed_limit: float,
+    violation_history_count: int,
+    vehicle_id: int = 0,
+    plate_number: str = None
