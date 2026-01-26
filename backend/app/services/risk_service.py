@@ -183,3 +183,30 @@ def calculate_risk(
     violation_history_count: int,
     vehicle_id: int = 0,
     plate_number: str = None
+) -> RiskScore:
+    """
+    Calculate accident risk score for a vehicle.
+    
+    Formula: Risk_Score = (Speed_Factor × 0.6) + (History_Factor × 0.4)
+    
+    Args:
+        speed: Current vehicle speed
+        speed_limit: Speed limit for the zone
+        violation_history_count: Number of past violations (last 30 days)
+        vehicle_id: Optional vehicle/track ID
+        plate_number: Optional license plate
+        
+    Returns:
+        RiskScore object with detailed calculation.
+    """
+    # Calculate components
+    speed_factor = calculate_speed_factor(speed, speed_limit)
+    history_factor = calculate_history_factor(violation_history_count=violation_history_count)
+    
+    # Final risk score
+    risk_score = (speed_factor * SPEED_WEIGHT) + (history_factor * HISTORY_WEIGHT)
+    
+    # Get risk level
+    risk_level = get_risk_level(risk_score)
+    
+    return RiskScore(

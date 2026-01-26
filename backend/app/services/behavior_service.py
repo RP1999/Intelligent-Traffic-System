@@ -184,3 +184,32 @@ def _queue_event_for_db_save(event: BehaviorEvent):
 def _send_behavior_warning(event: BehaviorEvent):
     """Fire-and-forget: send a warning push notification for a behavior event.
     Uses vehicle tracking ID as fallback when plate is not available,
+    mirroring how violations always create entries for unknown drivers."""
+    # Use plate if available, otherwise fall back to UNKNOWN{id}
+    # (same format the detection pipeline uses in yolo_detector.py)
+    identifier = event.plate_number or f"UNKNOWN{event.vehicle_id}"
+    try:
+        import threading
+        from app.services.push_notification_service import send_warning_notification
+        details_str = ", ".join(f"{k}: {v}" for k, v in (event.details or {}).items())
+
+        def _do_send():
+            try:
+                send_warning_notification(
+                    plate_number=identifier,
+                    behavior_type=event.behavior_type.value,
+                    severity=event.severity.value,
+                    details=details_str,
+                )
+            except Exception as e:
+                logger.error("Behavior warning push error: %s", e)
+
+        threading.Thread(target=_do_send, daemon=True).start()
+    except Exception as e:
+        logger.error("Failed to queue behavior warning: %s", e)
+
+
+# ============================================================================
+# DETECTION FUNCTIONS
+# ============================================================================
+
