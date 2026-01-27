@@ -77,3 +77,25 @@ def _get_fcm_token(plate_number: str) -> Optional[str]:
         from app.db.firestore_client import get_sync_db, Collections
         from app.utils.plate_utils import normalize_plate
 
+        norm_plate = normalize_plate(plate_number)
+        db = get_sync_db()
+        # Try normalized plate first, then original
+        for plate_val in dict.fromkeys([norm_plate, plate_number]):
+            if not plate_val:
+                continue
+            doc = db.collection(Collections.DRIVER_FCM_TOKENS).document(plate_val).get()
+            if doc.exists:
+                return doc.to_dict().get("fcm_token")
+        return None
+    except Exception as e:
+        logger.error("Error fetching FCM token for %s: %s", plate_number, e)
+        return None
+
+
+def send_push_to_driver(
+    plate_number: str,
+    title: str,
+    body: str,
+    data: Optional[dict] = None,
+) -> bool:
+    """

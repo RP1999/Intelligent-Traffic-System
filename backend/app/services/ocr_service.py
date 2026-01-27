@@ -119,3 +119,15 @@ def validate_plate_text(text: str) -> bool:
     - Bike format: WP AB-1234
     
     Args:
+        text: Cleaned plate text
+    
+    Returns:
+        True if text matches expected plate patterns
+    """
+    if not text:
+        return False
+    
+    # Too short - probably noise
+    if len(text) < 4:
+        return False
+    
