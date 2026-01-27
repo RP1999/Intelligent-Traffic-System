@@ -123,3 +123,14 @@ async def lifespan(app: FastAPI):
     def _preload_models():
         try:
             from app.detection.yolo_detector import (
+                load_vehicle_model, load_plate_model, get_ocr_service,
+                get_scoring_engine, get_tts_service as get_detector_tts,
+                get_lane_weaving_service, get_behavior_service,
+                load_stop_line_config,
+            )
+            print("🔄 Pre-loading YOLO vehicle model...")
+            load_vehicle_model("cpu")
+            print("✅ Vehicle model pre-loaded")
+
+            print("🔄 Pre-loading plate detection model...")
+            load_plate_model("cpu")
