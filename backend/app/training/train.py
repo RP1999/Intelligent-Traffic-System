@@ -96,3 +96,11 @@ def train_plate_detector(
     print("-" * 60)
     
     results = model.train(
+        data=str(data_yaml),
+        epochs=epochs,
+        imgsz=imgsz,
+        device=device,
+        batch=batch,
+        project=str(output_dir),
+        name=project_name,
+        exist_ok=True,  # Overwrite existing run
