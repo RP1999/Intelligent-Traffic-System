@@ -154,3 +154,26 @@ def get_fine_by_violation(violation_id: int) -> Optional[Dict]:
     Get fine breakdown for a specific violation.
     
     Args:
+        violation_id: ID of the violation record.
+        
+    Returns:
+        Dict with fine breakdown or None if not found.
+    """
+    db = get_sync_db()
+    docs = db.collection(Collections.DYNAMIC_FINES).where(
+        "violation_id", "==", violation_id
+    ).limit(1).get()
+
+    for doc in docs:
+        result = doc.to_dict()
+        result["id"] = doc.id
+        return result
+    return None
+
+
+def update_payment_status(fine_id: str, status: str) -> bool:
+    """
+    Update the payment status of a fine.
+    
+    Args:
+        fine_id: ID of the fine document.

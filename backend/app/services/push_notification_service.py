@@ -99,3 +99,13 @@ def send_push_to_driver(
     data: Optional[dict] = None,
 ) -> bool:
     """
+    Send a push notification to a specific driver (synchronous).
+
+    Args:
+        plate_number: Driver's license plate (used to look up FCM token).
+        title: Notification title.
+        body: Notification body text.
+        data: Optional data payload (all values must be strings).
+
+    Returns:
+        True if notification was sent successfully, False otherwise.
