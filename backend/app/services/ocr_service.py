@@ -131,3 +131,16 @@ def validate_plate_text(text: str) -> bool:
     if len(text) < 4:
         return False
     
+    # Too long - probably multiple lines or garbage
+    if len(text) > 15:
+        return False
+    
+    # Must contain at least one letter and one digit
+    has_letter = bool(re.search(r'[A-Z]', text))
+    has_digit = bool(re.search(r'[0-9]', text))
+    
+    if not (has_letter or has_digit):
+        return False
+    
+    # Sri Lankan plate patterns (flexible matching)
+    patterns = [
