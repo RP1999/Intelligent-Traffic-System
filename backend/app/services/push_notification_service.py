@@ -109,3 +109,11 @@ def send_push_to_driver(
 
     Returns:
         True if notification was sent successfully, False otherwise.
+    """
+    if not _init_firebase():
+        logger.warning("Firebase not configured – skipping push to %s", plate_number)
+        return False
+
+    token = _get_fcm_token(plate_number)
+    if not token:
+        logger.info("No FCM token registered for plate %s", plate_number)

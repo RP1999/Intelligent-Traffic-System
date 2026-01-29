@@ -144,3 +144,13 @@ def validate_plate_text(text: str) -> bool:
     
     # Sri Lankan plate patterns (flexible matching)
     patterns = [
+        # Province code + letters + hyphen + numbers: WP ABC-1234
+        r'^[A-Z]{2,3}\s?[A-Z]{1,4}[\-\s]?\d{4}$',
+        
+        # Province code + letters + numbers (no hyphen): WP CAB1234
+        r'^[A-Z]{2,3}\s?[A-Z]{1,4}\d{4}$',
+        
+        # Old format with hyphen: 123-4567 or 12-3456
+        r'^\d{2,3}[\-\s]?\d{4}$',
+        
+        # Bike/motorbike format: WP AB-1234
