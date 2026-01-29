@@ -213,3 +213,38 @@ def _send_behavior_warning(event: BehaviorEvent):
 # DETECTION FUNCTIONS
 # ============================================================================
 
+def detect_sudden_stop(
+    track_id: int,
+    current_speed: float,
+    plate_text: Optional[str] = None
+) -> Optional[BehaviorEvent]:
+    """
+    Detect sudden stop: >50% speed reduction in <2 seconds.
+    
+    Args:
+        track_id: Vehicle tracking ID
+        current_speed: Current speed in pixels/second
+        plate_text: License plate if available
+    
+    Returns:
+        BehaviorEvent if sudden stop detected
+    """
+    global _vehicle_behaviors
+    
+    if track_id not in _vehicle_behaviors:
+        _vehicle_behaviors[track_id] = VehicleBehavior(track_id=track_id)
+    
+    behavior = _vehicle_behaviors[track_id]
+    # NOTE: Don't append to speeds here — analyze_vehicle_behavior() already
+    # called add_position() which records the speed. Double-recording dilutes
+    # the speed change ratio and makes sudden stops harder to detect.
+    
+    # Need speed history
+    if len(behavior.speeds) < 6:
+        return None
+    
+    # Check per-type cooldown
+    if not behavior.can_fire('sudden_stop', BEHAVIOR_COOLDOWN):
+        return None
+    
+    speeds = list(behavior.speeds)

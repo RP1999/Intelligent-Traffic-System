@@ -177,3 +177,13 @@ def update_payment_status(fine_id: str, status: str) -> bool:
     
     Args:
         fine_id: ID of the fine document.
+        status: New status ('unpaid', 'paid', 'disputed')
+        
+    Returns:
+        True if updated, False if not found.
+    """
+    db = get_sync_db()
+    doc_ref = db.collection(Collections.DYNAMIC_FINES).document(fine_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        return False
