@@ -154,3 +154,13 @@ def validate_plate_text(text: str) -> bool:
         r'^\d{2,3}[\-\s]?\d{4}$',
         
         # Bike/motorbike format: WP AB-1234
+        r'^[A-Z]{2}\s?[A-Z]{2}[\-\s]?\d{4}$',
+        
+        # Partial matches (at least 2 letters followed by digits)
+        r'^[A-Z]{2,}\s?[\-]?\s?\d{3,}$',
+        
+        # Generic: starts with letters, ends with numbers
+        r'^[A-Z]+.*\d{3,}$',
+    ]
+    
+    for pattern in patterns:
