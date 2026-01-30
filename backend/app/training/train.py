@@ -104,3 +104,11 @@ def train_plate_detector(
         project=str(output_dir),
         name=project_name,
         exist_ok=True,  # Overwrite existing run
+        verbose=True,
+        
+        # Training hyperparameters (optimized for small dataset)
+        patience=5,  # Early stopping patience
+        save=True,  # Save checkpoints
+        save_period=-1,  # Save only best model
+        val=True,  # Run validation
+        plots=True,  # Generate training plots

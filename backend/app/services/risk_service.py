@@ -210,3 +210,26 @@ def calculate_risk(
     risk_level = get_risk_level(risk_score)
     
     return RiskScore(
+        vehicle_id=vehicle_id,
+        plate_number=plate_number,
+        risk_score=risk_score,
+        speed_factor=speed_factor,
+        violation_history_factor=history_factor,
+        risk_level=risk_level,
+        current_speed=speed,
+        speed_limit=speed_limit,
+        violation_count=violation_history_count
+    )
+
+
+def save_risk_score_to_database(risk: RiskScore) -> str:
+    """
+    Save the calculated risk score to Firestore.
+    
+    Args:
+        risk: RiskScore object with calculation details.
+        
+    Returns:
+        ID of the inserted document.
+    """
+    db = get_sync_db()
