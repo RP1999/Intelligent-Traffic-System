@@ -117,3 +117,25 @@ def send_push_to_driver(
     token = _get_fcm_token(plate_number)
     if not token:
         logger.info("No FCM token registered for plate %s", plate_number)
+        return False
+
+    try:
+        from firebase_admin import messaging
+
+        # Ensure all data values are strings (FCM requirement)
+        str_data = {k: str(v) for k, v in (data or {}).items()}
+
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            data=str_data,
+            token=token,
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(
+                    channel_id="itms_traffic_alerts",
+                    icon="ic_notification",
+                    color="#FFD700",
+                    sound="default",

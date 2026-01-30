@@ -187,3 +187,15 @@ def update_payment_status(fine_id: str, status: str) -> bool:
     doc = doc_ref.get()
     if not doc.exists:
         return False
+    doc_ref.update({"payment_status": status})
+    return True
+
+
+def get_unpaid_fines(limit: int = 50) -> list:
+    """
+    Get list of all unpaid fines.
+    
+    Args:
+        limit: Maximum number of records to return.
+        
+    Returns:
