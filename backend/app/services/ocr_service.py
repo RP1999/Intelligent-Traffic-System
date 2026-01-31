@@ -164,3 +164,25 @@ def validate_plate_text(text: str) -> bool:
     ]
     
     for pattern in patterns:
+        if re.match(pattern, text):
+            return True
+    
+    # Fallback: If it has reasonable letter-number mix, accept it
+    # This helps with partially visible plates
+    letter_count = len(re.findall(r'[A-Z]', text))
+    digit_count = len(re.findall(r'[0-9]', text))
+    
+    if letter_count >= 2 and digit_count >= 3:
+        return True
+    
+    return False
+
+
+def read_plate(image_crop: np.ndarray) -> Optional[str]:
+    """
+    Read license plate text from a cropped plate image.
+    
+    This is the main entry point for OCR. It:
+    1. Preprocesses the image (grayscale, blur, threshold)
+    2. Runs EasyOCR
+    3. Cleans and validates the result
