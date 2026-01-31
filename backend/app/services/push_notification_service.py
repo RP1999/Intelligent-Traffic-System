@@ -139,3 +139,11 @@ def send_push_to_driver(
                     icon="ic_notification",
                     color="#FFD700",
                     sound="default",
+                ),
+            ),
+        )
+
+        response = messaging.send(message)
+        logger.info("Push sent to %s: %s", plate_number, response)
+        return True
+
