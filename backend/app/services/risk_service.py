@@ -233,3 +233,19 @@ def save_risk_score_to_database(risk: RiskScore) -> str:
         ID of the inserted document.
     """
     db = get_sync_db()
+    doc_ref = db.collection(Collections.RISK_SCORES).add({
+        "vehicle_id": risk.vehicle_id,
+        "plate_number": risk.plate_number,
+        "risk_score": risk.risk_score,
+        "speed_factor": risk.speed_factor,
+        "violation_history_factor": risk.violation_history_factor,
+        "risk_level": risk.risk_level,
+        "current_speed": risk.current_speed,
+        "speed_limit": risk.speed_limit,
+        "created_at": datetime.now().isoformat(),
+    })
+    risk_id = doc_ref[1].id if isinstance(doc_ref, tuple) else doc_ref.id
+    print(f"[RISK] Saved score #{risk_id}: {risk.risk_score:.1f} ({risk.risk_level}) for vehicle {risk.vehicle_id}")
+    return risk_id
+
+

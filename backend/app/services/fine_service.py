@@ -199,3 +199,20 @@ def get_unpaid_fines(limit: int = 50) -> list:
         limit: Maximum number of records to return.
         
     Returns:
+        List of fine records as dicts.
+    """
+    db = get_sync_db()
+    docs = (
+        db.collection(Collections.DYNAMIC_FINES)
+        .where("payment_status", "==", "unpaid")
+        .order_by("created_at", direction="DESCENDING")
+        .limit(limit)
+        .get()
+    )
+    results = []
+    for doc in docs:
+        d = doc.to_dict()
+        d["id"] = doc.id
+        results.append(d)
+    return results
+
