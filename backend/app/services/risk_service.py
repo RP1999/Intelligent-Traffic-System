@@ -249,3 +249,28 @@ def save_risk_score_to_database(risk: RiskScore) -> str:
     return risk_id
 
 
+def get_recent_violations(vehicle_id: int = None, plate_number: str = None, days: int = 30) -> List[Dict]:
+    """
+    Get recent violations for a vehicle from Firestore.
+    """
+    db = get_sync_db()
+    threshold = (datetime.now() - timedelta(days=days)).isoformat()
+
+    try:
+        if plate_number:
+            docs = (
+                db.collection(Collections.VIOLATIONS)
+                .where("plate_text", "==", plate_number)
+                .where("timestamp", ">", threshold)
+                .get()
+            )
+        elif vehicle_id:
+            docs = (
+                db.collection(Collections.VIOLATIONS)
+                .where("track_id", "==", vehicle_id)
+                .where("timestamp", ">", threshold)
+                .get()
+            )
+        else:
+            return []
+

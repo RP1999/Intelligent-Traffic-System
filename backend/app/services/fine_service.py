@@ -216,3 +216,14 @@ def get_unpaid_fines(limit: int = 50) -> list:
         results.append(d)
     return results
 
+
+def calculate_and_save_fine(
+    violation_id: int,
+    violation_type: str,
+    duration_seconds: int,
+    vehicle_count_in_frame: int
+) -> Dict:
+    """
+    Calculate fine and save to database in one step.
+    
+    Args:
