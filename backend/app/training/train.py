@@ -136,3 +136,23 @@ def train_plate_detector(
     
     # Get best model path
     best_model = output_dir / project_name / "weights" / "best.pt"
+    
+    if best_model.exists():
+        print(f"🏆 Best model saved to: {best_model}")
+        print()
+        
+        # Print final metrics
+        print("📊 Training Results:")
+        print(f"   Box mAP@50: {results.box.map50:.4f}" if hasattr(results, 'box') else "")
+        print(f"   Box mAP@50-95: {results.box.map:.4f}" if hasattr(results, 'box') else "")
+        
+        # Copy best model to models directory
+        models_dir = PROJECT_ROOT / "models"
+        models_dir.mkdir(exist_ok=True)
+        
+        import shutil
+        final_model_path = models_dir / "best_plate.pt"
+        shutil.copy(best_model, final_model_path)
+        print(f"📦 Model copied to: {final_model_path}")
+    else:
+        print("⚠️ Best model not found. Check training logs.")
