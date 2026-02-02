@@ -248,3 +248,38 @@ def detect_sudden_stop(
         return None
     
     speeds = list(behavior.speeds)
+    recent_speeds = speeds[-5:]  # Last ~1.7 seconds at 3 FPS
+    older_speeds = speeds[-12:-7] if len(speeds) >= 12 else speeds[:5]
+    
+    if not older_speeds or not recent_speeds:
+        return None
+    
+    avg_old_speed = sum(older_speeds) / len(older_speeds)
+    avg_new_speed = sum(recent_speeds) / len(recent_speeds)
+    
+    # Sudden stop: speed dropped by more than 50% (guard lowered for realistic pixel speeds)
+    if avg_old_speed > 5 and avg_new_speed < avg_old_speed * (1 - SUDDEN_STOP_SPEED_DROP):
+        behavior.sudden_stop_count += 1
+        behavior.mark_fired('sudden_stop')
+        behavior.behaviors_detected.append('sudden_stop')
+        
+        severity = SeverityLevel.HIGH if avg_old_speed > 100 else SeverityLevel.MEDIUM
+        
+        event = BehaviorEvent(
+            vehicle_id=track_id,
+            behavior_type=BehaviorType.SUDDEN_STOP,
+            severity=severity,
+            plate_number=plate_text,
+            details={
+                'speed_before': round(avg_old_speed, 1),
+                'speed_after': round(avg_new_speed, 1),
+                'speed_drop_percent': round((1 - avg_new_speed / avg_old_speed) * 100, 1),
+            }
+        )
+        
+        _behavior_events.append(event)
+        _queue_event_for_db_save(event)  # Save to database
+        _send_behavior_warning(event)
+        print(f"[BEHAVIOR] 🛑 Vehicle {track_id} SUDDEN STOP: {avg_old_speed:.0f} → {avg_new_speed:.0f} px/s")
+        
+        return event

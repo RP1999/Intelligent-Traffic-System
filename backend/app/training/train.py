@@ -112,3 +112,27 @@ def train_plate_detector(
         save_period=-1,  # Save only best model
         val=True,  # Run validation
         plots=True,  # Generate training plots
+        
+        # Data augmentation (moderate for license plates)
+        augment=True,
+        flipud=0.0,  # No vertical flip (plates are always right-side up)
+        fliplr=0.5,  # Horizontal flip (plates can be mirrored)
+        mosaic=0.5,  # Mosaic augmentation
+        mixup=0.0,  # No mixup (preserve plate clarity)
+        
+        # Optimization
+        optimizer="AdamW",
+        lr0=0.01,  # Initial learning rate
+        lrf=0.01,  # Final learning rate factor
+        warmup_epochs=1,  # Warmup epochs
+        
+        # Workers (reduced for CPU)
+        workers=2,
+    )
+    
+    print("-" * 60)
+    print("✅ Training completed!")
+    print()
+    
+    # Get best model path
+    best_model = output_dir / project_name / "weights" / "best.pt"
