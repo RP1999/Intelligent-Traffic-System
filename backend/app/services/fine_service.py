@@ -227,3 +227,9 @@ def calculate_and_save_fine(
     Calculate fine and save to database in one step.
     
     Args:
+        violation_id: ID of the violation record
+        violation_type: Type of parking zone
+        duration_seconds: Duration of violation
+        vehicle_count_in_frame: Number of other vehicles affected
+        
+    Returns:
