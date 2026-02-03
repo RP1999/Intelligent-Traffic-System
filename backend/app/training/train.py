@@ -156,3 +156,27 @@ def train_plate_detector(
         print(f"📦 Model copied to: {final_model_path}")
     else:
         print("⚠️ Best model not found. Check training logs.")
+    
+    print()
+    print(f"⏰ Finished: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 60)
+    
+    return best_model
+
+
+def validate_model(model_path: str = None):
+    """
+    Validate a trained model on the test set.
+    
+    Args:
+        model_path: Path to the trained model (default: latest best.pt)
+    """
+    if model_path is None:
+        model_path = PROJECT_ROOT / "runs" / "detect" / "plate_detector" / "weights" / "best.pt"
+    
+    if not Path(model_path).exists():
+        print(f"❌ Model not found: {model_path}")
+        return
+    
+    print(f"📊 Validating model: {model_path}")
+    
