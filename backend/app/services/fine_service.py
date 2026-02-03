@@ -233,3 +233,20 @@ def calculate_and_save_fine(
         vehicle_count_in_frame: Number of other vehicles affected
         
     Returns:
+        Dict with fine ID and breakdown.
+    """
+    # Calculate
+    fine = calculate_dynamic_fine(
+        violation_type=violation_type,
+        duration_seconds=duration_seconds,
+        vehicle_count_in_frame=vehicle_count_in_frame,
+        violation_id=violation_id
+    )
+    
+    # Save
+    fine_id = save_fine_to_database(fine)
+    
+    result = fine.to_dict()
+    result['fine_id'] = fine_id
+    
+    return result

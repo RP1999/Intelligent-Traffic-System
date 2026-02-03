@@ -256,3 +256,23 @@ class TTSService:
         return False
     
     def _ensure_directories(self):
+        """Create necessary directories."""
+        if not WARNINGS_DIR.exists():
+            WARNINGS_DIR.mkdir(parents=True, exist_ok=True)
+            print(f"📁 Created warnings directory: {WARNINGS_DIR}")
+    
+    def _check_edge_tts(self) -> bool:
+        """Check if edge-tts is installed."""
+        try:
+            import edge_tts
+            return True
+        except ImportError:
+            return False
+    
+    def _check_pyttsx3(self) -> bool:
+        """Check if pyttsx3 is installed."""
+        try:
+            import pyttsx3
+            return True
+        except ImportError:
+            return False
