@@ -186,3 +186,20 @@ def read_plate(image_crop: np.ndarray) -> Optional[str]:
     1. Preprocesses the image (grayscale, blur, threshold)
     2. Runs EasyOCR
     3. Cleans and validates the result
+    4. Returns None if text is invalid (filters out false positives)
+    
+    Args:
+        image_crop: BGR image of the cropped license plate
+    
+    Returns:
+        Cleaned plate text if valid, None otherwise
+    """
+    if image_crop is None or image_crop.size == 0:
+        return None
+    
+    # Check minimum size
+    h, w = image_crop.shape[:2]
+    if w < 20 or h < 10:
+        return None
+    
+    # Get OCR reader
