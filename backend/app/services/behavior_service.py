@@ -283,3 +283,26 @@ def detect_sudden_stop(
         print(f"[BEHAVIOR] 🛑 Vehicle {track_id} SUDDEN STOP: {avg_old_speed:.0f} → {avg_new_speed:.0f} px/s")
         
         return event
+    
+    return None
+
+
+def detect_harsh_brake(
+    track_id: int,
+    current_speed: float,
+    plate_text: Optional[str] = None
+) -> Optional[BehaviorEvent]:
+    """
+    Detect harsh braking: high deceleration rate.
+    
+    Args:
+        track_id: Vehicle tracking ID
+        current_speed: Current speed in pixels/second
+        plate_text: License plate if available
+    
+    Returns:
+        BehaviorEvent if harsh brake detected
+    """
+    global _vehicle_behaviors
+    
+    if track_id not in _vehicle_behaviors:
