@@ -276,3 +276,35 @@ class TTSService:
             return True
         except ImportError:
             return False
+    
+    def _get_pyttsx3_engine(self):
+        """Get or create pyttsx3 engine (lazy initialization)."""
+        if self._pyttsx3_engine is None and self._pyttsx3_available:
+            try:
+                import pyttsx3
+                self._pyttsx3_engine = pyttsx3.init()
+                self._pyttsx3_engine.setProperty('rate', 150)
+                self._pyttsx3_engine.setProperty('volume', 0.9)
+            except Exception as e:
+                print(f"[TTS] Could not init pyttsx3: {e}")
+        return self._pyttsx3_engine
+    
+    async def generate_warning_async(
+        self, 
+        text: str, 
+        filename: Optional[str] = None
+    ) -> Optional[Path]:
+        """
+        Generate a warning audio file asynchronously.
+        
+        Args:
+            text: The text to convert to speech
+            filename: Optional filename (without extension). 
+                      If None, generates timestamp-based name.
+        
+        Returns:
+            Path to the generated MP3 file, or None if failed
+        """
+        if not self._edge_tts_available:
+            print(f"[TTS] ⚠️ edge-tts not available. Would say: {text}")
+            return None
