@@ -274,3 +274,28 @@ def get_recent_violations(vehicle_id: int = None, plate_number: str = None, days
         else:
             return []
 
+        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+    except Exception:
+        return []
+
+
+def get_high_risk_vehicles(threshold: float = 60.0, limit: int = 20) -> List[Dict]:
+    """
+    Get list of vehicles with risk scores above threshold.
+    """
+    db = get_sync_db()
+    docs = (
+        db.collection(Collections.RISK_SCORES)
+        .where("risk_score", ">=", threshold)
+        .order_by("risk_score", direction="DESCENDING")
+        .limit(limit)
+        .get()
+    )
+    return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+
+
+def log_abnormal_behavior(
+    vehicle_id: int,
+    behavior_type: str,
+    severity: str,
+    details: str = None,
