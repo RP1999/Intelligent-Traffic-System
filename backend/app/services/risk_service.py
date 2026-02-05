@@ -299,3 +299,32 @@ def log_abnormal_behavior(
     behavior_type: str,
     severity: str,
     details: str = None,
+    plate_number: str = None
+) -> str:
+    """
+    Log an abnormal driving behavior to Firestore.
+    """
+    db = get_sync_db()
+    doc_ref = db.collection(Collections.ABNORMAL_BEHAVIOR).add({
+        "vehicle_id": vehicle_id,
+        "plate_number": plate_number,
+        "behavior_type": behavior_type,
+        "severity": severity,
+        "details": details,
+        "created_at": datetime.now().isoformat(),
+    })
+    log_id = doc_ref[1].id if isinstance(doc_ref, tuple) else doc_ref.id
+    print(f"[BEHAVIOR] Logged {behavior_type} ({severity}) for vehicle {vehicle_id}")
+    return log_id
+
+
+def calculate_and_save_risk(
+    vehicle_id: int,
+    speed: float,
+    speed_limit: float = 60.0,
+    plate_number: str = None
+) -> Dict:
+    """
+    Calculate risk score from database violation history and save result.
+    
+    Args:
