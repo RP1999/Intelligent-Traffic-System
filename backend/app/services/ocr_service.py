@@ -203,3 +203,27 @@ def read_plate(image_crop: np.ndarray) -> Optional[str]:
         return None
     
     # Get OCR reader
+    reader = get_ocr_reader()
+    if reader is None:
+        return None
+    
+    try:
+        # Preprocess the image
+        preprocessed = preprocess_plate_image(image_crop)
+        
+        # Run OCR on both original and preprocessed
+        # Sometimes the original works better, sometimes preprocessed
+        results = []
+        
+        # Try preprocessed first (usually better for plates)
+        ocr_results = reader.readtext(preprocessed, detail=0, paragraph=False)
+        results.extend(ocr_results)
+        
+        # Also try original if preprocessed didn't work well
+        if not results or all(len(r) < 3 for r in results):
+            ocr_results = reader.readtext(image_crop, detail=0, paragraph=False)
+            results.extend(ocr_results)
+        
+        if not results:
+            return None
+        

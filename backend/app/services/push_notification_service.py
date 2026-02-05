@@ -147,3 +147,10 @@ def send_push_to_driver(
         logger.info("Push sent to %s: %s", plate_number, response)
         return True
 
+    except Exception as e:
+        logger.error("Failed to send push to %s: %s", plate_number, e)
+        return False
+
+
+def send_violation_notification(
+    plate_number: str,
