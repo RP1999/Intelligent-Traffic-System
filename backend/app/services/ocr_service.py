@@ -227,3 +227,13 @@ def read_plate(image_crop: np.ndarray) -> Optional[str]:
         if not results:
             return None
         
+        # Combine all detected text
+        combined_text = ' '.join(results)
+        
+        # Clean the text
+        cleaned = clean_plate_text(combined_text)
+        
+        # Validate
+        if validate_plate_text(cleaned):
+            return cleaned
+        

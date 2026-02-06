@@ -308,3 +308,23 @@ class TTSService:
         if not self._edge_tts_available:
             print(f"[TTS] ⚠️ edge-tts not available. Would say: {text}")
             return None
+        
+        try:
+            import edge_tts
+            
+            # Generate filename if not provided
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                filename = f"warning_{timestamp}"
+            
+            # Ensure .mp3 extension
+            if not filename.endswith(".mp3"):
+                filename = f"{filename}.mp3"
+            
+            filepath = WARNINGS_DIR / filename
+            
+            # Use save() for reliability (stream() can produce empty files in threads)
+            communicate = edge_tts.Communicate(text, self.voice)
+            await communicate.save(str(filepath))
+            
+            # Check if file was actually written with content
