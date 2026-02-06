@@ -328,3 +328,19 @@ def calculate_and_save_risk(
     Calculate risk score from database violation history and save result.
     
     Args:
+        vehicle_id: Track ID of the vehicle
+        speed: Current vehicle speed
+        speed_limit: Speed limit for the zone
+        plate_number: Optional license plate
+        
+    Returns:
+        Dict with risk score details.
+    """
+    # Get violation history from database
+    violations = get_recent_violations(vehicle_id=vehicle_id, plate_number=plate_number)
+    violation_count = len(violations)
+    
+    # Calculate risk
+    risk = calculate_risk(
+        speed=speed,
+        speed_limit=speed_limit,

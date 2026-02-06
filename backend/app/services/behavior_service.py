@@ -360,3 +360,36 @@ def detect_lane_drift(
     Detect lane drifting: consistent movement toward lane edges.
     
     Args:
+        track_id: Vehicle tracking ID
+        centroid: Current (x, y) position
+        lane_center_x: Expected lane center x-coordinate
+        plate_text: License plate if available
+        _skip_add_position: Internal flag — True when called from
+            analyze_vehicle_behavior() which already added the position.
+    
+    Returns:
+        BehaviorEvent if lane drift detected
+    """
+    global _vehicle_behaviors
+    
+    if track_id not in _vehicle_behaviors:
+        _vehicle_behaviors[track_id] = VehicleBehavior(track_id=track_id)
+    
+    behavior = _vehicle_behaviors[track_id]
+    if not _skip_add_position:
+        behavior.add_position(centroid[0], centroid[1])
+    
+    if len(behavior.positions) < DRIFT_WINDOW_FRAMES // 2:
+        return None
+    
+    # Check per-type cooldown (drift uses longer cooldown)
+    if not behavior.can_fire('lane_drift', BEHAVIOR_COOLDOWN * 2):
+        return None
+    
+    # Calculate x-axis variance (drift indicator)
+    x_variance = behavior.get_position_variance('x', DRIFT_WINDOW_FRAMES)
+    behavior.drift_score = x_variance
+    
+    # Also check if consistently moving away from lane center
+    positions = list(behavior.positions)[-DRIFT_WINDOW_FRAMES:]
+    distances_from_center = [abs(p.x - lane_center_x) for p in positions]
