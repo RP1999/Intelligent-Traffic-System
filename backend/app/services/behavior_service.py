@@ -334,3 +334,29 @@ def detect_harsh_brake(
             plate_number=plate_text,
             details={
                 'deceleration': round(deceleration, 1),
+                'speed_before': round(prev_speed, 1),
+                'speed_after': round(current_speed, 1),
+            }
+        )
+        
+        _behavior_events.append(event)
+        _queue_event_for_db_save(event)  # Save to database
+        _send_behavior_warning(event)
+        print(f"[BEHAVIOR] 🚨 Vehicle {track_id} HARSH BRAKE: decel={deceleration:.0f} px/frame")
+        
+        return event
+    
+    return None
+
+
+def detect_lane_drift(
+    track_id: int,
+    centroid: Tuple[int, int],
+    lane_center_x: int = 640,  # Approximate lane center
+    plate_text: Optional[str] = None,
+    _skip_add_position: bool = False,
+) -> Optional[BehaviorEvent]:
+    """
+    Detect lane drifting: consistent movement toward lane edges.
+    
+    Args:
