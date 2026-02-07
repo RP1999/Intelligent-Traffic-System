@@ -134,3 +134,28 @@ async def lifespan(app: FastAPI):
 
             print("🔄 Pre-loading plate detection model...")
             load_plate_model("cpu")
+            print("✅ Plate model pre-loaded")
+
+            print("🔄 Pre-loading EasyOCR...")
+            get_ocr_service()
+            # Also directly initialize the OCR reader itself
+            from app.services.ocr_service import get_ocr_reader
+            get_ocr_reader()
+            print("✅ EasyOCR pre-loaded")
+
+            print("🔄 Pre-loading scoring engine...")
+            get_scoring_engine()
+            print("✅ Scoring engine pre-loaded")
+
+            print("🔄 Pre-loading TTS service...")
+            get_detector_tts()
+            print("✅ TTS service pre-loaded")
+
+            print("🔄 Pre-loading lane weaving service (Member 2)...")
+            get_lane_weaving_service()
+            print("✅ Lane weaving service pre-loaded")
+
+            print("🔄 Pre-loading behavior detection service (Member 4)...")
+            get_behavior_service()
+            print("✅ Behavior detection service pre-loaded")
+            
