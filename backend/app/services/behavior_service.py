@@ -393,3 +393,26 @@ def detect_lane_drift(
     # Also check if consistently moving away from lane center
     positions = list(behavior.positions)[-DRIFT_WINDOW_FRAMES:]
     distances_from_center = [abs(p.x - lane_center_x) for p in positions]
+    
+    if len(distances_from_center) >= 4:
+        first_half_avg = sum(distances_from_center[:len(distances_from_center)//2]) / (len(distances_from_center)//2)
+        second_half_avg = sum(distances_from_center[len(distances_from_center)//2:]) / (len(distances_from_center)//2)
+        
+        # Drift detected: variance high AND moving away from center
+        if x_variance > DRIFT_VARIANCE_THRESHOLD and second_half_avg > first_half_avg * 1.2:
+            behavior.mark_fired('lane_drift')
+            behavior.behaviors_detected.append('lane_drift')
+            
+            event = BehaviorEvent(
+                vehicle_id=track_id,
+                behavior_type=BehaviorType.LANE_DRIFT,
+                severity=SeverityLevel.MEDIUM,
+                plate_number=plate_text,
+                details={
+                    'x_variance': round(x_variance, 1),
+                    'drift_from_center': round(second_half_avg - first_half_avg, 1),
+                }
+            )
+            
+            _behavior_events.append(event)
+            _queue_event_for_db_save(event)  # Save to database

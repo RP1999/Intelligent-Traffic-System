@@ -237,3 +237,25 @@ def read_plate(image_crop: np.ndarray) -> Optional[str]:
         if validate_plate_text(cleaned):
             return cleaned
         
+        return None
+        
+    except Exception as e:
+        # Silently fail - OCR errors shouldn't crash the system
+        return None
+
+
+def read_plate_with_confidence(image_crop: np.ndarray) -> Tuple[Optional[str], float]:
+    """
+    Read license plate text with confidence score.
+    
+    Args:
+        image_crop: BGR image of the cropped license plate
+    
+    Returns:
+        Tuple of (plate_text, confidence) or (None, 0.0)
+    """
+    if image_crop is None or image_crop.size == 0:
+        return None, 0.0
+    
+    reader = get_ocr_reader()
+    if reader is None:
