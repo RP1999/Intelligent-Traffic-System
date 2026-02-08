@@ -328,3 +328,27 @@ class TTSService:
             await communicate.save(str(filepath))
             
             # Check if file was actually written with content
+            if filepath.exists() and filepath.stat().st_size > 100:
+                print(f"[TTS] ✅ Generated: {filepath.name} ({filepath.stat().st_size} bytes)")
+                return filepath
+            else:
+                # Clean up empty/tiny file
+                if filepath.exists():
+                    filepath.unlink(missing_ok=True)
+                print(f"[TTS] ⚠️ File empty or not created")
+                return None
+            
+        except Exception as e:
+            print(f"[TTS] ⚠️ edge-tts generation failed: {e}")
+            return None
+    
+    def generate_warning(
+        self, 
+        text: str, 
+        filename: Optional[str] = None,
+        play_immediately: bool = True
+    ) -> Optional[Path]:
+        """
+        Generate a warning audio file (NON-BLOCKING, QUEUE-BASED).
+        
+        Adds the TTS request to a queue processed by a dedicated worker thread.
