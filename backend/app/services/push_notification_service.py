@@ -154,3 +154,22 @@ def send_push_to_driver(
 
 def send_violation_notification(
     plate_number: str,
+    violation_type: str,
+    fine_amount: float,
+    violation_id: str = "",
+) -> bool:
+    """Send a push notification for a new violation (synchronous)."""
+    return send_push_to_driver(
+        plate_number=plate_number,
+        title="Traffic Violation Detected",
+        body=f"{violation_type} — Fine: LKR {fine_amount:,.0f}",
+        data={
+            "type": "violation",
+            "violation_id": violation_id,
+            "violation_type": violation_type,
+            "fine_amount": str(fine_amount),
+        },
+    )
+
+
+def send_fine_notification(

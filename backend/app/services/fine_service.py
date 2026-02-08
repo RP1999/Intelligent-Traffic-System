@@ -256,3 +256,9 @@ def calculate_and_save_fine(
 # CLI TESTING
 # =============================================================================
 
+if __name__ == "__main__":
+    print("=" * 60)
+    print("DYNAMIC FINE CALCULATION SERVICE TEST")
+    print("=" * 60)
+    print()
+    print("Formula: Fine = Base + (Duration × 5) + (Traffic_Impact × 50)")
