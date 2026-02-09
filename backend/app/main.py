@@ -159,3 +159,33 @@ async def lifespan(app: FastAPI):
             get_behavior_service()
             print("✅ Behavior detection service pre-loaded")
             
+            print("🔄 Loading stop line configuration...")
+            load_stop_line_config()
+            print("✅ Stop line config loaded")
+
+            print("🎉 All models and services pre-loaded successfully!")
+        except Exception as e:
+            print(f"⚠️ Model pre-loading error (non-fatal): {e}")
+
+    preload_thread = threading.Thread(target=_preload_models, daemon=True)
+    preload_thread.start()
+    # Block until models are ready so the first video connection
+    # immediately gets annotated frames (zones, boxes, etc.).
+    preload_thread.join()
+
+    # Start AWS DynamoDB -> Firestore IoT junction sync loop.
+    try:
+        from app.services.iot_junction_service import get_iot_junction_service
+        await get_iot_junction_service().start_background_sync()
+    except Exception as e:
+        print(f"⚠️ IoT junction sync startup skipped: {e}")
+
+    yield
+    # Shutdown
+    print("🛑 Shutting down...")
+    try:
+        from app.services.iot_junction_service import get_iot_junction_service
+        await get_iot_junction_service().stop_background_sync()
+    except Exception:
+        pass
+    # Clean up TTS audio files
