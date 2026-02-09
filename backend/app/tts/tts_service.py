@@ -352,3 +352,40 @@ class TTSService:
         Generate a warning audio file (NON-BLOCKING, QUEUE-BASED).
         
         Adds the TTS request to a queue processed by a dedicated worker thread.
+        This ensures sequential processing and prevents thread-safety issues.
+        
+        Args:
+            text: The text to convert to speech
+            filename: Optional filename (without extension)
+            play_immediately: Whether to play the audio after generation
+        
+        Returns:
+            None (runs async via queue)
+        """
+        # Add request to the TTS queue (non-blocking)
+        try:
+            _tts_queue.put_nowait((text, filename, play_immediately, self))
+            print(f"[TTS] 🎤 Queued: {text[:50]}...")
+        except queue.Full:
+            print(f"[TTS] ⚠️ Queue full, dropping: {text[:30]}...")
+        
+        return None  # Returns immediately, audio processed by worker
+    
+    def _generate_with_pyttsx3(self, text: str, filename: Optional[str] = None) -> Optional[Path]:
+        """Generate audio file using pyttsx3 (cross-platform)."""
+        try:
+            engine = self._get_pyttsx3_engine()
+            if engine is None:
+                return None
+            
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                filename = f"warning_{timestamp}"
+            
+            # Remove any existing extension
+            if filename.endswith(('.mp3', '.wav', '.aiff')):
+                filename = filename.rsplit('.', 1)[0]
+            
+            # Use platform-appropriate extension
+            # macOS pyttsx3 saves to AIFF, Windows to MP3
+            if sys.platform == "darwin":
