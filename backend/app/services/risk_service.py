@@ -344,3 +344,21 @@ def calculate_and_save_risk(
     risk = calculate_risk(
         speed=speed,
         speed_limit=speed_limit,
+        violation_history_count=violation_count,
+        vehicle_id=vehicle_id,
+        plate_number=plate_number
+    )
+    
+    # Save to database
+    risk_id = save_risk_score_to_database(risk)
+    
+    result = risk.to_dict()
+    result['risk_id'] = risk_id
+    
+    return result
+
+
+# =============================================================================
+# CLI TESTING
+# =============================================================================
+
