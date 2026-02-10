@@ -189,3 +189,17 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
     # Clean up TTS audio files
+    try:
+        from app.tts import get_tts_service
+        tts = get_tts_service()
+        if tts:
+            tts.cleanup_all_warnings()
+    except:
+        pass
+
+
+# --- FastAPI App ---
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="AI-powered traffic management with violation detection, driver scoring, and adaptive signals",
