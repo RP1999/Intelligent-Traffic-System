@@ -173,3 +173,12 @@ def send_violation_notification(
 
 
 def send_fine_notification(
+    plate_number: str,
+    fine_id: int,
+    amount: float,
+    due_date: str = "",
+) -> bool:
+    """Send a push notification for a new or updated fine (synchronous)."""
+    return send_push_to_driver(
+        plate_number=plate_number,
+        title="Fine Issued",

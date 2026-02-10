@@ -362,3 +362,26 @@ def calculate_and_save_risk(
 # CLI TESTING
 # =============================================================================
 
+if __name__ == "__main__":
+    print("=" * 60)
+    print("ACCIDENT RISK PREDICTION SERVICE TEST")
+    print("=" * 60)
+    print()
+    print("Formula: Risk_Score = (Speed_Factor × 0.6) + (History_Factor × 0.4)")
+    print("Note: Weather factor REMOVED per supervisor decision.")
+    print()
+    
+    # Test cases with different speed/history combinations
+    test_cases = [
+        {"speed": 40, "limit": 60, "violations": 0, "expected": "LOW"},
+        {"speed": 60, "limit": 60, "violations": 2, "expected": "MEDIUM"},
+        {"speed": 75, "limit": 60, "violations": 3, "expected": "HIGH"},
+        {"speed": 90, "limit": 60, "violations": 5, "expected": "CRITICAL"},
+        {"speed": 55, "limit": 60, "violations": 8, "expected": "MEDIUM-HIGH"},
+    ]
+    
+    print("-" * 70)
+    print(f"{'Speed':<8} {'Limit':<8} {'Violations':<12} {'Risk Score':<12} {'Level':<10}")
+    print("-" * 70)
+    
+    for case in test_cases:
