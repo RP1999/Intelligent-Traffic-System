@@ -190,3 +190,26 @@ def send_fine_notification(
             "due_date": due_date,
         },
     )
+
+
+def send_score_alert(
+    plate_number: str,
+    new_score: int,
+    risk_level: str,
+) -> bool:
+    """Send a push notification when driver score drops significantly (synchronous)."""
+    return send_push_to_driver(
+        plate_number=plate_number,
+        title="Safety Score Updated",
+        body=f"Your score is now {new_score} ({risk_level})",
+        data={
+            "type": "score_update",
+            "score": str(new_score),
+            "risk_level": risk_level,
+        },
+    )
+
+
+def send_warning_notification(
+    plate_number: str,
+    behavior_type: str,

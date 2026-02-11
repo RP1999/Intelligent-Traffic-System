@@ -385,3 +385,13 @@ if __name__ == "__main__":
     print("-" * 70)
     
     for case in test_cases:
+        risk = calculate_risk(
+            speed=case["speed"],
+            speed_limit=case["limit"],
+            violation_history_count=case["violations"],
+            vehicle_id=1
+        )
+        
+        print(f"{case['speed']:>5} km/h {case['limit']:>5} km/h {case['violations']:>8}       {risk.risk_score:>8.1f}     {risk.risk_level:<10}")
+    
+    print("-" * 70)
