@@ -262,3 +262,19 @@ if __name__ == "__main__":
     print("=" * 60)
     print()
     print("Formula: Fine = Base + (Duration × 5) + (Traffic_Impact × 50)")
+    print()
+    
+    # Test cases
+    test_cases = [
+        {"zone": "no_parking", "duration": 60, "vehicles": 5},
+        {"zone": "handicap_zone", "duration": 120, "vehicles": 3},
+        {"zone": "fire_lane", "duration": 30, "vehicles": 10},
+        {"zone": "bus_stop", "duration": 180, "vehicles": 8},
+    ]
+    
+    print("-" * 60)
+    print(f"{'Zone':<15} {'Duration':<10} {'Vehicles':<10} {'Total Fine':<12}")
+    print("-" * 60)
+    
+    for case in test_cases:
+        fine = calculate_dynamic_fine(

@@ -182,3 +182,11 @@ def send_fine_notification(
     return send_push_to_driver(
         plate_number=plate_number,
         title="Fine Issued",
+        body=f"Amount: LKR {amount:,.0f}" + (f" — Due: {due_date}" if due_date else ""),
+        data={
+            "type": "fine",
+            "fine_id": str(fine_id),
+            "amount": str(amount),
+            "due_date": due_date,
+        },
+    )
