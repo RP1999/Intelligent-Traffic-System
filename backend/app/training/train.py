@@ -180,3 +180,18 @@ def validate_model(model_path: str = None):
     
     print(f"📊 Validating model: {model_path}")
     
+    model = YOLO(str(model_path))
+    data_yaml = get_data_yaml_path()
+    
+    results = model.val(
+        data=str(data_yaml),
+        split="test",
+        imgsz=640,
+        device="cpu",
+        verbose=True,
+    )
+    
+    print("\n📊 Validation Results:")
+    print(f"   Precision: {results.box.mp:.4f}")
+    print(f"   Recall: {results.box.mr:.4f}")
+    print(f"   mAP@50: {results.box.map50:.4f}")

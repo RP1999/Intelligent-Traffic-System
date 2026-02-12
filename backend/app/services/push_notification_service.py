@@ -213,3 +213,17 @@ def send_score_alert(
 def send_warning_notification(
     plate_number: str,
     behavior_type: str,
+    severity: str,
+    details: str = "",
+) -> bool:
+    """
+    Send a warning push notification for abnormal driving behavior (synchronous).
+    Also stores the warning in DRIVER_NOTIFICATIONS collection.
+    """
+    behavior_labels = {
+        "sudden_stop": "Sudden Stop Detected",
+        "harsh_brake": "Harsh Braking Detected",
+        "lane_drift": "Lane Drifting Detected",
+        "parking_warning": "Parking Warning",
+    }
+    title = behavior_labels.get(behavior_type, f"Warning: {behavior_type.replace('_', ' ').title()}")
