@@ -416,3 +416,31 @@ def detect_lane_drift(
             
             _behavior_events.append(event)
             _queue_event_for_db_save(event)  # Save to database
+            _send_behavior_warning(event)
+            print(f"[BEHAVIOR] ↔️ Vehicle {track_id} LANE DRIFT: variance={x_variance:.1f}")
+            
+            return event
+    
+    return None
+
+
+def analyze_vehicle_behavior(
+    track_id: int,
+    centroid: Tuple[int, int],
+    speed_pixels: float,
+    plate_text: Optional[str] = None
+) -> List[BehaviorEvent]:
+    """
+    Comprehensive behavior analysis for a vehicle.
+    Runs all detection algorithms.
+    
+    Args:
+        track_id: Vehicle tracking ID
+        centroid: Current (x, y) position
+        speed_pixels: Current speed in pixels/second
+        plate_text: License plate if available
+    
+    Returns:
+        List of detected behavior events
+    """
+    events = []
