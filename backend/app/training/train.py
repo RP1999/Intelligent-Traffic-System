@@ -210,3 +210,13 @@ if __name__ == "__main__":
         "--epochs", type=int, default=10,
         help="Number of training epochs (default: 10)"
     )
+    parser.add_argument(
+        "--imgsz", type=int, default=640,
+        help="Image size (default: 640)"
+    )
+    parser.add_argument(
+        "--batch", type=int, default=8,
+        help="Batch size (default: 8)"
+    )
+    parser.add_argument(
+        "--device", type=str, default="cpu",

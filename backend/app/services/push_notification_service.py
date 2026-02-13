@@ -249,3 +249,27 @@ def send_warning_notification(
             .where(filter=FieldFilter("plate_number", "==", norm_plate))
             .limit(5)
             .stream()
+        )
+        already = any(
+            d.to_dict().get("title") == title
+            and d.to_dict().get("timestamp", "") >= cutoff
+            for d in recent
+        )
+        if not already:
+            db.collection(Collections.DRIVER_NOTIFICATIONS).add({
+                "plate_number": norm_plate,
+                "title": title,
+                "message": body,
+                "notification_type": "warning",
+                "timestamp": datetime.now().isoformat(),
+                "read": False,
+            })
+    except Exception as e:
+        logger.error("Failed to store warning notification: %s", e)
+
+    return send_push_to_driver(
+        plate_number=plate_number,
+        title=title,
+        body=body,
+        data={
+            "type": "warning",
