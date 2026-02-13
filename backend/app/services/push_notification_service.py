@@ -227,3 +227,25 @@ def send_warning_notification(
         "parking_warning": "Parking Warning",
     }
     title = behavior_labels.get(behavior_type, f"Warning: {behavior_type.replace('_', ' ').title()}")
+    body = f"Severity: {severity.upper()}"
+    if details:
+        body += f" — {details}"
+
+    # Store in Firestore so it appears in the notification list
+    # (skip if a duplicate was already created by the behaviour save thread)
+    try:
+        from app.db.firestore_client import get_sync_db, Collections
+        from app.utils.plate_utils import normalize_plate
+        from datetime import datetime, timedelta
+        from google.cloud.firestore_v1 import FieldFilter
+
+        norm_plate = normalize_plate(plate_number)
+        db = get_sync_db()
+
+        # Quick dedup: avoid double-insert within a 30-second window
+        cutoff = (datetime.now() - timedelta(seconds=30)).isoformat()
+        recent = list(
+            db.collection(Collections.DRIVER_NOTIFICATIONS)
+            .where(filter=FieldFilter("plate_number", "==", norm_plate))
+            .limit(5)
+            .stream()

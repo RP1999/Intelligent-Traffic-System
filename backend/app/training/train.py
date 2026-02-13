@@ -195,3 +195,18 @@ def validate_model(model_path: str = None):
     print(f"   Precision: {results.box.mp:.4f}")
     print(f"   Recall: {results.box.mr:.4f}")
     print(f"   mAP@50: {results.box.map50:.4f}")
+    print(f"   mAP@50-95: {results.box.map:.4f}")
+    
+    return results
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description="Train YOLOv8 model for license plate detection"
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=10,
+        help="Number of training epochs (default: 10)"
+    )
