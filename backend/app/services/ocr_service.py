@@ -259,3 +259,16 @@ def read_plate_with_confidence(image_crop: np.ndarray) -> Tuple[Optional[str], f
     
     reader = get_ocr_reader()
     if reader is None:
+        return None, 0.0
+    
+    try:
+        preprocessed = preprocess_plate_image(image_crop)
+        
+        # Get detailed results with confidence
+        ocr_results = reader.readtext(preprocessed, detail=1, paragraph=False)
+        
+        if not ocr_results:
+            return None, 0.0
+        
+        # Combine text and average confidence
+        texts = []
