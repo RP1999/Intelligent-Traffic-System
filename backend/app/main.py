@@ -203,3 +203,23 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="AI-powered traffic management with violation detection, driver scoring, and adaptive signals",
+    lifespan=lifespan,
+)
+
+# --- CORS Middleware (allow Flutter web app) ---
+# Allow requests from both localhost and 127.0.0.1 variants
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+
+# --- Global Exception Handler (ensures CORS headers on 500 errors) ---
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    traceback.print_exc()

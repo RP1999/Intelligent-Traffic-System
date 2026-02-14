@@ -278,3 +278,16 @@ if __name__ == "__main__":
     
     for case in test_cases:
         fine = calculate_dynamic_fine(
+            violation_type=case["zone"],
+            duration_seconds=case["duration"],
+            vehicle_count_in_frame=case["vehicles"]
+        )
+        
+        print(f"{case['zone']:<15} {case['duration']:>6}s    {case['vehicles']:>5}       {fine.total_fine:>8.0f} LKR")
+    
+    print("-" * 60)
+    print()
+    
+    # Detailed breakdown for first case
+    fine = calculate_dynamic_fine("no_parking", 60, 5, violation_id=1)
+    print("Detailed Breakdown (no_parking, 60s, 5 vehicles):")
