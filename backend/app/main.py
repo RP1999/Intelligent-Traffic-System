@@ -223,3 +223,16 @@ app.add_middleware(
 async def global_exception_handler(request: Request, exc: Exception):
     import traceback
     traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal server error", "detail": str(exc)},
+    )
+
+# --- Include Routers ---
+app.include_router(video_router)
+app.include_router(parking_router)
+app.include_router(scoring_router)
+app.include_router(signal_router)
+app.include_router(junction_router)  # Member 2 & 4: Junction Safety, Behavior, Risk
+app.include_router(auth_router)       # Authentication: JWT login/register
+app.include_router(driver_router)     # Driver mobile app endpoints

@@ -291,3 +291,10 @@ if __name__ == "__main__":
     # Detailed breakdown for first case
     fine = calculate_dynamic_fine("no_parking", 60, 5, violation_id=1)
     print("Detailed Breakdown (no_parking, 60s, 5 vehicles):")
+    print(f"  Base Penalty:     {fine.base_penalty:>8.0f} LKR")
+    print(f"  Duration Penalty: {fine.duration_penalty:>8.0f} LKR (60 × 5)")
+    print(f"  Impact Penalty:   {fine.impact_penalty:>8.0f} LKR (5 × 50)")
+    print(f"  ─────────────────────────────")
+    print(f"  TOTAL FINE:       {fine.total_fine:>8.0f} LKR")
+    print()
+    print("[OK] Fine calculation service test complete!")
