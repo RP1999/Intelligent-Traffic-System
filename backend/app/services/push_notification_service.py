@@ -273,3 +273,8 @@ def send_warning_notification(
         body=body,
         data={
             "type": "warning",
+            "behavior_type": behavior_type,
+            "severity": severity,
+            "details": details,
+        },
+    )

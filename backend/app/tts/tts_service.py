@@ -389,3 +389,34 @@ class TTSService:
             # Use platform-appropriate extension
             # macOS pyttsx3 saves to AIFF, Windows to MP3
             if sys.platform == "darwin":
+                filename = f"{filename}.aiff"
+            else:
+                filename = f"{filename}.mp3"
+            
+            filepath = WARNINGS_DIR / filename
+            
+            # pyttsx3 can save to file
+            engine.save_to_file(text, str(filepath))
+            engine.runAndWait()
+            
+            if filepath.exists() and filepath.stat().st_size > 0:
+                print(f"[TTS] ✅ Generated (pyttsx3): {filepath.name}")
+                return filepath
+            
+        except Exception as e:
+            print(f"[TTS] pyttsx3 file generation failed: {e}")
+        
+        return None
+    
+    def _speak_pyttsx3_direct(self, text: str):
+        """Speak directly using pyttsx3 without saving file."""
+        try:
+            engine = self._get_pyttsx3_engine()
+            if engine:
+                # Run in a thread to not block
+                def _speak():
+                    engine.say(text)
+                    engine.runAndWait()
+                
+                thread = threading.Thread(target=_speak, daemon=True)
+                thread.start()
