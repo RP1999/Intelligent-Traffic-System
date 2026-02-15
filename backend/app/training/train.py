@@ -220,3 +220,24 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--device", type=str, default="cpu",
+        help="Device to use: cpu or cuda:0 (default: cpu)"
+    )
+    parser.add_argument(
+        "--validate", action="store_true",
+        help="Run validation on test set after training"
+    )
+    
+    args = parser.parse_args()
+    
+    # Run training
+    best_model = train_plate_detector(
+        epochs=args.epochs,
+        imgsz=args.imgsz,
+        batch=args.batch,
+        device=args.device,
+    )
+    
+    # Optionally validate
+    if args.validate and best_model.exists():
+        print("\n" + "=" * 60)
+        validate_model(str(best_model))

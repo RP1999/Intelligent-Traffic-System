@@ -236,3 +236,31 @@ app.include_router(signal_router)
 app.include_router(junction_router)  # Member 2 & 4: Junction Safety, Behavior, Risk
 app.include_router(auth_router)       # Authentication: JWT login/register
 app.include_router(driver_router)     # Driver mobile app endpoints
+app.include_router(admin_router)      # Admin dashboard endpoints
+app.include_router(community_router)  # Public community endpoints
+app.include_router(config_router)     # Admin zone configuration & audit logs
+app.include_router(settings_router)   # Admin system settings
+app.include_router(risk_router)       # Member 4: Accident Risk Prediction
+app.include_router(iot_junction_router)  # IoT prototype integration module
+
+# --- Static Files (for simulation UI and videos) ---
+from pathlib import Path
+static_dir = Path(__file__).parent / "wokwi"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# Mount videos directory for serving annotated videos
+videos_dir = Path(settings.data_dir) / "videos"
+if videos_dir.exists():
+    app.mount("/videos", StaticFiles(directory=str(videos_dir)), name="videos")
+
+# Mount snapshots directory for serving violation evidence images
+snapshots_dir = Path(settings.data_dir) / "snapshots"
+snapshots_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/evidence", StaticFiles(directory=str(snapshots_dir)), name="evidence")
+app.mount("/snapshots", StaticFiles(directory=str(snapshots_dir)), name="snapshots")
+
+
+@app.get("/simulation", tags=["Simulation"])
+async def simulation_page():
+    """Serve the traffic signal simulation page."""
