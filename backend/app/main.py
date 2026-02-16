@@ -281,3 +281,29 @@ async def detection_page():
 
 # =============================================================================
 # Health & Status Endpoints
+# =============================================================================
+
+@app.get("/", tags=["Status"])
+async def root():
+    """Root endpoint with welcome message."""
+    return {
+        "message": f"Welcome to {settings.app_name}",
+        "version": settings.app_version,
+        "docs": "/docs",
+    }
+
+
+@app.get("/health", tags=["Status"])
+async def health_check():
+    """Health check endpoint for monitoring."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": settings.app_version,
+    }
+
+
+@app.get("/version", tags=["Status"])
+async def version_info():
+    """Get detailed version and configuration info."""
+    return {
