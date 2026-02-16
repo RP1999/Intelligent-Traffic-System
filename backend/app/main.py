@@ -264,3 +264,20 @@ app.mount("/snapshots", StaticFiles(directory=str(snapshots_dir)), name="snapsho
 @app.get("/simulation", tags=["Simulation"])
 async def simulation_page():
     """Serve the traffic signal simulation page."""
+    html_path = static_dir / "simulation.html"
+    if html_path.exists():
+        return FileResponse(str(html_path))
+    return {"error": "Simulation page not found"}
+
+
+@app.get("/detect", tags=["Detection"])
+async def detection_page():
+    """Serve the live vehicle and plate detection video player page."""
+    html_path = static_dir / "video_player.html"
+    if html_path.exists():
+        return FileResponse(str(html_path))
+    return {"error": "Detection page not found"}
+
+
+# =============================================================================
+# Health & Status Endpoints

@@ -272,3 +272,25 @@ def read_plate_with_confidence(image_crop: np.ndarray) -> Tuple[Optional[str], f
         
         # Combine text and average confidence
         texts = []
+        confidences = []
+        
+        for bbox, text, conf in ocr_results:
+            texts.append(text)
+            confidences.append(conf)
+        
+        combined_text = ' '.join(texts)
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        
+        cleaned = clean_plate_text(combined_text)
+        
+        if validate_plate_text(cleaned):
+            return cleaned, avg_confidence
+        
+        return None, 0.0
+        
+    except Exception:
+        return None, 0.0
+
+
+# Module initialization - don't load OCR at import time
+def init_ocr():
