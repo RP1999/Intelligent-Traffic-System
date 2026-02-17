@@ -307,3 +307,27 @@ async def health_check():
 async def version_info():
     """Get detailed version and configuration info."""
     return {
+        "app_name": settings.app_name,
+        "version": settings.app_version,
+        "debug": settings.debug,
+        "models": {
+            "vehicle_detection": settings.vehicle_model,
+            "plate_detection": settings.plate_model,
+        },
+        "settings": {
+            "detection_confidence": settings.detection_confidence,
+            "frame_skip": settings.frame_skip,
+            "parking_duration_threshold": settings.parking_duration_threshold,
+        },
+    }
+
+
+# =============================================================================
+# SSE (Server-Sent Events) Endpoint for Real-time Updates
+# =============================================================================
+
+async def event_generator(request: Request) -> AsyncGenerator[dict, None]:
+    """Generate SSE events from the event queue."""
+    try:
+        while True:
+            # Check if client disconnected

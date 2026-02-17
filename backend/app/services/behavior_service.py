@@ -444,3 +444,29 @@ def analyze_vehicle_behavior(
         List of detected behavior events
     """
     events = []
+    
+    # Update position and speed
+    if track_id not in _vehicle_behaviors:
+        _vehicle_behaviors[track_id] = VehicleBehavior(track_id=track_id)
+    
+    behavior = _vehicle_behaviors[track_id]
+    behavior.add_position(centroid[0], centroid[1], speed_pixels)
+    
+    # Run detections
+    event = detect_sudden_stop(track_id, speed_pixels, plate_text)
+    if event:
+        events.append(event)
+    
+    event = detect_harsh_brake(track_id, speed_pixels, plate_text)
+    if event:
+        events.append(event)
+    
+    event = detect_lane_drift(track_id, centroid, plate_text=plate_text, _skip_add_position=True)
+    if event:
+        events.append(event)
+    
+    return events
+
+
+# ============================================================================
+# API FUNCTIONS
