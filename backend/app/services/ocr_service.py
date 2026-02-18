@@ -294,3 +294,5 @@ def read_plate_with_confidence(image_crop: np.ndarray) -> Tuple[Optional[str], f
 
 # Module initialization - don't load OCR at import time
 def init_ocr():
+    """Explicitly initialize OCR reader. Called when needed."""
+    return get_ocr_reader() is not None

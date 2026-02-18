@@ -470,3 +470,41 @@ def analyze_vehicle_behavior(
 
 # ============================================================================
 # API FUNCTIONS
+# ============================================================================
+
+def get_vehicle_behavior(track_id: int) -> Optional[Dict]:
+    """Get behavior summary for a vehicle."""
+    if track_id not in _vehicle_behaviors:
+        return None
+    
+    behavior = _vehicle_behaviors[track_id]
+    return {
+        'track_id': track_id,
+        'sudden_stop_count': behavior.sudden_stop_count,
+        'harsh_brake_count': behavior.harsh_brake_count,
+        'drift_score': round(behavior.drift_score, 1),
+        'behaviors_detected': behavior.behaviors_detected[-10:],
+    }
+
+
+# Cache for Firestore-loaded behavior events (avoids re-querying on every API call)
+_firestore_behavior_cache: List[dict] = []
+_firestore_behavior_cache_time: float = 0.0
+_FIRESTORE_CACHE_TTL = 60.0  # seconds
+
+
+def get_recent_behavior_events(limit: int = 20) -> List[dict]:
+    """Get recent behavior events. Falls back to Firestore if in-memory is empty."""
+    if _behavior_events:
+        return [e.to_dict() for e in _behavior_events[-limit:]]
+    # Fallback: load from Firestore after server restart (cached)
+    return _load_behavior_events_from_firestore(limit)
+
+
+def _load_behavior_events_from_firestore(limit: int = 50) -> List[dict]:
+    """Load recent behavior events from Firestore (used after server restart).
+    Results are cached to avoid repeated Firestore queries."""
+    global _firestore_behavior_cache, _firestore_behavior_cache_time
+    
+    # Return cache if fresh
+    if _firestore_behavior_cache and (time.time() - _firestore_behavior_cache_time) < _FIRESTORE_CACHE_TTL:
