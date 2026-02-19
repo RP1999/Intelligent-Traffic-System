@@ -508,3 +508,37 @@ def _load_behavior_events_from_firestore(limit: int = 50) -> List[dict]:
     
     # Return cache if fresh
     if _firestore_behavior_cache and (time.time() - _firestore_behavior_cache_time) < _FIRESTORE_CACHE_TTL:
+        return _firestore_behavior_cache[:limit]
+    
+    try:
+        from app.db.firestore_client import get_sync_db, Collections
+        db = get_sync_db()
+        # Try ordered query first; fall back to unordered if no index
+        try:
+            docs = (
+                db.collection(Collections.ABNORMAL_BEHAVIOR)
+                .order_by('timestamp', direction='DESCENDING')
+                .limit(limit)
+                .get()
+            )
+        except Exception:
+            # Index might not exist — fetch without ordering
+            docs = (
+                db.collection(Collections.ABNORMAL_BEHAVIOR)
+                .limit(limit)
+                .get()
+            )
+        events = []
+        for doc in docs:
+            data = doc.to_dict()
+            events.append({
+                'vehicle_id': data.get('vehicle_id', 0),
+                'behavior_type': data.get('behavior_type', 'unknown'),
+                'severity': data.get('severity', 'medium'),
+                'plate_number': data.get('plate_number'),
+                'details': data.get('details', {}),
+                'timestamp': data.get('timestamp', ''),
+            })
+        _firestore_behavior_cache = events
+        _firestore_behavior_cache_time = time.time()
+        print(f"[BEHAVIOR] Loaded {len(events)} events from Firestore")
