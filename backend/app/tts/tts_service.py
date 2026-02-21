@@ -448,3 +448,38 @@ class TTSService:
             
             if sys.platform == "win32":
                 # Windows: Use PowerShell MediaPlayer which plays and exits cleanly
+                # Escape backslashes and quotes for PowerShell
+                escaped_path = filepath_str.replace("\\", "\\\\").replace("'", "''")
+                ps_script = f'''
+                Add-Type -AssemblyName presentationCore
+                $player = New-Object System.Windows.Media.MediaPlayer
+                $player.Open([uri]'{escaped_path}')
+                Start-Sleep -Milliseconds 200
+                $player.Play()
+                # Wait for playback with timeout
+                $timeout = 30
+                $waited = 0
+                while ($player.NaturalDuration.HasTimeSpan -eq $false -and $waited -lt $timeout) {{
+                    Start-Sleep -Milliseconds 100
+                    $waited += 0.1
+                }}
+                if ($player.NaturalDuration.HasTimeSpan) {{
+                    while ($player.Position -lt $player.NaturalDuration.TimeSpan) {{
+                        Start-Sleep -Milliseconds 200
+                    }}
+                }} else {{
+                    Start-Sleep -Milliseconds 3000
+                }}
+                $player.Close()
+                '''
+                CREATE_NO_WINDOW = 0x08000000
+                subprocess.Popen(
+                    ['powershell', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', ps_script],
+                    creationflags=CREATE_NO_WINDOW,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            elif sys.platform == "darwin":
+                # macOS: Use afplay (built-in macOS audio player)
+                # afplay supports MP3, WAV, AAC, AIFF, etc.
+                # It blocks until playback finishes, which is fine in our worker thread
