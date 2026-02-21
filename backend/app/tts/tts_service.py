@@ -420,3 +420,31 @@ class TTSService:
                 
                 thread = threading.Thread(target=_speak, daemon=True)
                 thread.start()
+                print(f"[TTS] 🔊 Speaking (pyttsx3): {text[:50]}...")
+        except Exception as e:
+            print(f"[TTS] pyttsx3 direct speak failed: {e}")
+    
+    def play_audio(self, filepath: Path) -> bool:
+        """
+        Play an audio file in the background.
+        
+        Platform-specific implementation:
+        - Windows: Uses PowerShell MediaPlayer (auto-closes after playback)
+        - macOS: Uses 'afplay' (built-in, supports MP3/WAV/etc.)
+        - Linux: Uses 'mpg123' or 'aplay'
+        
+        Args:
+            filepath: Path to the audio file
+        
+        Returns:
+            True if playback started successfully
+        """
+        if not filepath or not filepath.exists():
+            print(f"[TTS] ⚠️ Audio file not found: {filepath}")
+            return False
+        
+        try:
+            filepath_str = str(filepath.absolute())
+            
+            if sys.platform == "win32":
+                # Windows: Use PowerShell MediaPlayer which plays and exits cleanly
