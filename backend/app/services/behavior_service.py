@@ -542,3 +542,32 @@ def _load_behavior_events_from_firestore(limit: int = 50) -> List[dict]:
         _firestore_behavior_cache = events
         _firestore_behavior_cache_time = time.time()
         print(f"[BEHAVIOR] Loaded {len(events)} events from Firestore")
+        return events
+    except Exception as e:
+        print(f"[BEHAVIOR] Failed to load events from Firestore: {e}")
+        return []
+
+
+def get_high_risk_vehicles() -> List[Dict]:
+    """Get vehicles with concerning behavior patterns."""
+    high_risk = []
+    
+    for track_id, behavior in _vehicle_behaviors.items():
+        risk_count = behavior.sudden_stop_count + behavior.harsh_brake_count
+        if risk_count >= 2 or behavior.drift_score > DRIFT_VARIANCE_THRESHOLD * 1.5:
+            high_risk.append({
+                'track_id': track_id,
+                'risk_events': risk_count,
+                'drift_score': round(behavior.drift_score, 1),
+                'behaviors': behavior.behaviors_detected[-5:],
+            })
+    
+    return sorted(high_risk, key=lambda x: x['risk_events'], reverse=True)
+
+
+def cleanup_old_behaviors(max_age_seconds: float = 60.0):
+    """Remove old behavior records."""
+    global _vehicle_behaviors
+    current_time = time.time()
+    stale_ids = []
+    
