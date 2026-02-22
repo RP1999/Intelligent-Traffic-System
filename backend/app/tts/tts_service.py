@@ -483,3 +483,20 @@ class TTSService:
                 # macOS: Use afplay (built-in macOS audio player)
                 # afplay supports MP3, WAV, AAC, AIFF, etc.
                 # It blocks until playback finishes, which is fine in our worker thread
+                subprocess.Popen(
+                    ['afplay', filepath_str],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            else:
+                # Linux: Try multiple players in order of preference
+                players = [
+                    ['mpg123', '-q', filepath_str],  # For MP3
+                    ['aplay', filepath_str],          # For WAV
+                    ['ffplay', '-nodisp', '-autoexit', filepath_str],  # FFmpeg player
+                ]
+                played = False
+                for player_cmd in players:
+                    try:
+                        subprocess.Popen(
+                            player_cmd,
