@@ -331,3 +331,30 @@ async def event_generator(request: Request) -> AsyncGenerator[dict, None]:
     try:
         while True:
             # Check if client disconnected
+            if await request.is_disconnected():
+                break
+            
+            try:
+                # Wait for events with timeout to allow disconnect checks
+                event = await asyncio.wait_for(event_queue.get(), timeout=1.0)
+                yield {
+                    "event": event.get("type", "message"),
+                    "data": event.get("data", {}),
+                    "retry": settings.sse_retry_timeout,
+                }
+            except asyncio.TimeoutError:
+                # Send keepalive ping
+                yield {
+                    "event": "ping",
+                    "data": {"timestamp": datetime.utcnow().isoformat()},
+                }
+    except asyncio.CancelledError:
+        print("SSE client disconnected")
+
+
+@app.get("/events", tags=["Real-time"])
+async def sse_events(request: Request):
+    """
+    Server-Sent Events endpoint for real-time updates.
+    
+    Event types:
