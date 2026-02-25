@@ -500,3 +500,34 @@ class TTSService:
                     try:
                         subprocess.Popen(
                             player_cmd,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        played = True
+                        break
+                    except FileNotFoundError:
+                        continue
+                
+                if not played:
+                    print(f"[TTS] ⚠️ No audio player found on Linux. Install mpg123, aplay, or ffplay.")
+                    return False
+            
+            print(f"[TTS] 🔊 Playing: {filepath.name}")
+            return True
+            
+        except Exception as e:
+            print(f"[TTS] ❌ Error playing audio: {e}")
+            return False
+    
+    def speak(self, text: str, play: bool = True) -> Optional[Path]:
+        """
+        Convenience method to generate and optionally play a warning.
+        
+        Args:
+            text: Text to speak
+            play: Whether to play immediately
+        
+        Returns:
+            Path to audio file
+        """
+        return self.generate_warning(text, play_immediately=play)
