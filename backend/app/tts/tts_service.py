@@ -531,3 +531,36 @@ class TTSService:
             Path to audio file
         """
         return self.generate_warning(text, play_immediately=play)
+    
+    def get_warning_count(self) -> int:
+        """Get the number of warning files generated."""
+        if WARNINGS_DIR.exists():
+            return len(list(WARNINGS_DIR.glob("*.mp3")))
+        return 0
+    
+    def cleanup_all_warnings(self):
+        """
+        Remove ALL generated warning files (called on shutdown).
+        Also signals TTS worker to stop.
+        """
+        global _tts_worker_stop
+        
+        # Signal worker to stop
+        _tts_worker_stop = True
+        try:
+            _tts_queue.put_nowait(None)  # Send shutdown signal
+        except:
+            pass
+        
+        if not WARNINGS_DIR.exists():
+            return
+        
+        count = 0
+        for ext in ['*.mp3', '*.aiff', '*.wav']:
+            for f in WARNINGS_DIR.glob(ext):
+                try:
+                    f.unlink()
+                    count += 1
+                except:
+                    pass
+        
