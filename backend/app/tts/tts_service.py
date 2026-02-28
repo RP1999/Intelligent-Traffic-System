@@ -564,3 +564,25 @@ class TTSService:
                 except:
                     pass
         
+        if count > 0:
+            print(f"[TTS] 🧹 Cleaned up {count} audio files")
+    
+    def cleanup_old_warnings(self, max_files: int = 100):
+        """
+        Remove old warning files to prevent disk buildup.
+        
+        Args:
+            max_files: Maximum number of files to keep
+        """
+        if not WARNINGS_DIR.exists():
+            return
+        
+        files = sorted(WARNINGS_DIR.glob("*.mp3"), key=lambda f: f.stat().st_mtime)
+        
+        if len(files) > max_files:
+            to_delete = files[:-max_files]
+            for f in to_delete:
+                f.unlink()
+            print(f"[TTS] 🧹 Cleaned up {len(to_delete)} old warning files")
+
+

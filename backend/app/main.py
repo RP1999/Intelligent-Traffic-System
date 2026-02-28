@@ -376,3 +376,23 @@ async def broadcast_event(event_type: str, data: dict):
             "timestamp": datetime.utcnow().isoformat(),
         }
     })
+
+
+# =============================================================================
+# Pipeline Control Endpoints (Now using video router)
+# =============================================================================
+
+@app.post("/pipeline/start", tags=["Pipeline"])
+async def start_pipeline(video_source: str = None):
+    """
+    Start the detection pipeline with optional video source.
+    
+    Note: Use /video/stream endpoint directly for MJPEG streaming.
+    This endpoint is for programmatic control.
+    """
+    await broadcast_event("pipeline", {"status": "started", "source": video_source})
+    return {
+        "status": "started", 
+        "message": "Use /video/stream?source=<path> for MJPEG streaming",
+        "stream_url": f"/video/stream?source={video_source}" if video_source else "/video/stream",
+    }
