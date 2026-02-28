@@ -358,3 +358,21 @@ async def sse_events(request: Request):
     Server-Sent Events endpoint for real-time updates.
     
     Event types:
+    - detection: New vehicle/object detected
+    - violation: Parking or traffic violation detected  
+    - score_update: Driver score changed
+    - signal_change: Traffic signal state changed
+    - ping: Keepalive heartbeat
+    """
+    return EventSourceResponse(event_generator(request))
+
+
+async def broadcast_event(event_type: str, data: dict):
+    """Broadcast an event to all connected SSE clients."""
+    await event_queue.put({
+        "type": event_type,
+        "data": {
+            **data,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    })
