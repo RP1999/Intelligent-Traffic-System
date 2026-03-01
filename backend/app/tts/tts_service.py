@@ -614,3 +614,40 @@ if __name__ == "__main__":
     print("\n📝 Test 1: Generating test audio...")
     filepath = tts.generate_warning(
         "Testing system audio. If you hear this, the text to speech module is working correctly.",
+        filename="test_audio",
+        play_immediately=True
+    )
+    
+    if filepath:
+        print(f"✅ Test file generated: {filepath}")
+        print(f"   File size: {filepath.stat().st_size} bytes")
+    else:
+        print("❌ Failed to generate test file")
+    
+    # Test 2: Generate a parking warning
+    print("\n📝 Test 2: Generating parking warning...")
+    filepath2 = tts.generate_warning(
+        "Vehicle WP ABC 1234, please move immediately. You are in a no parking zone.",
+        filename="parking_warning_test",
+        play_immediately=False  # Don't play, just generate
+    )
+    
+    if filepath2:
+        print(f"✅ Parking warning generated: {filepath2}")
+    
+    # Test 3: Generate a speeding warning
+    print("\n📝 Test 3: Generating speeding warning...")
+    filepath3 = tts.generate_warning(
+        "Attention! Vehicle exceeding speed limit. Fine has been recorded.",
+        filename="speeding_warning_test",
+        play_immediately=False
+    )
+    
+    if filepath3:
+        print(f"✅ Speeding warning generated: {filepath3}")
+    
+    # Summary
+    print("\n" + "=" * 60)
+    print(f"📊 Summary:")
+    print(f"   Warnings directory: {WARNINGS_DIR}")
+    print(f"   Total warning files: {tts.get_warning_count()}")
