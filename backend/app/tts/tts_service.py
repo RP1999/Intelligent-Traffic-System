@@ -586,3 +586,31 @@ class TTSService:
             print(f"[TTS] 🧹 Cleaned up {len(to_delete)} old warning files")
 
 
+# Global TTS service instance
+_tts_service: Optional[TTSService] = None
+
+
+def get_tts_service() -> TTSService:
+    """Get or create the global TTS service instance."""
+    global _tts_service
+    if _tts_service is None:
+        _tts_service = TTSService()
+    return _tts_service
+
+
+# =============================================================================
+# Test Block
+# =============================================================================
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("🔊 TTS Service Test")
+    print("=" * 60)
+    
+    # Initialize service
+    tts = TTSService()
+    
+    # Test 1: Generate a test warning
+    print("\n📝 Test 1: Generating test audio...")
+    filepath = tts.generate_warning(
+        "Testing system audio. If you hear this, the text to speech module is working correctly.",
