@@ -651,3 +651,9 @@ if __name__ == "__main__":
     print(f"📊 Summary:")
     print(f"   Warnings directory: {WARNINGS_DIR}")
     print(f"   Total warning files: {tts.get_warning_count()}")
+    print("=" * 60)
+    
+    # List all files
+    print("\n📁 Files in warnings directory:")
+    for f in WARNINGS_DIR.glob("*.mp3"):
+        print(f"   - {f.name} ({f.stat().st_size} bytes)")
