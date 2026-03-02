@@ -396,3 +396,24 @@ async def start_pipeline(video_source: str = None):
         "message": "Use /video/stream?source=<path> for MJPEG streaming",
         "stream_url": f"/video/stream?source={video_source}" if video_source else "/video/stream",
     }
+
+
+@app.post("/pipeline/stop", tags=["Pipeline"])
+async def stop_pipeline():
+    """Stop the detection pipeline."""
+    from app.routers.video import _pipeline_state
+    _pipeline_state["running"] = False
+    await broadcast_event("pipeline", {"status": "stopped"})
+    return {"status": "stopped", "message": "Pipeline stop requested"}
+
+
+@app.get("/pipeline/status", tags=["Pipeline"])
+async def pipeline_status():
+    """Get current pipeline status."""
+    from app.routers.video import get_pipeline_state
+    state = get_pipeline_state()
+    return {
+        "running": state["running"],
+        "video_source": state["video_source"],
+        "frames_processed": state["frames_processed"],
+        "detections": state["total_detections"],
