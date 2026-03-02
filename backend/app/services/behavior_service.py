@@ -571,3 +571,40 @@ def cleanup_old_behaviors(max_age_seconds: float = 60.0):
     current_time = time.time()
     stale_ids = []
     
+    for track_id, behavior in _vehicle_behaviors.items():
+        if behavior.positions and (current_time - behavior.positions[-1].timestamp) > max_age_seconds:
+            stale_ids.append(track_id)
+    
+    for track_id in stale_ids:
+        del _vehicle_behaviors[track_id]
+
+
+def reset_behaviors():
+    """Reset all behavior tracking."""
+    global _vehicle_behaviors, _behavior_events
+    _vehicle_behaviors.clear()
+    _behavior_events.clear()
+
+
+# ============================================================================
+# DATABASE INTEGRATION
+# ============================================================================
+
+def _save_behavior_event_sync(event: BehaviorEvent):
+    """Save a behavior event to Firestore using the sync client (thread-safe)."""
+    try:
+        from app.db.firestore_client import get_sync_db, Collections
+        from app.utils.plate_utils import normalize_plate
+        from datetime import timedelta as _td
+        from google.cloud.firestore_v1 import FieldFilter
+
+        # Use plate if available, otherwise fall back to UNKNOWN{id}
+        # (same format the detection pipeline uses in yolo_detector.py)
+        plate_norm = normalize_plate(event.plate_number) if event.plate_number else None
+        identifier = plate_norm or f"UNKNOWN{event.vehicle_id}"
+
+        db = get_sync_db()
+        db.collection(Collections.ABNORMAL_BEHAVIOR).add({
+            "vehicle_id": event.vehicle_id,
+            "behavior_type": event.behavior_type.value,
+            "severity": event.severity.value,
