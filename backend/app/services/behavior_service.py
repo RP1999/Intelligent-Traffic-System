@@ -608,3 +608,41 @@ def _save_behavior_event_sync(event: BehaviorEvent):
             "vehicle_id": event.vehicle_id,
             "behavior_type": event.behavior_type.value,
             "severity": event.severity.value,
+            "plate_number": event.plate_number,
+            "plate_number_normalized": identifier,
+            "details": event.details,
+            "timestamp": datetime.now().isoformat(),
+        })
+        print(f"[DB] Saved behavior event: {event.behavior_type.value} for vehicle {event.vehicle_id}")
+
+        # Always record as a driver event + ensure driver entity exists
+        # (just like violations do for unknown plates)
+        _record_behavior_as_driver_event(db, identifier, event)
+        _ensure_driver_entity(db, identifier)
+
+        # Create a driver notification so the warning always appears
+        # in the notification list even if the FCM push thread fails.
+        behavior_labels = {
+            "sudden_stop": "Sudden Stop Detected",
+            "harsh_brake": "Harsh Braking Detected",
+            "lane_drift": "Lane Drifting Detected",
+            "wrong_way": "Wrong-Way Driving Detected",
+            "erratic_movement": "Erratic Movement Detected",
+        }
+        btype = event.behavior_type.value
+        title = behavior_labels.get(btype, f"Warning: {btype.replace('_', ' ').title()}")
+        body = f"Severity: {event.severity.value.upper()}"
+        details_str = ", ".join(f"{k}: {v}" for k, v in (event.details or {}).items())
+        if details_str:
+            body += f" — {details_str}"
+
+        # Quick dedup: skip if an identical notification was written
+        # in the last 30 seconds (the FCM push thread may have created one)
+        cutoff = (datetime.now() - _td(seconds=30)).isoformat()
+        existing = list(
+            db.collection(Collections.DRIVER_NOTIFICATIONS)
+            .where(filter=FieldFilter("plate_number", "==", identifier))
+            .limit(5)
+            .stream()
+        )
+        already_exists = any(
