@@ -417,3 +417,28 @@ async def pipeline_status():
         "video_source": state["video_source"],
         "frames_processed": state["frames_processed"],
         "detections": state["total_detections"],
+        "uptime_seconds": state.get("uptime_seconds", 0),
+    }
+
+
+# =============================================================================
+# Server Logs Endpoint (Admin Only)
+# =============================================================================
+
+@app.get("/admin/server-logs", tags=["Admin"])
+async def get_server_logs(
+    lines: int = 500,
+):
+    """
+    Get the last N lines of the server log file.
+    Useful for debugging and monitoring.
+    """
+    try:
+        if LOG_FILE.exists():
+            with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
+                all_lines = f.readlines()
+            # Return last N lines
+            recent_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
+            return {
+                "log_file": str(LOG_FILE),
+                "total_lines": len(all_lines),
