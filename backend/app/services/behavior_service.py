@@ -646,3 +646,37 @@ def _save_behavior_event_sync(event: BehaviorEvent):
             .stream()
         )
         already_exists = any(
+            d.to_dict().get("title") == title
+            and d.to_dict().get("timestamp", "") >= cutoff
+            for d in existing
+        )
+        if not already_exists:
+            db.collection(Collections.DRIVER_NOTIFICATIONS).add({
+                "plate_number": identifier,
+                "title": title,
+                "message": body,
+                "notification_type": "warning",
+                "timestamp": datetime.now().isoformat(),
+                "read": False,
+            })
+            print(f"[BEHAVIOR→NOTIF] Created notification for {identifier}: {title}")
+    except Exception as e:
+        print(f"[DB] Error saving behavior event: {e}")
+
+
+def _ensure_driver_entity(db, plate_normalized: str):
+    """
+    Ensure a driver entity exists in the DRIVERS collection when a warning
+    is issued, just like violations create/update driver records.
+    Uses merge=True so it never overwrites existing violation-based data.
+    """
+    try:
+        from app.db.firestore_client import Collections
+
+        doc_ref = db.collection(Collections.DRIVERS).document(plate_normalized)
+        doc = doc_ref.get()
+        if doc.exists:
+            # Driver already exists — just update the timestamp
+            doc_ref.update({"updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+        else:
+            # Create a new driver entity with default score
