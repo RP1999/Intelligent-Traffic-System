@@ -442,3 +442,14 @@ async def get_server_logs(
             return {
                 "log_file": str(LOG_FILE),
                 "total_lines": len(all_lines),
+                "returned_lines": len(recent_lines),
+                "content": "".join(recent_lines)
+            }
+        else:
+            return {"error": "Log file not found", "log_file": str(LOG_FILE)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/admin/server-logs/download", tags=["Admin"])
+async def download_server_logs():
