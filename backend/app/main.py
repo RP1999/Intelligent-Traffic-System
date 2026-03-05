@@ -453,3 +453,22 @@ async def get_server_logs(
 
 @app.get("/admin/server-logs/download", tags=["Admin"])
 async def download_server_logs():
+    """Download the full server log file."""
+    if LOG_FILE.exists():
+        return FileResponse(
+            path=str(LOG_FILE),
+            filename=f"itms_server_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+            media_type="text/plain"
+        )
+    return {"error": "Log file not found"}
+
+
+# =============================================================================
+# Development entry point
+# =============================================================================
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
