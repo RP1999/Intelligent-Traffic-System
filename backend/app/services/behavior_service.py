@@ -721,3 +721,31 @@ def _record_behavior_as_driver_event(db, plate_normalized: str, event: BehaviorE
         points = behavior_points.get(btype, 2)
         
         # Calculate risk score using the real formula:
+        # Risk_Score = (Speed_Factor × 0.6) + (History_Factor × 0.4)
+        # For behavior events, speed_factor = 0 (no speed context)
+        history_factor = min(100, points * 5)
+        computed_risk_score = round((0 * 0.6) + (history_factor * 0.4), 1)
+        
+        # Determine risk level from computed score
+        if computed_risk_score >= 80:
+            risk_level = 'CRITICAL'
+        elif computed_risk_score >= 60:
+            risk_level = 'HIGH'
+        elif computed_risk_score >= 30:
+            risk_level = 'MEDIUM'
+        else:
+            risk_level = 'LOW'
+        
+        # Save to risk_scores collection for analytics/admin dashboards
+        db.collection(Collections.RISK_SCORES).add({
+            'vehicle_id': str(event.vehicle_id),
+            'plate_number': event.plate_number,
+            'plate_number_normalized': plate_normalized,
+            'risk_score': computed_risk_score,
+            'risk_level': risk_level,
+            'speed_factor': 0,
+            'violation_history_factor': history_factor,
+            'behaviors_detected': [btype],
+            'created_at': datetime.now().isoformat(),
+        })
+        
