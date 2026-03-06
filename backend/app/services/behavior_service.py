@@ -680,3 +680,44 @@ def _ensure_driver_entity(db, plate_normalized: str):
             doc_ref.update({"updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
         else:
             # Create a new driver entity with default score
+            doc_ref.set({
+                "driver_id": plate_normalized,
+                "current_score": 100,
+                "total_violations": 0,
+                "total_fines": 0,
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            })
+            print(f"[BEHAVIOR→DRIVER] Created driver entity for {plate_normalized}")
+    except Exception as e:
+        print(f"[BEHAVIOR→DRIVER] Error ensuring driver entity: {e}")
+
+
+def _record_behavior_as_driver_event(db, plate_normalized: str, event: BehaviorEvent):
+    """
+    Record an abnormal behavior as a risk score entry on the driver's record.
+    
+    Behaviors are recorded in the RISK_SCORES collection for analytics 
+    but do NOT directly mutate driver scores — that's handled exclusively
+    by ScoringEngine.record_violation() to avoid conflicting score updates.
+    
+    Wrong-way driving is already handled as a formal WRONG_WAY violation
+    by yolo_detector.check_wrong_way_violation(), so we do NOT issue
+    a duplicate violation here. Behaviors are risk indicators, not violations.
+    """
+    try:
+        from app.db.firestore_client import Collections
+        
+        # Map behavior severity to points (for risk analytics only)
+        behavior_points = {
+            'sudden_stop': 3,
+            'harsh_brake': 4,
+            'lane_drift': 5,
+            'wrong_way': 15,
+            'erratic_movement': 8,
+        }
+        
+        btype = event.behavior_type.value
+        points = behavior_points.get(btype, 2)
+        
+        # Calculate risk score using the real formula:
