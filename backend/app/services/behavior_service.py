@@ -749,3 +749,45 @@ def _record_behavior_as_driver_event(db, plate_normalized: str, event: BehaviorE
             'created_at': datetime.now().isoformat(),
         })
         
+        print(f"[BEHAVIOR→RISK] Recorded {btype} risk entry for {plate_normalized}")
+        
+    except Exception as e:
+        print(f"[BEHAVIOR→DRIVER] Error recording behavior to driver: {e}")
+
+
+async def save_behavior_event_to_db(event: BehaviorEvent):
+    """Save a behavior event to Firestore (async version — for direct async callers)."""
+    try:
+        from app.db.firestore_client import get_db, Collections
+
+        db = get_db()
+        await db.collection(Collections.ABNORMAL_BEHAVIOR).add({
+            "vehicle_id": event.vehicle_id,
+            "behavior_type": event.behavior_type.value,
+            "severity": event.severity.value,
+            "plate_number": event.plate_number,
+            "details": event.details,
+            "timestamp": datetime.now().isoformat(),
+        })
+        print(f"[DB] Saved behavior event: {event.behavior_type.value} for vehicle {event.vehicle_id}")
+    except Exception as e:
+        print(f"[DB] Error saving behavior event: {e}")
+
+
+# ============================================================================
+# SETTINGS INTEGRATION
+# ============================================================================
+
+def update_from_settings(settings: dict) -> None:
+    """
+    Update behavior detection thresholds from admin settings.
+    Called when settings are saved via the Settings page.
+    """
+    global HARSH_BRAKE_PIXEL_THRESHOLD, DRIFT_VARIANCE_THRESHOLD, DRIFT_WINDOW_FRAMES
+    global SUDDEN_STOP_SPEED_DROP, BEHAVIOR_COOLDOWN, PIXEL_TO_KMH_FACTOR
+    
+    detection = settings.get('detection', {})
+    if detection:
+        # Speed limit affects the pixel-to-kmh conversion factor indirectly
+        speed_limit = detection.get('speed_limit', 60.0)
+        PIXEL_TO_KMH_FACTOR = speed_limit / 120.0  # Scale factor relative to default
