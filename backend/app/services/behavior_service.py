@@ -791,3 +791,30 @@ def update_from_settings(settings: dict) -> None:
         # Speed limit affects the pixel-to-kmh conversion factor indirectly
         speed_limit = detection.get('speed_limit', 60.0)
         PIXEL_TO_KMH_FACTOR = speed_limit / 120.0  # Scale factor relative to default
+        
+        # X-velocity threshold from detection settings maps to drift detection
+        x_threshold = detection.get('x_velocity_threshold', 15.0)
+        DRIFT_VARIANCE_THRESHOLD = max(3.0, x_threshold * 0.5)
+        
+        # Harsh brake threshold scales with speed limit (higher speed = larger pixel deltas)
+        HARSH_BRAKE_PIXEL_THRESHOLD = max(5.0, speed_limit * 0.2)
+        
+        # Drift window scales with direction changes threshold (more changes = wider window)
+        direction_changes = detection.get('direction_changes_threshold', 3)
+        DRIFT_WINDOW_FRAMES = max(5, direction_changes * 3 + 1)
+        
+        # Sudden stop speed drop: fixed at 50% — not configurable via admin
+        SUDDEN_STOP_SPEED_DROP = 0.5
+        
+        # Behavior cooldown derived from yellow light duration (debounce period)
+        yellow_duration = detection.get('yellow_light_duration', 3.0)
+        BEHAVIOR_COOLDOWN = max(1.0, yellow_duration * 0.67)
+        
+        print(f"[BEHAVIOR] Updated thresholds: drift_variance={DRIFT_VARIANCE_THRESHOLD:.1f}, "
+              f"pixel_to_kmh={PIXEL_TO_KMH_FACTOR:.2f}, harsh_brake={HARSH_BRAKE_PIXEL_THRESHOLD:.1f}, "
+              f"drift_window={DRIFT_WINDOW_FRAMES}, cooldown={BEHAVIOR_COOLDOWN:.1f}s")
+
+
+# ============================================================================
+# TEST
+# ============================================================================
