@@ -16,6 +16,7 @@ extern const char* AWS_IOT_ENDPOINT;
 // MQTT topic - define this in main.ino
 extern const char* AWS_IOT_TOPIC;
 
+
 // ============================================
 // YOUR AWS CERTIFICATES
 // ============================================
