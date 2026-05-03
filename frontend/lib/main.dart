@@ -1,15 +1,36 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/services/notification_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/admin/violations_provider.dart';
 import 'providers/admin/drivers_provider.dart';
 import 'providers/admin/analytics_provider.dart';
+import 'providers/admin/iot_junction_provider.dart';
+import 'providers/driver/driver_home_provider.dart';
+import 'providers/driver/driver_violations_provider.dart';
+import 'providers/driver/driver_fines_provider.dart';
 import 'screens/screens.dart';
+import 'models/fine.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase (mobile only — web requires FirebaseOptions)
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
+      // Register background message handler
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (e) {
+      debugPrint('[Main] Firebase init error (running without FCM): $e');
+    }
+  }
+
   runApp(const TrafficControlApp());
 }
 
@@ -24,6 +45,10 @@ class TrafficControlApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ViolationsProvider()),
         ChangeNotifierProvider(create: (_) => DriversProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
+        ChangeNotifierProvider(create: (_) => IotJunctionProvider()),
+        ChangeNotifierProvider(create: (_) => DriverHomeProvider()),
+        ChangeNotifierProvider(create: (_) => DriverViolationsProvider()),
+        ChangeNotifierProvider(create: (_) => DriverFinesProvider()),
       ],
       child: MaterialApp(
         title: 'Traffic Control System',
@@ -31,6 +56,7 @@ class TrafficControlApp extends StatelessWidget {
         theme: AppTheme.darkTheme,
         initialRoute: '/',
         routes: _buildRoutes(),
+        onGenerateRoute: _onGenerateRoute,
       ),
     );
   }
@@ -52,14 +78,30 @@ class TrafficControlApp extends StatelessWidget {
       '/admin/violations': (context) => const ViolationsListScreen(),
       '/admin/drivers': (context) => const DriversListScreen(),
       '/admin/analytics': (context) => const AnalyticsScreen(),
-      '/admin/settings': (context) => const _PlaceholderScreen(title: 'Settings'),
+      '/admin/risk': (context) => const RiskAnalyticsScreen(),
+      '/admin/settings': (context) => const AdminSettingsScreen(),
+      '/admin/iot-junction': (context) => const IotJunctionScreen(),
       
-      // Driver routes (placeholders for now)
-      '/driver/home': (context) => const _PlaceholderScreen(title: 'Driver Home'),
-      '/driver/violations': (context) => const _PlaceholderScreen(title: 'My Violations'),
-      '/driver/fines': (context) => const _PlaceholderScreen(title: 'My Fines'),
-      '/driver/profile': (context) => const _PlaceholderScreen(title: 'Profile'),
+      // Driver routes
+      '/driver/home': (context) => const DriverShellScreen(),
+      '/driver/violations': (context) => const DriverShellScreen(),
+      '/driver/fines': (context) => const DriverShellScreen(),
+      '/driver/profile': (context) => const DriverShellScreen(),
     };
+  }
+
+  /// Handle routes that require arguments (e.g. payment with Fine object)
+  static Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
+    if (settings.name == '/driver/payment') {
+      final fine = settings.arguments as Fine?;
+      if (fine != null) {
+        return MaterialPageRoute(
+          builder: (_) => PaymentScreen(fine: fine),
+          settings: settings,
+        );
+      }
+    }
+    return null;
   }
 }
 

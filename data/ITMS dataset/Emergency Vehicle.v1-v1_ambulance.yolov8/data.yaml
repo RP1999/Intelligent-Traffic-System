@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['Ambulance']
+
+roboflow:
+  workspace: intelligent-traffic-management-system-h4mrb
+  project: emergency-vehicle-06veu-zszr2
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/intelligent-traffic-management-system-h4mrb/emergency-vehicle-06veu-zszr2/dataset/1

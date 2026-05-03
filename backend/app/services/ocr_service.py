@@ -98,6 +98,7 @@ def clean_plate_text(text: str) -> str:
     # Common OCR corrections for Sri Lankan plates
     replacements = {
         'O': '0',  # Sometimes O is read as 0 (context-dependent)
+
         'I': '1',  # I can be 1
         'S': '5',  # S can be 5
         'B': '8',  # B can be 8

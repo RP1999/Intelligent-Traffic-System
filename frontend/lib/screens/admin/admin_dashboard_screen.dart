@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -9,6 +10,7 @@ import '../../widgets/admin/live_video_feed.dart';
 import '../../widgets/admin/traffic_light_panel.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
+import '../../models/analytics.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -19,8 +21,10 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
-  Map<String, dynamic>? _stats;
+  DashboardStats? _dashboardStats;
+  Map<String, dynamic>? _junctionScore;
   bool _isLoading = true;
+  Timer? _pollTimer;
   
   final ApiClient _apiClient = ApiClient();
 
@@ -28,6 +32,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _loadStats();
+    // Auto-refresh stats every 10 seconds
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _loadStats(silent: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   /// Handle unauthorized access - redirect to login
@@ -36,27 +50,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil('/platform-router', (route) => false);
   }
 
-  Future<void> _loadStats() async {
+  Future<void> _loadStats({bool silent = false}) async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    if (!silent) {
+      setState(() => _isLoading = true);
+    }
     
     try {
-      final response = await _apiClient.get(ApiEndpoints.adminStats);
+      final results = await Future.wait([
+        _apiClient.get(ApiEndpoints.dashboardStats),
+        _apiClient.get(ApiEndpoints.junctionScore),
+      ]);
       if (!mounted) return;
       
-      if (response.success && response.data != null) {
-        setState(() {
-          _stats = response.data;
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
+      if (results[0].success && results[0].data != null) {
+        _dashboardStats = DashboardStats.fromJson(results[0].data!);
       }
+      if (results[1].success && results[1].data != null) {
+        _junctionScore = results[1].data;
+      }
+      setState(() => _isLoading = false);
     } on UnauthorizedException {
       _handleUnauthorized();
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (!silent) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -86,6 +106,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  String _formatNumber(double value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      final formatted = value.toStringAsFixed(0);
+      final result = StringBuffer();
+      for (int i = 0; i < formatted.length; i++) {
+        if (i > 0 && (formatted.length - i) % 3 == 0) result.write(',');
+        result.write(formatted[i]);
+      }
+      return result.toString();
+    }
+    return value.toStringAsFixed(0);
+  }
+
   void _handleNavigation(int index) {
     switch (index) {
       case 0: // Dashboard - stay here
@@ -105,11 +140,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 5: // Audit Logs
         Navigator.of(context).pushReplacementNamed('/admin/logs');
         break;
-      case 6: // Settings
+      case 6: // Risk Analytics
+        Navigator.of(context).pushReplacementNamed('/admin/risk');
+        break;
+      case 7: // Settings
         Navigator.of(context).pushReplacementNamed('/admin/settings');
         break;
-      case 7: // Logout
-        _handleLogout();
+      case 8: // IoT Junction
+        Navigator.of(context).pushReplacementNamed('/admin/iot-junction');
         break;
     }
   }
@@ -333,24 +371,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildStatsSection() {
+    final jScore = _junctionScore?['current_score'] ?? 0;
+    final jLevel = _junctionScore?['risk_level'] ?? 'unknown';
+    final jColor = _junctionScore?['safety_color'] ?? 'GREEN';
+    Color jCardColor;
+    // Match proposal thresholds: Green(>=70), Yellow(>=40), Red(<40)
+    if (jScore >= 70) {
+      jCardColor = AppColors.success;
+    } else if (jScore >= 40) {
+      jCardColor = AppColors.warning;
+    } else {
+      jCardColor = AppColors.error;
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           Expanded(
             child: StatCard(
-              title: 'Active Zones',
-              value: _stats?['active_zones']?.toString() ?? '0',
-              icon: Icons.location_on,
-              color: AppColors.primary,
+              title: 'Junction Safety',
+              value: '$jScore%',
+              icon: Icons.shield,
+              color: jCardColor,
               isLoading: _isLoading,
+              subtitle: '${jColor.toUpperCase()} • ${jLevel.toString().toUpperCase()}',
             ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: StatCard(
               title: 'Violations Today',
-              value: _stats?['total_violations_today']?.toString() ?? '0',
+              value: _dashboardStats?.violationsToday.toString() ?? '0',
               icon: Icons.report_problem,
               color: AppColors.error,
               isLoading: _isLoading,
@@ -360,7 +412,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Expanded(
             child: StatCard(
               title: 'Registered Drivers',
-              value: _stats?['total_drivers']?.toString() ?? '0',
+              value: _dashboardStats?.totalDrivers.toString() ?? '0',
               icon: Icons.people,
               color: AppColors.info,
               isLoading: _isLoading,
@@ -370,7 +422,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Expanded(
             child: StatCard(
               title: 'Pending Fines',
-              value: 'Rs. ${(_stats?['pending_fines'] ?? 0).toStringAsFixed(0)}',
+              value: 'Rs. ${_formatNumber((_dashboardStats?.pendingFines ?? 0))}',
               icon: Icons.attach_money,
               color: AppColors.warning,
               isLoading: _isLoading,
@@ -393,6 +445,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: LiveVideoFeed(
               onZoneEditorPressed: () {
                 Navigator.of(context).pushReplacementNamed('/admin/zones');
+              },
+              onSettingsPressed: () {
+                Navigator.of(context).pushReplacementNamed('/admin/settings');
               },
             ),
           ),
@@ -448,8 +503,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(height: 12),
           _buildActionButton(
             icon: Icons.analytics,
-            label: 'Reports',
-            onTap: () {},
+            label: 'Analytics',
+            onTap: () => Navigator.of(context).pushReplacementNamed('/admin/analytics'),
           ),
         ],
       ),

@@ -1,4 +1,4 @@
-  import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -148,7 +148,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen>
           ),
           child: const Icon(
             Icons.directions_car,
-             size: 48,
+            size: 48,
             color: AppColors.primary,
           ),
         ),

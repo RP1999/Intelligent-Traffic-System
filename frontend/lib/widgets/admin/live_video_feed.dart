@@ -10,10 +10,12 @@ import '../../core/config/app_config.dart';
 
 class LiveVideoFeed extends StatefulWidget {
   final VoidCallback? onZoneEditorPressed;
+  final VoidCallback? onSettingsPressed;
 
   const LiveVideoFeed({
     super.key,
     this.onZoneEditorPressed,
+    this.onSettingsPressed,
   });
 
   @override
@@ -25,6 +27,9 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
   StreamSubscription? _streamSubscription;
   Uint8List? _currentFrame;
   bool _isStreaming = false;
+
+  /// Shared notifier so fullscreen overlay gets frames without a second WebSocket.
+  final ValueNotifier<Uint8List?> _frameNotifier = ValueNotifier<Uint8List?>(null);
   bool _isConnecting = false;
   bool _hasError = false;
   String _errorMessage = '';
@@ -39,6 +44,10 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
   
   // FIX: User pause flag - don't auto-reconnect if user clicked Pause
   bool _userPaused = false;
+  
+  // Video seek position for timeline control
+  double _videoSeekPosition = 0.0; // 0.0 to 1.0 for timeline
+  bool _isSeekingVideo = false;
 
   // WebSocket URL - use localhost to avoid connection pool issues
   String get _wsUrl => '${AppConfig.videoBaseUrl.replaceFirst('http', 'ws')}/video/ws';
@@ -63,16 +72,16 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
     });
   }
 
-  /// FIX: Stats timer to fetch /video/status every 1 second for vehicle count updates
+  /// FIX: Stats timer to fetch /video/status every 3 seconds for vehicle count updates
   void _startStatsTimer() {
     _statsTimer?.cancel();
-    _statsTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+    _statsTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (!mounted || !_isStreaming) return;
       
       try {
         final response = await http.get(
           Uri.parse('${AppConfig.videoBaseUrl}/video/status'),
-        ).timeout(const Duration(seconds: 2));
+        ).timeout(const Duration(seconds: 5));
         
         if (!mounted) return;
         
@@ -88,11 +97,10 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
           });
         }
       } catch (e) {
-        debugPrint('[VideoFeed] Stats fetch error: $e');
-        // Don't update state on error - just log
+        // Suppress timeout errors - non-critical polling
       }
     });
-    debugPrint('[VideoFeed] Stats timer started (1s interval)');
+    debugPrint('[VideoFeed] Stats timer started (3s interval)');
   }
 
   void _connectWebSocket() {
@@ -133,6 +141,7 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
           // Decode Base64 to bytes
           try {
             final bytes = base64Decode(data as String);
+            _frameNotifier.value = bytes;
             setState(() {
               _currentFrame = bytes;
               _isStreaming = true;
@@ -253,6 +262,7 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
   @override
   void dispose() {
     debugPrint('[VideoFeed] dispose() called');
+    _frameNotifier.dispose();
     _clockTimer?.cancel();
     _reconnectTimer?.cancel();
     _statsTimer?.cancel();
@@ -274,6 +284,28 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
       _disconnect();
     } else {
       _connectWebSocket();
+    }
+  }
+
+  /// Seek video to position (0.0 to 1.0)
+  void _seekVideo(double position) async {
+    if (!_isStreaming) return;
+
+    try {
+      debugPrint('[VideoFeed] Seeking to ${(position * 100).toInt()}%');
+      final response = await http.post(
+        Uri.parse('${AppConfig.videoBaseUrl}/video/seek'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'position': position}),
+      ).timeout(const Duration(seconds: 5));
+      
+      if (response.statusCode == 200) {
+        debugPrint('[VideoFeed] Seek successful');
+      } else {
+        debugPrint('[VideoFeed] Seek failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('[VideoFeed] Seek error: $e');
     }
   }
 
@@ -303,6 +335,74 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
               ),
             ),
           ),
+          // Video Timeline Seek Bar
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Video Timeline', style: AppTypography.labelSmall),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        final next = (_videoSeekPosition - 0.05).clamp(0.0, 1.0);
+                        setState(() => _videoSeekPosition = next);
+                        _seekVideo(next);
+                      },
+                      icon: const Icon(Icons.fast_rewind),
+                      tooltip: 'Rewind 5%',
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Slider(
+                        value: _videoSeekPosition,
+                        min: 0.0,
+                        max: 1.0,
+                        divisions: 100,
+                        label: '${(_videoSeekPosition * 100).toInt()}%',
+                        onChanged: (value) {
+                          setState(() => _videoSeekPosition = value);
+                        },
+                        onChangeStart: (_) => setState(() => _isSeekingVideo = true),
+                        onChangeEnd: (value) {
+                          setState(() => _isSeekingVideo = false);
+                          _seekVideo(value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {
+                        final next = (_videoSeekPosition + 0.05).clamp(0.0, 1.0);
+                        setState(() => _videoSeekPosition = next);
+                        _seekVideo(next);
+                      },
+                      icon: const Icon(Icons.fast_forward),
+                      tooltip: 'Forward 5%',
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${(_videoSeekPosition * 100).toInt()}%',
+                      style: AppTypography.caption,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           _buildControls(),
         ],
       ),
@@ -542,7 +642,7 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
                 _buildControlButton(
                   icon: Icons.fullscreen,
                   label: 'Fullscreen',
-                  onTap: () {},
+                  onTap: _openFullscreen,
                 ),
                 _buildControlButton(
                   icon: Icons.edit_location_alt,
@@ -553,7 +653,7 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
                 _buildControlButton(
                   icon: Icons.settings,
                   label: 'Settings',
-                  onTap: () {},
+                  onTap: widget.onSettingsPressed,
                 ),
               ],
             );
@@ -572,7 +672,7 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
                 child: _buildControlButton(
                   icon: Icons.fullscreen,
                   label: 'Fullscreen',
-                  onTap: () {},
+                  onTap: _openFullscreen,
                 ),
               ),
               const SizedBox(width: 8),
@@ -589,7 +689,7 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
                 child: _buildControlButton(
                   icon: Icons.settings,
                   label: 'Settings',
-                  onTap: () {},
+                  onTap: widget.onSettingsPressed,
                 ),
               ),
             ],
@@ -630,6 +730,99 @@ class _LiveVideoFeedState extends State<LiveVideoFeed> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Open the video feed full-screen inside the same browser tab (no new window).
+  void _openFullscreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _FullscreenVideoOverlay(frameNotifier: _frameNotifier),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Full-screen video overlay — listens to the shared ValueNotifier from the
+// parent LiveVideoFeed so it receives frames instantly without opening a
+// second WebSocket (the backend only serves one client at a time).
+// ---------------------------------------------------------------------------
+class _FullscreenVideoOverlay extends StatelessWidget {
+  final ValueNotifier<Uint8List?> frameNotifier;
+  const _FullscreenVideoOverlay({required this.frameNotifier});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Video — fill entire area edge-to-edge
+            Positioned.fill(
+              child: ValueListenableBuilder<Uint8List?>(
+                valueListenable: frameNotifier,
+                builder: (_, frame, __) {
+                  if (frame != null) {
+                    return Image.memory(
+                      frame,
+                      gaplessPlayback: true,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    );
+                  }
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white54),
+                        SizedBox(height: 16),
+                        Text('Waiting for video...',
+                            style: TextStyle(color: Colors.white54)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Exit fullscreen button — floating pill
+            Positioned(
+              top: 20,
+              right: 20,
+              child: Material(
+                color: Colors.black.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(24),
+                elevation: 4,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.fullscreen_exit,
+                            color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text('Exit Fullscreen',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

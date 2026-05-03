@@ -53,6 +53,27 @@ class Settings(BaseSettings):
     
     # --- SSE Settings ---
     sse_retry_timeout: int = 3000  # milliseconds
+
+    # --- AWS IoT Junction Sync ---
+    aws_region: str = "us-east-1"
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_session_token: str = ""
+    iot_dynamodb_table: str = "TrafficLightData"
+    iot_dynamodb_junction_key: str = "deviceId"
+    iot_dynamodb_sort_key: str = "timestamp"
+    iot_dynamodb_timestamp_field: str = "timestamp"
+    iot_dynamodb_junction_id: str = "ESP8266-A4CF12F38"
+    iot_dynamodb_scan_limit: int = 200
+
+    # Background sync loop (DynamoDB -> Firestore)
+    iot_junction_sync_enabled: bool = True
+    iot_junction_poll_interval_sec: int = 5
+    iot_junction_firestore_sync_enabled: bool = True
+    iot_junction_history_enabled: bool = True
+
+    # Signal transition behavior for non-emergency lane switching
+    iot_signal_yellow_seconds: int = 2
     
     # --- Video Ingestion ---
     default_fps: int = 30

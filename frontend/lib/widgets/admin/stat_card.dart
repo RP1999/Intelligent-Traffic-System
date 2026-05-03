@@ -10,6 +10,7 @@ class StatCard extends StatelessWidget {
   final bool isLoading;
   final String? trend;
   final bool? isPositiveTrend;
+  final String? subtitle;
 
   const StatCard({
     super.key,
@@ -20,6 +21,7 @@ class StatCard extends StatelessWidget {
     this.isLoading = false,
     this.trend,
     this.isPositiveTrend,
+    this.subtitle,
   });
 
   @override
@@ -61,11 +63,16 @@ class StatCard extends StatelessWidget {
           if (isLoading)
             _buildLoadingState()
           else ...[
-            Text(
-              value,
-              style: AppTypography.h2.copyWith(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: AppTypography.h2.copyWith(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
               ),
             ),
             const SizedBox(height: 4),
@@ -75,6 +82,17 @@ class StatCard extends StatelessWidget {
                 color: AppColors.textSecondary,
               ),
             ),
+            if (subtitle != null) ...[  
+              const SizedBox(height: 2),
+              Text(
+                subtitle!,
+                style: AppTypography.caption.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ],
         ],
       ),

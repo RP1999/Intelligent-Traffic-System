@@ -1,0 +1,72 @@
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs and DB
+*.log
+*.sqlite
+*.db
+
+# Firebase service account (secrets)
+firebase-service-account.json
+
+# Training outputs and models
+runs/
+models/
+*.pt
+*.onnx
+
+# Video and large datasets
+data/videos/
+data/plates/
+
+# IDE files
+.idea/
+
+# Environments
+.env
+
+# Coverage
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Misc
+*.bak
+*.swp
+
+# Node modules (if any front-end tooling)
+node_modules/
+
+# Flutter build artifacts
+build/
+.flutter-plugins
+.flutter-plugins-deps
+.packages
+.pub-cache/
+.pub/
+
+# Windows thumbnail cache
+Thumbs.db
+
+# Secrets
+secrets.json
+
+plan/
+
+*.mp3
+*.mp4
+*.jpg

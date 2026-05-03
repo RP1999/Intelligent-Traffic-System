@@ -1,4 +1,4 @@
-  import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
@@ -156,7 +156,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  driver.driverId,
+                  driver.plateNumber ?? driver.driverId,
                   style: AppTypography.bodyMedium.copyWith(
                     color: Colors.white.withOpacity(0.8),
                   ),
@@ -175,7 +175,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 _buildProfileRow(
                   Icons.credit_card,
                   'License Plate',
-                  driver.driverId,
+                  driver.plateNumber ?? driver.driverId,
                 ),
                 const SizedBox(height: 16),
                 _buildProfileRow(
@@ -254,22 +254,63 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             ),
             const SizedBox(height: 24),
             
-            // Score display
-            Center(
-              child: Column(
-                children: [
-                  _buildLargeScoreCircle(driver.currentScore, driver.riskLevel),
-                  const SizedBox(height: 12),
-                  Text(
-                    'LiveSafe Score',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+            // Scores display — Safety + Risk side by side
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Driver Safety Score (personal violation-based)
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildLargeScoreCircle(driver.currentScore, driver.riskLevel),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Safety Score',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _buildRiskBadge(driver.riskLevel),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Higher = Safer',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  _buildRiskBadge(driver.riskLevel),
-                ],
-              ),
+                ),
+                // Risk Prediction Score (accident risk)
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildRiskScoreCircle(driver.riskScore, driver.riskLevelPrediction),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Risk Score',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _buildRiskPredictionBadge(driver.riskLevelPrediction),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Accident Prediction',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             
             const SizedBox(height: 24),
@@ -287,7 +328,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                   AppColors.warning,
                 ),
                 _buildStatColumn(
-                  '\$${driver.totalFines.toStringAsFixed(0)}',
+                  'LKR ${driver.totalFines.toStringAsFixed(0)}',
                   'Total Fines',
                   Icons.attach_money,
                   AppColors.error,
@@ -355,6 +396,91 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildRiskScoreCircle(double? riskScore, String? riskLevel) {
+    final score = riskScore?.round() ?? 0;
+    final color = _getRiskPredictionColor(riskLevel);
+    final hasData = riskScore != null;
+
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: hasData
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [color, color.withOpacity(0.5)],
+              )
+            : null,
+        color: hasData ? null : AppColors.border.withOpacity(0.3),
+        boxShadow: hasData
+            ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 20, spreadRadius: 4)]
+            : null,
+      ),
+      child: Center(
+        child: Text(
+          hasData ? score.toString() : 'N/A',
+          style: AppTypography.h1.copyWith(
+            color: Colors.white,
+            fontSize: hasData ? 48 : 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRiskPredictionBadge(String? riskLevel) {
+    if (riskLevel == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.border.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          'NO DATA',
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+    final color = _getRiskPredictionColor(riskLevel);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        riskLevel.toUpperCase(),
+        style: AppTypography.labelMedium.copyWith(
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Color _getRiskPredictionColor(String? level) {
+    switch (level?.toUpperCase()) {
+      case 'CRITICAL':
+        return AppColors.error;
+      case 'HIGH':
+        return Colors.deepOrange;
+      case 'MEDIUM':
+        return AppColors.warning;
+      case 'LOW':
+        return AppColors.success;
+      default:
+        return AppColors.textSecondary;
+    }
   }
 
   Widget _buildStatColumn(
@@ -564,7 +690,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '\$${violation.fineAmount.toStringAsFixed(0)}',
+                      'LKR ${violation.fineAmount.toStringAsFixed(0)}',
                       style: AppTypography.labelLarge.copyWith(
                         color: AppColors.error,
                         fontWeight: FontWeight.bold,
@@ -601,6 +727,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
   Color _getViolationColor(String type) {
     switch (type.toLowerCase()) {
       case 'red_light':
+      case 'wrong_way':
         return AppColors.error;
       case 'speeding':
         return AppColors.warning;
@@ -621,6 +748,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         return Icons.traffic;
       case 'speeding':
         return Icons.speed;
+      case 'wrong_way':
+        return Icons.wrong_location;
       case 'parking':
       case 'no_parking':
         return Icons.local_parking;
@@ -646,6 +775,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         return 'Lane Weaving';
       case 'lane_drift':
         return 'Lane Drift';
+      case 'wrong_way':
+        return 'Wrong Way Driving';
       default:
         return type.replaceAll('_', ' ').toUpperCase();
     }

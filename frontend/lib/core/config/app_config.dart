@@ -1,20 +1,52 @@
+import 'package:flutter/foundation.dart';
+
 /// App configuration constants
 class AppConfig {
   AppConfig._();
 
   // ============== API CONFIGURATION ==============
+
+  /// Optional override: pass via --dart-define=API_BASE_URL=http://HOST_IP:8000
+  static const String _apiBaseUrlFromEnv = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
+
+  /// Optional override: pass via --dart-define=VIDEO_BASE_URL=http://HOST_IP:8000
+  static const String _videoBaseUrlFromEnv = String.fromEnvironment(
+    'VIDEO_BASE_URL',
+    defaultValue: '',
+  );
   
-  /// Base URL for the FastAPI backend (data APIs)
-  /// Using localhost to match the frontend origin for CORS
-  static const String apiBaseUrl = 'http://localhost:8000';
+  /// Base URL for FastAPI backend (data APIs).
+  ///
+  /// Defaults:
+  /// - Web/Desktop/iOS simulator: localhost
+  /// - Android emulator: 10.0.2.2 (maps to host machine localhost)
+  static String get apiBaseUrl {
+    if (_apiBaseUrlFromEnv.isNotEmpty) {
+      return _apiBaseUrlFromEnv;
+    }
+    if (kIsWeb) {
+      return 'http://localhost:8000';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8000';
+    }
+    return 'http://localhost:8000';
+  }
   
-  /// Base URL for video-related endpoints
-  /// Uses 'localhost' instead of '127.0.0.1' to bypass browser's 6-connection limit
-  /// Browser treats localhost and 127.0.0.1 as different origins = separate connection pools
-  static const String videoBaseUrl = 'http://localhost:8000';
+  /// Base URL for video-related endpoints.
+  /// Falls back to API base URL when not explicitly overridden.
+  static String get videoBaseUrl {
+    if (_videoBaseUrlFromEnv.isNotEmpty) {
+      return _videoBaseUrlFromEnv;
+    }
+    return apiBaseUrl;
+  }
   
   /// Video stream endpoint (MJPEG stream with detection overlay)
-  static const String videoStreamUrl = '$videoBaseUrl/video/stream';
+  static String get videoStreamUrl => '$videoBaseUrl/video/stream';
   
   /// API timeout duration
   static const Duration apiTimeout = Duration(seconds: 30);

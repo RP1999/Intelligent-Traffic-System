@@ -108,7 +108,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
         children: [
           // Sidebar
           AdminSidebar(
-            selectedIndex: 3, // Audit Logs
+            selectedIndex: 5, // Audit Logs
             onItemSelected: (index) => _handleNavigation(context, index),
           ),
           
@@ -146,13 +146,22 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       case 2: // Violations
         Navigator.of(context).pushReplacementNamed('/admin/violations');
         break;
-      case 3: // Audit Logs - already here
+      case 3: // Drivers
+        Navigator.of(context).pushReplacementNamed('/admin/drivers');
         break;
-      case 4: // Settings
+      case 4: // Analytics
+        Navigator.of(context).pushReplacementNamed('/admin/analytics');
+        break;
+      case 5: // Audit Logs - already here
+        break;
+      case 6: // Risk Analytics
+        Navigator.of(context).pushReplacementNamed('/admin/risk');
+        break;
+      case 7: // Settings
         Navigator.of(context).pushReplacementNamed('/admin/settings');
         break;
-      case 5: // Logout
-        _handleLogout();
+      case 8: // IoT Junction
+        Navigator.of(context).pushReplacementNamed('/admin/iot-junction');
         break;
     }
   }
@@ -636,7 +645,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
 }
 
 class AuditLogEntry {
-  final int id;
+  final String id;
   final String adminUsername;
   final String action;
   final String? details;
@@ -654,7 +663,7 @@ class AuditLogEntry {
   
   factory AuditLogEntry.fromJson(Map<String, dynamic> json) {
     return AuditLogEntry(
-      id: json['id'],
+      id: json['id'].toString(),
       adminUsername: json['admin_username'] ?? 'Unknown',
       action: json['action'] ?? '',
       details: json['details'],

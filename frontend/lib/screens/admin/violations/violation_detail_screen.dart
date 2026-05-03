@@ -39,17 +39,23 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
         actions: [
           Consumer<ViolationsProvider>(
             builder: (context, provider, _) {
-              if (provider.selectedViolation == null) return const SizedBox();
+              final violation = provider.selectedViolation;
+              if (violation == null) return const SizedBox();
+              // Hide buttons if already verified, dismissed, or paid
+              final status = violation.status.toLowerCase();
+              if (status == 'verified' || status == 'dismissed' || status == 'paid') {
+                return const SizedBox();
+              }
               return Row(
                 children: [
                   TextButton.icon(
-                    onPressed: () => _verifyViolation(provider.selectedViolation!),
+                    onPressed: () => _verifyViolation(violation),
                     icon: const Icon(Icons.check_circle, color: AppColors.success),
                     label: const Text('Verify', style: TextStyle(color: AppColors.success)),
                   ),
                   const SizedBox(width: 8),
                   TextButton.icon(
-                    onPressed: () => _dismissViolation(provider.selectedViolation!),
+                    onPressed: () => _dismissViolation(violation),
                     icon: const Icon(Icons.cancel, color: AppColors.error),
                     label: const Text('Dismiss', style: TextStyle(color: AppColors.error)),
                   ),
@@ -186,7 +192,7 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Image.network(
-                            '${AppConfig.apiBaseUrl}/snapshots/${violation.snapshotPath}',
+                            '${AppConfig.apiBaseUrl}/evidence/${violation.snapshotPath}',
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
                               return _buildPlaceholderImage('Snapshot not available');
@@ -205,38 +211,6 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                           ),
                         )
                       : _buildPlaceholderImage('No snapshot available'),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Cropped Plate Image
-                Text(
-                  'License Plate Crop',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 120,
-                  width: 280,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: violation.evidencePath != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            '${AppConfig.apiBaseUrl}/evidence/${violation.evidencePath}',
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildPlaceholderImage('Plate image not available');
-                            },
-                          ),
-                        )
-                      : _buildPlaceholderImage('No plate image'),
                 ),
                 
                 const SizedBox(height: 24),
@@ -381,18 +355,50 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
             ),
           ),
           
-          // Fine details
+          // Fine details - use dynamic breakdown if available
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                _buildFineRow('Base Fine', violation.fineAmount * 0.7),
-                const SizedBox(height: 12),
-                _buildFineRow('Processing Fee', violation.fineAmount * 0.1),
-                const SizedBox(height: 12),
-                _buildFineRow('Admin Fee', violation.fineAmount * 0.1),
-                const SizedBox(height: 12),
-                _buildFineRow('Impact Score Adjustment', violation.fineAmount * 0.1),
+                if (violation.fineBreakdown != null && violation.fineBreakdown!.hasDynamicComponents) ...[
+                  // Dynamic fine breakdown (parking violations)
+                  _buildFineRow('Base Penalty', violation.fineBreakdown!.basePenalty),
+                  const SizedBox(height: 12),
+                  _buildFineRow('Duration Penalty', violation.fineBreakdown!.durationPenalty),
+                  const SizedBox(height: 12),
+                  _buildFineRow(
+                    'Traffic Impact (${violation.fineBreakdown!.trafficImpactCount} vehicles)',
+                    violation.fineBreakdown!.trafficImpactPenalty,
+                  ),
+                  if (violation.fineBreakdown!.formula != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Formula: ${violation.fineBreakdown!.formula}',
+                        style: AppTypography.caption.copyWith(color: AppColors.primary),
+                      ),
+                    ),
+                  ],
+                ] else if (violation.fineBreakdown != null) ...[
+                  // Breakdown available but no dynamic components (base-only fine)
+                  _buildFineRow('Base Penalty', violation.fineBreakdown!.basePenalty),
+                ] else ...[
+                  // No breakdown stored — show as fixed statutory fine
+                  _buildFineRow('Statutory Fine', violation.fineAmount),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Fixed penalty as per traffic regulations',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
                 
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
@@ -408,7 +414,7 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
                       style: AppTypography.h4,
                     ),
                     Text(
-                      '\$${violation.fineAmount.toStringAsFixed(2)}',
+                      'LKR ${violation.fineAmount.toStringAsFixed(0)}',
                       style: AppTypography.h3.copyWith(
                         color: AppColors.primary,
                       ),
@@ -466,7 +472,7 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
           ),
         ),
         Text(
-          '\$${amount.toStringAsFixed(2)}',
+          'LKR ${amount.toStringAsFixed(0)}',
           style: AppTypography.bodyMedium,
         ),
       ],
@@ -615,13 +621,21 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
     );
     
     if (confirmed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Violation verified successfully'),
-          backgroundColor: AppColors.success,
-        ),
+      final success = await context.read<ViolationsProvider>().updateViolationStatus(
+        violation.violationId,
+        'verified',
       );
-      Navigator.of(context).pop();
+      
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Violation verified successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        // Reload the violation details
+        context.read<ViolationsProvider>().loadViolationDetail(violation.violationId);
+      }
     }
   }
 
@@ -632,7 +646,7 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
         backgroundColor: AppColors.surface,
         title: const Text('Dismiss Violation'),
         content: Text(
-          'Are you sure you want to dismiss this violation? This indicates the AI made an error.\n\nViolation: ${violation.licensePlate ?? violation.driverId}',
+          'Are you sure you want to dismiss this violation? This indicates the AI made an error.\\n\\nViolation: ${violation.licensePlate ?? violation.driverId}',
         ),
         actions: [
           TextButton(
@@ -651,8 +665,9 @@ class _ViolationDetailScreenState extends State<ViolationDetailScreen> {
     );
     
     if (confirmed == true && mounted) {
-      final success = await context.read<ViolationsProvider>().deleteViolation(
+      final success = await context.read<ViolationsProvider>().updateViolationStatus(
         violation.violationId,
+        'dismissed',
       );
       
       if (success && mounted) {

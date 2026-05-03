@@ -6,6 +6,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../../providers/admin/analytics_provider.dart';
 import '../../../widgets/admin/admin_sidebar.dart';
 import '../../../widgets/common/loading_widget.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_endpoints.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -15,12 +17,25 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  final ApiClient _apiClient = ApiClient();
+  Map<String, dynamic>? _junctionScore;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AnalyticsProvider>().loadAllAnalytics();
+      _loadJunctionScore();
     });
+  }
+
+  Future<void> _loadJunctionScore() async {
+    try {
+      final response = await _apiClient.get(ApiEndpoints.junctionScore);
+      if (mounted && response.success && response.data != null) {
+        setState(() => _junctionScore = response.data);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -53,6 +68,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
+  String _formatNumber(double value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      final formatted = value.toStringAsFixed(0);
+      final result = StringBuffer();
+      for (int i = 0; i < formatted.length; i++) {
+        if (i > 0 && (formatted.length - i) % 3 == 0) result.write(',');
+        result.write(formatted[i]);
+      }
+      return result.toString();
+    }
+    return value.toStringAsFixed(0);
+  }
+
   void _handleNavigation(int index) {
     switch (index) {
       case 0:
@@ -74,7 +104,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         Navigator.of(context).pushReplacementNamed('/admin/logs');
         break;
       case 6:
+        Navigator.of(context).pushReplacementNamed('/admin/risk');
+        break;
+      case 7:
         Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+      case 8:
+        Navigator.of(context).pushReplacementNamed('/admin/iot-junction');
         break;
     }
   }
@@ -165,6 +201,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           child: Row(
             children: [
               Expanded(
+                child: _buildJunctionSafetyCard(),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: _buildStatCard(
                   'Violations Today',
                   stats.violationsToday.toString(),
@@ -184,9 +224,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildStatCard(
-                  'Avg Risk Score',
+                  'Avg Driver Risk',
                   '${stats.averageRiskScore.toStringAsFixed(1)}%',
-                  Icons.speed,
+                  Icons.warning_amber,
                   stats.averageRiskScore > 50 ? AppColors.error : AppColors.success,
                 ),
               ),
@@ -194,7 +234,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               Expanded(
                 child: _buildStatCard(
                   'Pending Fines',
-                  '\$${stats.pendingFines.toStringAsFixed(0)}',
+                  'LKR ${_formatNumber(stats.pendingFines)}',
                   Icons.attach_money,
                   AppColors.primary,
                 ),
@@ -203,6 +243,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildJunctionSafetyCard() {
+    final score = _junctionScore?['current_score'] ?? 0;
+    final safetyColor = _junctionScore?['safety_color'] ?? 'GREEN';
+    Color color;
+    // Match proposal thresholds: Green(>=70), Yellow(>=40), Red(<40)
+    if (score >= 70) {
+      color = AppColors.success;
+    } else if (score >= 40) {
+      color = AppColors.warning;
+    } else {
+      color = AppColors.error;
+    }
+    return _buildStatCard(
+      'Junction Safety ($safetyColor)',
+      '$score%',
+      Icons.shield,
+      color,
     );
   }
 
@@ -242,10 +302,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: AppTypography.h3.copyWith(
-                    fontWeight: FontWeight.bold,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: AppTypography.h3.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -504,12 +569,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
 
     final colors = {
-      'red_light': AppColors.error,
-      'speeding': AppColors.warning,
-      'parking': AppColors.info,
-      'no_parking': AppColors.info,
-      'lane_weaving': AppColors.riskMedium,
-      'lane_drift': AppColors.riskHigh,
+      'red_light': const Color(0xFFEF5350),      // red
+      'speeding': const Color(0xFFFFA726),        // orange
+      'parking_no_parking': const Color(0xFF42A5F5), // blue
+      'wrong_way': const Color(0xFFAB47BC),       // purple
+      'lane_weaving': const Color(0xFFFFEE58),    // yellow
     };
 
     final sections = distribution.entries.map((entry) {
@@ -677,7 +741,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        hotspot.location,
+                        _formatHotspotLocation(hotspot.location),
                         style: AppTypography.labelMedium.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -709,7 +773,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '\$${hotspot.totalFines.toStringAsFixed(0)}',
+                          'LKR ${hotspot.totalFines.toStringAsFixed(0)}',
                           style: AppTypography.h4.copyWith(color: AppColors.error),
                         ),
                         Text(
@@ -752,21 +816,39 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
+  String _formatHotspotLocation(String location) {
+    // Legacy: old records stored zone:zone_id format
+    if (location.startsWith('zone:')) {
+      final zoneId = location.substring(5).trim();
+      // Try to make it readable: zone_1 -> Zone 1
+      return 'Zone ${zoneId.replaceAll(RegExp(r'[^0-9]'), '').isEmpty ? zoneId : zoneId.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ')}';
+    }
+    if (location.isEmpty || location.toLowerCase() == 'unknown') {
+      return 'Unknown Location';
+    }
+    // All other values (including admin zone names like "No Parking Zone 1"
+    // and "Traffic Camera") are stored as-is — just return them directly.
+    return location;
+  }
+
   String _formatTypeName(String type) {
     switch (type.toLowerCase()) {
       case 'red_light':
         return 'Red Light';
       case 'speeding':
         return 'Speeding';
-      case 'parking':
-      case 'no_parking':
+      case 'parking_no_parking':
+      case 'parking_no_stopping':
+      case 'parking_overtime':
+      case 'parking_handicap':
+      case 'parking_loading':
         return 'Parking';
+      case 'wrong_way':
+        return 'Wrong Way';
       case 'lane_weaving':
         return 'Lane Weaving';
-      case 'lane_drift':
-        return 'Lane Drift';
       default:
-        return type.replaceAll('_', ' ');
+        return type.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
     }
   }
 }

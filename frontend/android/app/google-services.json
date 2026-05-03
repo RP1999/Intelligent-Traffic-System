@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "322850505486",
+    "project_id": "intelligent-traffic-mana-a08ad",
+    "storage_bucket": "intelligent-traffic-mana-a08ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:322850505486:android:1b7b14d93c7d9e5e6f0d5f",
+        "android_client_info": {
+          "package_name": "com.itms.traffic_control_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7yRY658b82bKv25i1B-51B15ZQ_GR5VA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

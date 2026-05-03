@@ -13,19 +13,44 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-import aiosqlite
+from google.cloud.firestore_v1 import FieldFilter
 
 from app.config import get_settings
+from app.db.firestore_client import get_db, Collections
 from app.routers.auth import get_current_admin, UserInfo
 
 settings = get_settings()
 router = APIRouter(prefix="/admin", tags=["Admin Configuration"])
 
-# Database path
-DB_PATH = settings.data_dir.parent / "backend" / "traffic.db"
-
 # Video source for snapshots (can be overridden)
 VIDEO_SOURCE = None
+
+
+def _reload_zones_in_detector():
+    """Reload parking zones from Firestore into the live detection system."""
+    try:
+        from app.routers.video import load_zones_from_db_sync
+        load_zones_from_db_sync()
+    except Exception as e:
+        print(f"[ZONES] Warning: Could not reload zones in detector: {e}")
+
+
+def _coords_to_firestore(coords: List[List[float]]) -> List[dict]:
+    """Convert [[x,y], ...] to [{x:,y:}, ...] — Firestore forbids nested arrays."""
+    return [{"x": p[0], "y": p[1]} for p in coords]
+
+
+def _coords_from_firestore(raw) -> List[List[float]]:
+    """Convert Firestore stored coords back to [[x,y], ...] format."""
+    if isinstance(raw, str):
+        raw = json.loads(raw)
+    if not raw:
+        return []
+    # Already in dict format {x:, y:}
+    if isinstance(raw[0], dict):
+        return [[p["x"], p["y"]] for p in raw]
+    # Legacy nested-array format (shouldn't happen in Firestore, but handle gracefully)
+    return [[float(p[0]), float(p[1])] for p in raw]
 
 
 # =============================================================================
@@ -47,7 +72,7 @@ class ZoneUpdate(BaseModel):
 
 
 class ZoneResponse(BaseModel):
-    id: int
+    id: str
     zone_type: str
     coordinates: List[List[float]]
     label: Optional[str]
@@ -57,7 +82,7 @@ class ZoneResponse(BaseModel):
 
 
 class AuditLogResponse(BaseModel):
-    id: int
+    id: str
     admin_username: str
     action: str
     details: Optional[str]
@@ -72,44 +97,40 @@ class StatsResponse(BaseModel):
     pending_fines: float
 
 
+class StopLineConfig(BaseModel):
+    """Configuration for the red light stop line."""
+    y_position: float = 0.6  # Ratio from top (0-1)
+    x_start: float = 0.0     # Left boundary as ratio (0-1)
+    x_end: float = 0.5       # Right boundary as ratio (0-1) - only main lane
+    active: bool = True
+
+
+class StopLineResponse(BaseModel):
+    y_position: float
+    x_start: float
+    x_end: float
+    active: bool
+    updated_at: str
+
+
 # =============================================================================
 # DATABASE HELPERS
 # =============================================================================
 
 async def ensure_tables():
-    """Ensure required tables exist."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS parking_zones (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                zone_type TEXT NOT NULL,
-                coordinates TEXT NOT NULL,
-                label TEXT,
-                active INTEGER DEFAULT 1,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS audit_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                admin_username TEXT NOT NULL,
-                action TEXT NOT NULL,
-                details TEXT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        await db.commit()
+    """No-op for Firestore — collections are auto-created."""
+    pass
 
 
 async def log_action(username: str, action: str, details: str = None):
     """Log an admin action to the audit trail."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        await db.execute(
-            "INSERT INTO audit_logs (admin_username, action, details) VALUES (?, ?, ?)",
-            (username, action, details)
-        )
-        await db.commit()
+    db = get_db()
+    await db.collection(Collections.AUDIT_LOGS).add({
+        "admin_username": username,
+        "action": action,
+        "details": details,
+        "timestamp": datetime.now().isoformat(),
+    })
 
 
 # =============================================================================
@@ -126,34 +147,27 @@ async def get_zones(
     Returns zone coordinates for drawing on video feed.
     """
     await ensure_tables()
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        if active_only:
-            cursor = await db.execute(
-                "SELECT * FROM parking_zones WHERE active = 1 ORDER BY id"
-            )
-        else:
-            cursor = await db.execute(
-                "SELECT * FROM parking_zones ORDER BY id"
-            )
-        
-        rows = await cursor.fetchall()
-        
-        zones = []
-        for row in rows:
-            zones.append({
-                "id": row["id"],
-                "zone_type": row["zone_type"],
-                "coordinates": json.loads(row["coordinates"]),
-                "label": row["label"],
-                "active": bool(row["active"]),
-                "created_at": str(row["created_at"]),
-                "updated_at": str(row["updated_at"])
-            })
-        
-        return {"zones": zones}
+
+    db = get_db()
+    q = db.collection(Collections.PARKING_ZONES)
+    if active_only:
+        q = q.where(filter=FieldFilter("active", "==", True))
+
+    zones = []
+    async for doc in q.stream():
+        row = doc.to_dict()
+        coords = _coords_from_firestore(row.get("coordinates", []))
+        zones.append({
+            "id": doc.id,
+            "zone_type": row.get("zone_type", ""),
+            "coordinates": coords,
+            "label": row.get("label"),
+            "active": bool(row.get("active", True)),
+            "created_at": str(row.get("created_at", "")),
+            "updated_at": str(row.get("updated_at", "")),
+        })
+
+    return {"zones": zones}
 
 
 @router.post("/zones", response_model=ZoneResponse, summary="Create a new parking zone")
@@ -189,50 +203,43 @@ async def create_zone(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Zone must have at least 3 coordinate points"
         )
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        cursor = await db.execute(
-            """INSERT INTO parking_zones (zone_type, coordinates, label, active)
-               VALUES (?, ?, ?, ?)""",
-            (zone.zone_type, json.dumps(zone.coordinates), zone.label, int(zone.active))
-        )
-        await db.commit()
-        
-        zone_id = cursor.lastrowid
-        
-        # Fetch the created zone
-        cursor = await db.execute(
-            "SELECT * FROM parking_zones WHERE id = ?",
-            (zone_id,)
-        )
-        row = await cursor.fetchone()
-    
+
+    db = get_db()
+    now = datetime.now().isoformat()
+    doc_ref = await db.collection(Collections.PARKING_ZONES).add({
+        "zone_type": zone.zone_type,
+        "coordinates": _coords_to_firestore(zone.coordinates),
+        "label": zone.label,
+        "active": zone.active,
+        "created_at": now,
+        "updated_at": now,
+    })
+    zone_id = doc_ref[1].id if isinstance(doc_ref, tuple) else doc_ref.id
+
     # Log the action
     await log_action(
         user.identifier,
         "zone_create",
         f"Zone ID: {zone_id}, Type: {zone.zone_type}, Label: {zone.label}"
     )
-    
-    # TODO: Update running detector instance
-    # This would notify the YOLO detector to reload zones
-    
+
+    # Immediately reload zones in the detection system
+    _reload_zones_in_detector()
+
     return ZoneResponse(
-        id=row["id"],
-        zone_type=row["zone_type"],
-        coordinates=json.loads(row["coordinates"]),
-        label=row["label"],
-        active=bool(row["active"]),
-        created_at=str(row["created_at"]),
-        updated_at=str(row["updated_at"])
+        id=zone_id,
+        zone_type=zone.zone_type,
+        coordinates=zone.coordinates,
+        label=zone.label,
+        active=zone.active,
+        created_at=now,
+        updated_at=now,
     )
 
 
 @router.put("/zones/{zone_id}", response_model=ZoneResponse, summary="Update a parking zone")
 async def update_zone(
-    zone_id: int,
+    zone_id: str,
     zone: ZoneUpdate,
     user: UserInfo = Depends(get_current_admin)
 ):
@@ -241,91 +248,68 @@ async def update_zone(
     Changes are applied immediately to the detection system.
     """
     await ensure_tables()
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        # Check if zone exists
-        cursor = await db.execute(
-            "SELECT * FROM parking_zones WHERE id = ?",
-            (zone_id,)
+
+    db = get_db()
+    doc_ref = db.collection(Collections.PARKING_ZONES).document(zone_id)
+    doc = await doc_ref.get()
+
+    if not doc.exists:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Zone not found"
         )
-        existing = await cursor.fetchone()
-        
-        if not existing:
+
+    updates = {"updated_at": datetime.now().isoformat()}
+
+    if zone.zone_type is not None:
+        if zone.zone_type not in ['red', 'yellow']:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Zone not found"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="zone_type must be 'red' or 'yellow'"
             )
-        
-        # Build update query dynamically
-        updates = []
-        params = []
-        
-        if zone.zone_type is not None:
-            if zone.zone_type not in ['red', 'yellow']:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="zone_type must be 'red' or 'yellow'"
-                )
-            updates.append("zone_type = ?")
-            params.append(zone.zone_type)
-        
-        if zone.coordinates is not None:
-            if len(zone.coordinates) < 3:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Zone must have at least 3 coordinate points"
-                )
-            updates.append("coordinates = ?")
-            params.append(json.dumps(zone.coordinates))
-        
-        if zone.label is not None:
-            updates.append("label = ?")
-            params.append(zone.label)
-        
-        if zone.active is not None:
-            updates.append("active = ?")
-            params.append(int(zone.active))
-        
-        if updates:
-            updates.append("updated_at = CURRENT_TIMESTAMP")
-            params.append(zone_id)
-            
-            await db.execute(
-                f"UPDATE parking_zones SET {', '.join(updates)} WHERE id = ?",
-                params
+        updates["zone_type"] = zone.zone_type
+
+    if zone.coordinates is not None:
+        if len(zone.coordinates) < 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Zone must have at least 3 coordinate points"
             )
-            await db.commit()
-        
-        # Fetch updated zone
-        cursor = await db.execute(
-            "SELECT * FROM parking_zones WHERE id = ?",
-            (zone_id,)
-        )
-        row = await cursor.fetchone()
-    
-    # Log the action
-    await log_action(
-        user.identifier,
-        "Updated Zone",
-        f"Zone ID: {zone_id}"
-    )
-    
+        updates["coordinates"] = _coords_to_firestore(zone.coordinates)
+
+    if zone.label is not None:
+        updates["label"] = zone.label
+
+    if zone.active is not None:
+        updates["active"] = zone.active
+
+    await doc_ref.update(updates)
+
+    # Fetch updated zone
+    updated_doc = await doc_ref.get()
+    row = updated_doc.to_dict()
+
+    await log_action(user.identifier, "Updated Zone", f"Zone ID: {zone_id}")
+
+    # Immediately reload zones in the detection system
+    _reload_zones_in_detector()
+
+    coords = _coords_from_firestore(row.get("coordinates", []))
+
     return ZoneResponse(
-        id=row["id"],
-        zone_type=row["zone_type"],
-        coordinates=json.loads(row["coordinates"]),
-        label=row["label"],
-        active=bool(row["active"]),
-        created_at=str(row["created_at"]),
-        updated_at=str(row["updated_at"])
+        id=zone_id,
+        zone_type=row.get("zone_type", ""),
+        coordinates=coords,
+        label=row.get("label"),
+        active=bool(row.get("active", True)),
+        created_at=str(row.get("created_at", "")),
+        updated_at=str(row.get("updated_at", "")),
     )
 
 
 @router.delete("/zones/{zone_id}", summary="Delete a parking zone")
 async def delete_zone(
-    zone_id: int,
+    zone_id: str,
     user: UserInfo = Depends(get_current_admin)
 ):
     """
@@ -333,31 +317,129 @@ async def delete_zone(
     The zone will be immediately removed from detection.
     """
     await ensure_tables()
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        cursor = await db.execute(
-            "SELECT id FROM parking_zones WHERE id = ?",
-            (zone_id,)
+
+    db = get_db()
+    doc = await db.collection(Collections.PARKING_ZONES).document(zone_id).get()
+
+    if not doc.exists:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Zone not found"
         )
-        existing = await cursor.fetchone()
-        
-        if not existing:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Zone not found"
-            )
-        
-        await db.execute("DELETE FROM parking_zones WHERE id = ?", (zone_id,))
-        await db.commit()
+
+    await db.collection(Collections.PARKING_ZONES).document(zone_id).delete()
+
+    await log_action(user.identifier, "Deleted Zone", f"Zone ID: {zone_id}")
+
+    # Immediately reload zones in the detection system
+    _reload_zones_in_detector()
+
+    return {"message": "Zone deleted successfully", "zone_id": zone_id}
+
+
+# =============================================================================
+# STOP LINE CONFIGURATION ENDPOINTS
+# =============================================================================
+
+# Default stop line config document ID
+STOP_LINE_DOC_ID = "main_stop_line"
+
+
+def _reload_stop_line_in_detector():
+    """Reload stop line configuration into the live detection system."""
+    try:
+        from app.detection.yolo_detector import load_stop_line_config
+        load_stop_line_config()
+    except Exception as e:
+        print(f"[STOP_LINE] Warning: Could not reload stop line in detector: {e}")
+
+
+@router.get("/stop-line", response_model=StopLineResponse, summary="Get stop line configuration")
+async def get_stop_line_config(
+    user: UserInfo = Depends(get_current_admin)
+):
+    """
+    Get the current red light stop line configuration.
+    Defines the y position and x boundaries for the monitored lane.
+    """
+    db = get_db()
+    doc = await db.collection(Collections.CONFIG).document(STOP_LINE_DOC_ID).get()
     
-    # Log the action
+    if doc.exists:
+        data = doc.to_dict()
+        return StopLineResponse(
+            y_position=data.get("y_position", 0.6),
+            x_start=data.get("x_start", 0.0),
+            x_end=data.get("x_end", 1.0),
+            active=data.get("active", True),
+            updated_at=str(data.get("updated_at", "")),
+        )
+    else:
+        # Return defaults
+        return StopLineResponse(
+            y_position=0.6,
+            x_start=0.0,
+            x_end=1.0,
+            active=True,
+            updated_at="",
+        )
+
+
+@router.put("/stop-line", response_model=StopLineResponse, summary="Update stop line configuration")
+async def update_stop_line_config(
+    config: StopLineConfig,
+    user: UserInfo = Depends(get_current_admin)
+):
+    """
+    Update the red light stop line configuration.
+    
+    - y_position: Vertical position as ratio (0=top, 1=bottom). Default 0.6.
+    - x_start: Left boundary as ratio (0=left edge). Default 0.0.
+    - x_end: Right boundary as ratio (1=right edge). Default 0.5 for main lane only.
+    - active: Whether red light detection is enabled.
+    
+    Only vehicles within the x_start to x_end horizontal range will be
+    checked for red light violations. This prevents false positives from
+    vehicles in opposite lanes.
+    """
+    db = get_db()
+    
+    # Validate ranges
+    if not (0 <= config.y_position <= 1):
+        raise HTTPException(status_code=400, detail="y_position must be between 0 and 1")
+    if not (0 <= config.x_start <= 1):
+        raise HTTPException(status_code=400, detail="x_start must be between 0 and 1")
+    if not (0 <= config.x_end <= 1):
+        raise HTTPException(status_code=400, detail="x_end must be between 0 and 1")
+    if config.x_start >= config.x_end:
+        raise HTTPException(status_code=400, detail="x_start must be less than x_end")
+    
+    now = datetime.now().isoformat()
+    
+    await db.collection(Collections.CONFIG).document(STOP_LINE_DOC_ID).set({
+        "y_position": config.y_position,
+        "x_start": config.x_start,
+        "x_end": config.x_end,
+        "active": config.active,
+        "updated_at": now,
+    })
+    
     await log_action(
-        user.identifier,
-        "Deleted Zone",
-        f"Zone ID: {zone_id}"
+        user.identifier, 
+        "Updated Stop Line", 
+        f"Y: {config.y_position:.2f}, X: {config.x_start:.2f}-{config.x_end:.2f}"
     )
     
-    return {"message": "Zone deleted successfully", "zone_id": zone_id}
+    # Reload in detector
+    _reload_stop_line_in_detector()
+    
+    return StopLineResponse(
+        y_position=config.y_position,
+        x_start=config.x_start,
+        x_end=config.x_end,
+        active=config.active,
+        updated_at=now,
+    )
 
 
 # =============================================================================
@@ -376,43 +458,34 @@ async def get_audit_logs(
     Returns most recent logs first.
     """
     await ensure_tables()
-    
-    # Calculate offset from page if provided
+
     actual_offset = (page - 1) * limit if page > 1 else offset
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        # Get total count for pagination
-        count_cursor = await db.execute("SELECT COUNT(*) FROM audit_logs")
-        count_row = await count_cursor.fetchone()
-        total_count = count_row[0] if count_row else 0
-        total_pages = max(1, (total_count + limit - 1) // limit)
-        
-        cursor = await db.execute(
-            """SELECT * FROM audit_logs 
-               ORDER BY timestamp DESC 
-               LIMIT ? OFFSET ?""",
-            (limit, actual_offset)
-        )
-        rows = await cursor.fetchall()
-        
-        logs = []
-        for row in rows:
-            logs.append({
-                "id": row["id"],
-                "admin_username": row["admin_username"],
-                "action": row["action"],
-                "details": row["details"],
-                "timestamp": str(row["timestamp"])
-            })
-        
-        return {
-            "logs": logs,
-            "total_count": total_count,
-            "total_pages": total_pages,
-            "current_page": page,
-        }
+
+    db = get_db()
+
+    # Get all audit logs ordered by timestamp desc
+    all_logs = []
+    q = db.collection(Collections.AUDIT_LOGS).order_by("timestamp", direction="DESCENDING")
+    async for doc in q.stream():
+        row = doc.to_dict()
+        all_logs.append({
+            "id": doc.id,
+            "admin_username": row.get("admin_username", ""),
+            "action": row.get("action", ""),
+            "details": row.get("details"),
+            "timestamp": str(row.get("timestamp", "")),
+        })
+
+    total_count = len(all_logs)
+    total_pages = max(1, (total_count + limit - 1) // limit)
+    page_logs = all_logs[actual_offset: actual_offset + limit]
+
+    return {
+        "logs": page_logs,
+        "total_count": total_count,
+        "total_pages": total_pages,
+        "current_page": page,
+    }
 
 
 # =============================================================================
@@ -505,55 +578,104 @@ async def get_dashboard_stats(
     Get statistics for the admin dashboard.
     """
     await ensure_tables()
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        # Total zones
-        cursor = await db.execute("SELECT COUNT(*) FROM parking_zones")
-        total_zones = (await cursor.fetchone())[0]
-        
-        # Active zones
-        cursor = await db.execute("SELECT COUNT(*) FROM parking_zones WHERE active = 1")
-        active_zones = (await cursor.fetchone())[0]
-        
-        # Today's violations - use timestamp column that exists
+
+    db = get_db()
+
+    # Total zones
+    total_zones = 0
+    active_zones = 0
+    async for doc in db.collection(Collections.PARKING_ZONES).stream():
+        total_zones += 1
+        if doc.to_dict().get("active", True):
+            active_zones += 1
+
+    # Today's violations
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_violations = 0
+    try:
+        q = db.collection(Collections.VIOLATIONS).where(
+            filter=FieldFilter("timestamp", ">=", today)
+        )
+        async for _ in q.stream():
+            today_violations += 1
+    except Exception:
         today_violations = 0
-        try:
-            cursor = await db.execute("""
-                SELECT COUNT(*) FROM violations 
-                WHERE date(start_time, 'unixepoch') = date('now')
-            """)
-            today_violations = (await cursor.fetchone())[0]
-        except Exception:
-            # Fallback if violations table has different schema or doesn't exist
-            today_violations = 0
-        
-        # Total drivers
-        total_drivers = 0
-        try:
-            cursor = await db.execute("SELECT COUNT(*) FROM drivers")
-            total_drivers = (await cursor.fetchone())[0]
-        except Exception:
-            try:
-                cursor = await db.execute("SELECT COUNT(*) FROM driver_users")
-                total_drivers = (await cursor.fetchone())[0]
-            except Exception:
-                total_drivers = 0
-        
-        # Pending fines (from violations)
+
+    # Total drivers
+    total_drivers = 0
+    async for _ in db.collection(Collections.DRIVERS).stream():
+        total_drivers += 1
+
+    # Pending fines
+    pending_fines = 0.0
+    try:
+        q = db.collection(Collections.VIOLATIONS).where(
+            filter=FieldFilter("status", "==", "pending")
+        )
+        async for doc in q.stream():
+            pending_fines += doc.to_dict().get("fine_amount", 0) or 0
+    except Exception:
         pending_fines = 0.0
-        try:
-            cursor = await db.execute("""
-                SELECT COALESCE(SUM(fine_amount), 0) FROM violations 
-                WHERE status = 'pending'
-            """)
-            pending_fines = (await cursor.fetchone())[0] or 0.0
-        except Exception:
-            pending_fines = 0.0
-    
+
     return StatsResponse(
         total_zones=total_zones,
         active_zones=active_zones,
         total_violations_today=today_violations,
         total_drivers=total_drivers,
-        pending_fines=pending_fines
+        pending_fines=pending_fines,
     )
+
+
+# =============================================================================
+# TTS TEST ENDPOINT
+# =============================================================================
+
+@router.post("/tts/test", summary="Test TTS audio playback")
+async def test_tts_playback(
+    message: str = Query(default="Testing audio playback system.", description="Message to speak"),
+    user: UserInfo = Depends(get_current_admin),
+):
+    """
+    Test the TTS (Text-to-Speech) system by generating and playing an audio message.
+    This helps diagnose audio playback issues.
+    """
+    from app.tts.tts_service import get_tts_service, is_tts_paused, WARNINGS_DIR
+    
+    tts = get_tts_service()
+    
+    # Get TTS status
+    status_info = {
+        "tts_paused": is_tts_paused(),
+        "edge_tts_available": tts._edge_tts_available,
+        "pyttsx3_available": tts._pyttsx3_available,
+        "warnings_dir": str(WARNINGS_DIR),
+        "warnings_count": tts.get_warning_count(),
+    }
+    
+    # Try to generate and play
+    import time
+    timestamp = int(time.time())
+    filename = f"test_audio_{timestamp}"
+    
+    try:
+        filepath = tts.generate_warning(
+            message,
+            filename=filename,
+            play_immediately=True
+        )
+        
+        if filepath:
+            status_info["generated_file"] = str(filepath)
+            status_info["file_size"] = filepath.stat().st_size if filepath.exists() else 0
+            status_info["status"] = "success"
+            status_info["message"] = "Audio generated and playback initiated"
+        else:
+            status_info["status"] = "failed"
+            status_info["message"] = "Failed to generate audio file"
+    except Exception as e:
+        status_info["status"] = "error"
+        status_info["error"] = str(e)
+    
+    await log_action(user.username, "tts_test", f"Tested TTS: {message[:50]}...")
+    
+    return status_info

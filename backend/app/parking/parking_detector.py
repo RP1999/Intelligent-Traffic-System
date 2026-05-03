@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 
 from app.detection.yolo_detector import Detection
+from app.parking.dynamic_fine import calculate_dynamic_fine, FineBreakdown
 
 
 class ZoneType(str, Enum):
@@ -144,7 +145,8 @@ class TrackedVehicle:
 @dataclass
 class ParkingViolation:
     """
-    Represents a parking violation event.
+    Represents a parking violation event with dynamic fine calculation.
+    Fine Formula: Base + (Duration × Rate) + (Traffic_Impact × Multiplier)
     """
     violation_id: str
     track_id: int
@@ -158,6 +160,11 @@ class ParkingViolation:
     snapshot_path: Optional[str] = None
     fine_amount: float = 0.0
     status: str = "active"  # active, resolved, disputed
+    # Dynamic fine breakdown (IT22925572 formula)
+    traffic_impact_count: int = 0
+    base_penalty: float = 0.0
+    duration_penalty: float = 0.0
+    traffic_impact_penalty: float = 0.0
     
     def to_dict(self) -> dict:
         return {
@@ -171,8 +178,16 @@ class ParkingViolation:
             "duration_sec": round(self.duration_sec, 1),
             "license_plate": self.license_plate,
             "snapshot_path": self.snapshot_path,
-            "fine_amount": self.fine_amount,
+            "fine_amount": round(self.fine_amount, 2),
             "status": self.status,
+            # Dynamic fine breakdown (IT22925572 formula)
+            "fine_breakdown": {
+                "base_penalty": round(self.base_penalty, 2),
+                "duration_penalty": round(self.duration_penalty, 2),
+                "traffic_impact_count": self.traffic_impact_count,
+                "traffic_impact_penalty": round(self.traffic_impact_penalty, 2),
+                "formula": "Base + (Duration × Rate) + (Traffic_Impact × Cost)",
+            },
         }
 
 
@@ -289,7 +304,19 @@ class ParkingDetector:
                             violation_key = f"{detection.track_id}_{zone_id}"
                             
                             if violation_key not in self.violations:
-                                # Create new violation
+                                # Count OTHER moving vehicles (traffic impact)
+                                traffic_impact_count = self._count_other_vehicles(
+                                    detections, detection.track_id
+                                )
+                                
+                                # Calculate dynamic fine using IT22925572 formula
+                                fine_breakdown = self._calculate_dynamic_fine(
+                                    zone.zone_type,
+                                    tracked.dwell_time,
+                                    traffic_impact_count
+                                )
+                                
+                                # Create new violation with dynamic fine
                                 violation = ParkingViolation(
                                     violation_id=self._generate_violation_id(),
                                     track_id=detection.track_id,
@@ -298,7 +325,11 @@ class ParkingDetector:
                                     zone_type=zone.zone_type,
                                     start_time=tracked.first_seen,
                                     duration_sec=tracked.dwell_time,
-                                    fine_amount=self._calculate_fine(zone.zone_type),
+                                    fine_amount=fine_breakdown.total_fine,
+                                    traffic_impact_count=traffic_impact_count,
+                                    base_penalty=fine_breakdown.base_penalty,
+                                    duration_penalty=fine_breakdown.duration_penalty,
+                                    traffic_impact_penalty=fine_breakdown.traffic_impact_penalty,
                                 )
                                 
                                 # Save snapshot if frame provided
@@ -314,8 +345,23 @@ class ParkingDetector:
                                 if self.violation_callback:
                                     self.violation_callback(violation)
                             else:
-                                # Update existing violation duration
-                                self.violations[violation_key].duration_sec = tracked.dwell_time
+                                # Update existing violation duration and recalculate fine
+                                existing = self.violations[violation_key]
+                                existing.duration_sec = tracked.dwell_time
+                                
+                                # Recalculate fine with updated duration
+                                traffic_impact_count = self._count_other_vehicles(
+                                    detections, detection.track_id
+                                )
+                                fine_breakdown = self._calculate_dynamic_fine(
+                                    zone.zone_type,
+                                    tracked.dwell_time,
+                                    traffic_impact_count
+                                )
+                                existing.fine_amount = fine_breakdown.total_fine
+                                existing.duration_penalty = fine_breakdown.duration_penalty
+                                existing.traffic_impact_count = traffic_impact_count
+                                existing.traffic_impact_penalty = fine_breakdown.traffic_impact_penalty
                     else:
                         # Start tracking new vehicle in zone
                         self.tracked_vehicles[key] = TrackedVehicle(
@@ -342,16 +388,43 @@ class ParkingDetector:
         
         return new_violations
     
-    def _calculate_fine(self, zone_type: ZoneType) -> float:
-        """Calculate fine amount based on zone type."""
-        fine_map = {
-            ZoneType.NO_PARKING: 50.0,
-            ZoneType.NO_STOPPING: 100.0,
-            ZoneType.LIMITED_PARKING: 30.0,
-            ZoneType.HANDICAP: 200.0,
-            ZoneType.LOADING: 75.0,
-        }
-        return fine_map.get(zone_type, 50.0)
+    def _count_other_vehicles(
+        self,
+        detections: List[Detection],
+        exclude_track_id: int,
+    ) -> int:
+        """
+        Count other moving vehicles in frame (traffic impact).
+        Used for dynamic fine calculation per IT22925572 formula.
+        """
+        count = 0
+        for det in detections:
+            if det.track_id is not None and det.track_id != exclude_track_id:
+                # Count vehicle classes
+                if det.class_name in ['car', 'truck', 'bus', 'motorcycle', 'vehicle']:
+                    count += 1
+        return count
+    
+    def _calculate_dynamic_fine(
+        self,
+        zone_type: ZoneType,
+        duration_sec: float,
+        traffic_impact_count: int,
+    ) -> FineBreakdown:
+        """
+        Calculate dynamic fine using formula:
+        Fine = Base + (Duration × Rate) + (Traffic_Impact × Multiplier)
+        """
+        return calculate_dynamic_fine(
+            zone_type.value,
+            duration_sec,
+            traffic_impact_count,
+        )
+    
+    def _calculate_fine(self, zone_type: ZoneType, duration_sec: float = 0, traffic_impact: int = 0) -> float:
+        """Calculate fine amount (legacy wrapper for backwards compatibility)."""
+        breakdown = self._calculate_dynamic_fine(zone_type, duration_sec, traffic_impact)
+        return breakdown.total_fine
     
     def _save_snapshot(
         self,

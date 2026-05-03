@@ -22,6 +22,12 @@ class DriversProvider extends ChangeNotifier {
   String _sortBy = 'current_score';
   String _sortOrder = 'asc';
 
+  // Risk level filter
+  String _riskFilter = 'all'; // all, excellent, good, fair, poor, critical
+
+  // Registered users filter
+  bool _registeredOnly = true; // Show only registered drivers by default
+
   // Search
   String _searchQuery = '';
 
@@ -39,6 +45,8 @@ class DriversProvider extends ChangeNotifier {
   bool get hasMore => _drivers.length < _total;
   String get sortBy => _sortBy;
   String get sortOrder => _sortOrder;
+  String get riskFilter => _riskFilter;
+  bool get registeredOnly => _registeredOnly;
   Driver? get selectedDriver => _selectedDriver;
   LoadingState get detailState => _detailState;
 
@@ -59,7 +67,16 @@ class DriversProvider extends ChangeNotifier {
         'offset': ((_currentPage - 1) * _pageSize).toString(),
         'sort_by': _sortBy,
         'order': _sortOrder,
+        'registered_only': _registeredOnly.toString(),
       };
+
+      if (_searchQuery.trim().isNotEmpty) {
+        queryParams['search'] = _searchQuery.trim();
+      }
+
+      if (_riskFilter != 'all') {
+        queryParams['risk_level'] = _riskFilter;
+      }
 
       final response = await _apiClient.get(
         ApiEndpoints.allDrivers,
@@ -68,22 +85,11 @@ class DriversProvider extends ChangeNotifier {
 
       if (response.success && response.data != null) {
         final parsed = DriversResponse.fromJson(response.data!);
-        
-        // Apply client-side search filtering
-        var filtered = parsed.drivers;
-        if (_searchQuery.isNotEmpty) {
-          final query = _searchQuery.toLowerCase();
-          filtered = filtered.where((d) {
-            return d.driverId.toLowerCase().contains(query) ||
-                (d.phone?.toLowerCase().contains(query) ?? false) ||
-                (d.name?.toLowerCase().contains(query) ?? false);
-          }).toList();
-        }
 
         if (refresh) {
-          _drivers = filtered;
+          _drivers = parsed.drivers;
         } else {
-          _drivers.addAll(filtered);
+          _drivers.addAll(parsed.drivers);
         }
         _total = parsed.total;
         _state = LoadingState.loaded;
@@ -113,6 +119,24 @@ class DriversProvider extends ChangeNotifier {
   /// Set search query
   void setSearchQuery(String query) {
     _searchQuery = query;
+    loadDrivers(refresh: true);
+  }
+
+  /// Set risk level filter
+  void setRiskFilter(String filter) {
+    _riskFilter = filter;
+    loadDrivers(refresh: true);
+  }
+
+  /// Toggle registered-only filter
+  void toggleRegisteredOnly() {
+    _registeredOnly = !_registeredOnly;
+    loadDrivers(refresh: true);
+  }
+
+  /// Set registered-only filter
+  void setRegisteredOnly(bool value) {
+    _registeredOnly = value;
     loadDrivers(refresh: true);
   }
 
@@ -151,6 +175,13 @@ class DriversProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  /// Reset search query and filters to defaults
+  void resetFilters() {
+    _searchQuery = '';
+    _riskFilter = 'all';
+    _registeredOnly = true;
   }
 
   /// Clear selected driver

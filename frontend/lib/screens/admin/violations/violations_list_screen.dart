@@ -22,6 +22,7 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
   final ScrollController _scrollController = ScrollController();
   String? _selectedStatus;
   String? _selectedType;
+  DateTimeRange? _selectedDateRange;
 
   @override
   void initState() {
@@ -98,7 +99,13 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
         Navigator.of(context).pushReplacementNamed('/admin/logs');
         break;
       case 6:
+        Navigator.of(context).pushReplacementNamed('/admin/risk');
+        break;
+      case 7:
         Navigator.of(context).pushReplacementNamed('/admin/settings');
+        break;
+      case 8:
+        Navigator.of(context).pushReplacementNamed('/admin/iot-junction');
         break;
     }
   }
@@ -210,9 +217,12 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
                   dropdownColor: AppColors.surface,
                   items: const [
                     DropdownMenuItem(value: null, child: Text('All Status')),
+                    DropdownMenuItem(value: 'pending', child: Text('Pending')),
                     DropdownMenuItem(value: 'unpaid', child: Text('Unpaid')),
                     DropdownMenuItem(value: 'paid', child: Text('Paid')),
                     DropdownMenuItem(value: 'disputed', child: Text('Disputed')),
+                    DropdownMenuItem(value: 'verified', child: Text('Verified')),
+                    DropdownMenuItem(value: 'dismissed', child: Text('Dismissed')),
                   ],
                   onChanged: (value) {
                     setState(() => _selectedStatus = value);
@@ -240,15 +250,56 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
                   dropdownColor: AppColors.surface,
                   items: const [
                     DropdownMenuItem(value: null, child: Text('All Types')),
-                    DropdownMenuItem(value: 'red_light', child: Text('Red Light')),
                     DropdownMenuItem(value: 'speeding', child: Text('Speeding')),
-                    DropdownMenuItem(value: 'parking', child: Text('Parking')),
+                    DropdownMenuItem(value: 'parking', child: Text('Parking Violation')),
+                    DropdownMenuItem(value: 'red_light', child: Text('Red Light')),
                     DropdownMenuItem(value: 'lane_weaving', child: Text('Lane Weaving')),
+                    DropdownMenuItem(value: 'wrong_way', child: Text('Wrong Way')),
                   ],
                   onChanged: (value) {
                     setState(() => _selectedType = value);
                     context.read<ViolationsProvider>().setTypeFilter(value);
                   },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Date range picker button
+          Expanded(
+            child: InkWell(
+              onTap: () => _pickDateRange(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.date_range, size: 18, color: _selectedDateRange != null ? AppColors.primary : AppColors.textSecondary),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        _selectedDateRange != null
+                            ? '${DateFormat('MMM dd').format(_selectedDateRange!.start)} – ${DateFormat('MMM dd').format(_selectedDateRange!.end)}'
+                            : 'Date Range',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: _selectedDateRange != null ? AppColors.textPrimary : AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_selectedDateRange != null)
+                      GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedDateRange = null);
+                          context.read<ViolationsProvider>().setDateRange(null, null);
+                        },
+                        child: const Icon(Icons.close, size: 16),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -261,6 +312,7 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
               setState(() {
                 _selectedStatus = null;
                 _selectedType = null;
+                _selectedDateRange = null;
                 _searchController.clear();
               });
               context.read<ViolationsProvider>().clearFilters();
@@ -271,6 +323,37 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 1),
+      lastDate: now,
+      initialDateRange: _selectedDateRange,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              surface: AppColors.surface,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedDateRange = picked);
+      final fmt = DateFormat('yyyy-MM-dd');
+      context.read<ViolationsProvider>().setDateRange(
+        fmt.format(picked.start),
+        fmt.format(picked.end),
+      );
+    }
   }
 
   Widget _buildViolationsTable() {
@@ -356,7 +439,7 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
                 ),
               ),
               
-              // Pagination info
+              // Pagination info and controls
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: const BoxDecoration(
@@ -373,11 +456,31 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    Text(
-                      'Page ${provider.currentPage} of ${provider.totalPages}',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: provider.currentPage > 1
+                              ? () => provider.goToPage(provider.currentPage - 1)
+                              : null,
+                          icon: const Icon(Icons.chevron_left),
+                          tooltip: 'Previous page',
+                          iconSize: 20,
+                        ),
+                        Text(
+                          'Page ${provider.currentPage} of ${provider.totalPages}',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: provider.hasMore
+                              ? () => provider.goToPage(provider.currentPage + 1)
+                              : null,
+                          icon: const Icon(Icons.chevron_right),
+                          tooltip: 'Next page',
+                          iconSize: 20,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -460,7 +563,7 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
             Expanded(
               flex: 1,
               child: Text(
-                '\$${violation.fineAmount.toStringAsFixed(0)}',
+                'LKR ${violation.fineAmount.toStringAsFixed(0)}',
                 style: AppTypography.labelLarge.copyWith(
                   color: _getFineColor(violation.fineAmount),
                   fontWeight: FontWeight.bold,
@@ -527,6 +630,11 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
         break;
       case 'parking':
       case 'no_parking':
+      case 'parking_no_parking':
+      case 'parking_no_stopping':
+      case 'parking_overtime':
+      case 'parking_handicap':
+      case 'parking_loading':
         icon = Icons.local_parking;
         color = AppColors.info;
         break;
@@ -534,6 +642,10 @@ class _ViolationsListScreenState extends State<ViolationsListScreen> {
       case 'lane_drift':
         icon = Icons.swap_horiz;
         color = AppColors.riskMedium;
+        break;
+      case 'wrong_way':
+        icon = Icons.wrong_location;
+        color = AppColors.error;
         break;
       default:
         icon = Icons.warning;

@@ -1,12 +1,12 @@
 """
 Junction Safety Router - API Endpoints
-Member 2: LiveSafeScore, Lane Weaving Detection, Community Alerts
+LiveSafeScore, Lane Weaving Detection, Community Alerts
 """
 
 from fastapi import APIRouter, HTTPException
 from typing import Optional
 
-router = APIRouter(prefix="/junction", tags=["Junction Safety (Member 2)"])
+router = APIRouter(prefix="/junction", tags=["Junction Safety"])
 
 
 # ============================================================================
@@ -75,7 +75,7 @@ async def reset_safety():
 
 
 # ============================================================================
-# BEHAVIOR DETECTION ENDPOINTS (Member 4)
+# BEHAVIOR DETECTION ENDPOINTS
 # ============================================================================
 
 @router.get("/behavior-events", summary="Get abnormal driving behavior events")
@@ -129,7 +129,7 @@ async def get_vehicle_behavior(track_id: int):
 
 
 # ============================================================================
-# RISK SCORE ENDPOINTS (Member 4)
+# RISK SCORE ENDPOINTS
 # ============================================================================
 
 @router.get("/risk/vehicle/{vehicle_id}", summary="Get risk score for a vehicle")
@@ -144,19 +144,19 @@ async def get_vehicle_risk(vehicle_id: int, current_speed: float = 50.0, speed_l
     """
     try:
         from app.services.risk_service import calculate_risk
-        result = calculate_risk(vehicle_id, current_speed, speed_limit)
+        result = calculate_risk(speed=current_speed, speed_limit=speed_limit, violation_history_count=0, vehicle_id=vehicle_id)
         return result.to_dict()
     except ImportError:
         raise HTTPException(status_code=503, detail="Risk service not available")
 
 
 # ============================================================================
-# FINE CALCULATION ENDPOINTS (Member 1)
+# FINE CALCULATION ENDPOINTS
 # ============================================================================
 
 @router.get("/fine/calculate", summary="Calculate dynamic fine for a violation")
 async def calculate_fine(
-    violation_type: str = "parking",
+    violation_type: str = "no_parking",
     duration_seconds: int = 60,
     vehicle_count_in_frame: int = 5
 ):
@@ -166,8 +166,13 @@ async def calculate_fine(
     Formula: Fine = Base + (Duration × 5) + (Traffic_Impact × 50)
     """
     try:
-        from app.services.fine_service import calculate_dynamic_fine
-        result = calculate_dynamic_fine(violation_type, duration_seconds, vehicle_count_in_frame)
+        from app.parking.dynamic_fine import get_fine_calculator
+        fine_calc = get_fine_calculator()
+        result = fine_calc.calculate(
+            zone_type=violation_type,
+            duration_seconds=duration_seconds,
+            traffic_impact_count=vehicle_count_in_frame
+        )
         return result.to_dict()
     except ImportError:
         raise HTTPException(status_code=503, detail="Fine service not available")

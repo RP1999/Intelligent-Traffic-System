@@ -1,17 +1,24 @@
 """
 Intelligent Traffic Management System - Video Streaming Router
-PROFESSIONAL WORKER THREAD ARCHITECTURE
+TWO-THREAD ARCHITECTURE v3
 
 Architecture:
 =============
-- Background Worker Thread: Runs YOLO detection continuously
-- Thread-Safe VideoState: Stores latest frame, snapshot, vehicle count
-- Lightweight Endpoints: Just serve data from memory (no processing)
+  Thread 1 — DISPLAY (video_display_loop)
+    Reads video at native 30 FPS, draws cached detection overlays,
+    encodes full-resolution JPEG, updates VideoState for WebSocket.
+    NEVER calls YOLO → always smooth, no stutter.
 
-Benefits:
-- API endpoints (zones, logs) respond instantly
-- Zone Editor snapshot always available
-- Traffic controller gets real-time vehicle counts
+  Thread 2 — ANALYSIS (video_analysis_loop)
+    Grabs the latest raw frame from a shared buffer, runs full YOLO
+    pipeline (vehicle tracking, plate OCR, speed, violations) at 3 FPS.
+    Results are cached so Thread 1 can draw them on every frame.
+
+Key Design Decisions:
+- Both threads use full 1920×1080 — NO resize anywhere
+- Zone coordinates match perfectly between Zone Editor and live feed
+- YOLO at 3 FPS gives 3× more speed/tracking data without blocking video
+- On stop: both threads halt, ALL detection state is reset
 """
 
 import asyncio
@@ -25,7 +32,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 import cv2
-import aiosqlite
+import numpy as np
 from fastapi import APIRouter, HTTPException, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 
@@ -43,9 +50,6 @@ from app.tts.tts_service import set_tts_paused
 
 settings = get_settings()
 router = APIRouter(prefix="/video", tags=["Video"])
-
-# Database path
-DB_PATH = settings.data_dir.parent / "backend" / "traffic.db"
 
 
 # ============================================================================
@@ -137,13 +141,32 @@ class VideoState:
 # Global state instance
 _video_state = VideoState()
 
-# Worker thread reference
-_worker_thread: Optional[threading.Thread] = None
+# Worker thread references (two threads)
+_display_thread: Optional[threading.Thread] = None
+_analysis_thread: Optional[threading.Thread] = None
 _stop_event = threading.Event()
+
+# Shared frame buffer: display thread writes latest raw frame here,
+# analysis thread reads it for YOLO processing.
+_analysis_frame: Optional[np.ndarray] = None
+_analysis_frame_id: int = 0
+_analysis_lock = threading.Lock()
+
+# Cached analysis result — written by analysis thread, read by display thread
+_cached_result: Optional[FrameResult] = None
+_cached_vehicle_count: int = 0
+_cached_plate_count: int = 0
+_result_lock = threading.Lock()
 
 # WebSocket clients
 _ws_clients: set = set()
 _ws_lock = asyncio.Lock()
+
+# Video capture for seeking
+_video_capture: Optional[cv2.VideoCapture] = None
+_video_total_frames: int = 0
+_video_capture_lock = threading.Lock()
+_seek_target_frame: Optional[int] = None
 
 
 # ============================================================================
@@ -151,32 +174,34 @@ _ws_lock = asyncio.Lock()
 # ============================================================================
 
 def load_zones_from_db_sync():
-    """Synchronous zone loading for worker thread."""
-    import sqlite3
-    
+    """Synchronous zone loading using the sync Firestore client."""
+    from app.db.firestore_client import get_sync_db, Collections
+
     try:
-        if not DB_PATH.exists():
-            print(f"[ZONES] DB not found at {DB_PATH}")
-            return
-        
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM parking_zones WHERE active = 1 ORDER BY id")
-        rows = cursor.fetchall()
-        conn.close()
-        
+        db = get_sync_db()
+        q = db.collection(Collections.PARKING_ZONES).where(
+            "active", "==", True
+        )
+        rows = [(doc.id, doc.to_dict()) for doc in q.stream()]
+
         if not rows:
-            print("[ZONES] No active zones in DB, disabling violation detection")
+            print("[ZONES] No active zones in Firestore, disabling violation detection")
             set_parking_zones([])
             return
-        
+
         zones = []
-        for row in rows:
-            coords = json.loads(row["coordinates"])
-            polygon = [(int(p[0]), int(p[1])) for p in coords]
-            
-            zone_type = row["zone_type"]
+        for doc_id, row in rows:
+            raw_coords = row.get("coordinates", [])
+            if isinstance(raw_coords, str):
+                import json as _json
+                raw_coords = _json.loads(raw_coords)
+            # Handle both dict format {x:,y:} and list format [x,y]
+            if raw_coords and isinstance(raw_coords[0], dict):
+                polygon = [(int(p["x"]), int(p["y"])) for p in raw_coords]
+            else:
+                polygon = [(int(p[0]), int(p[1])) for p in raw_coords]
+
+            zone_type = row.get("zone_type", "red")
             if zone_type in ("red", "no_parking"):
                 color = (0, 0, 255)
             elif zone_type in ("yellow", "loading"):
@@ -185,46 +210,41 @@ def load_zones_from_db_sync():
                 color = (255, 0, 0)
             else:
                 color = (0, 0, 255)
-            
+
             zones.append({
-                "id": f"zone_{row['id']}",
-                "name": row["label"] or f"Zone {row['id']}",
+                "id": f"zone_{doc_id}",
+                "name": row.get("label") or f"Zone {doc_id}",
                 "polygon": polygon,
                 "color": color,
             })
-        
+
         set_parking_zones(zones)
-        print(f"[ZONES] ✅ Loaded {len(zones)} zones from DB")
-        
+        print(f"[ZONES] Loaded {len(zones)} zones from Firestore")
+
     except Exception as e:
-        print(f"[ZONES] ❌ Error loading zones: {e}")
+        print(f"[ZONES] Error loading zones: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # ============================================================================
-# BACKGROUND WORKER THREAD
+# THREAD 1 — DISPLAY (reads video, draws overlays, encodes JPEG)
 # ============================================================================
 
-def video_worker_loop():
+def video_display_loop():
     """
-    Background worker thread that runs YOLO detection continuously.
-    Updates VideoState with latest frames - endpoints just read from memory.
+    Display thread: reads video at native FPS, draws cached detections,
+    encodes full-resolution JPEG, updates VideoState for WebSocket.
+    NEVER calls YOLO — always smooth, no stutter.
     """
-    global _video_state
-    
-    print("[WORKER] 🚀 Video worker thread starting...")
-    
-    # Get traffic controller for signal updates
-    try:
-        from app.fuzzy.traffic_controller import get_four_way_controller
-        traffic_controller = get_four_way_controller()
-        print("[WORKER] ✅ Traffic controller connected")
-    except Exception as e:
-        print(f"[WORKER] ⚠️ Traffic controller not available: {e}")
-        traffic_controller = None
-    
-    # Load zones from database
-    load_zones_from_db_sync()
-    
+    global _video_state, _analysis_frame, _analysis_frame_id
+    global _video_capture, _video_total_frames, _video_capture_lock, _seek_target_frame
+
+    JPEG_QUALITY = 80
+    SNAPSHOT_JPEG_QUALITY = 90
+
+    print("[DISPLAY] 🚀 Display thread starting...")
+
     # Find video source
     video_path = str(settings.data_dir / "videos" / "SriLankan_Traffic_Video.mp4")
     if not Path(video_path).exists():
@@ -234,133 +254,219 @@ def video_worker_loop():
             if video_files:
                 video_path = str(video_files[0])
             else:
-                print("[WORKER] ❌ No video files found!")
+                print("[DISPLAY] ❌ No video files found!")
                 return
-    
-    print(f"[WORKER] 📹 Opening video: {video_path}")
+
+    print(f"[DISPLAY] 📹 Opening video: {video_path}")
     cap = cv2.VideoCapture(video_path)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)
-    
+
     if not cap.isOpened():
-        print(f"[WORKER] ❌ Cannot open video: {video_path}")
+        print(f"[DISPLAY] ❌ Cannot open video: {video_path}")
         return
-    
-    # Load YOLO models
-    print("[WORKER] 🔄 Loading YOLO models...")
-    vehicle_model = load_vehicle_model("cpu")
-    plate_model = load_plate_model("cpu")
-    print("[WORKER] ✅ Models loaded")
-    
-    # Update state
+
+    # Store video capture globally for seeking
+    with _video_capture_lock:
+        _video_capture = cap
+        _video_total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        print(f"[DISPLAY] 📊 Total frames: {_video_total_frames}")
+
+    native_fps = cap.get(cv2.CAP_PROP_FPS)
+    if native_fps <= 0 or native_fps > 120:
+        native_fps = 25.0
+    frame_interval = 1.0 / native_fps
+
+    print(f"[DISPLAY] Video FPS: {native_fps:.1f}, frame interval: {frame_interval*1000:.1f}ms")
+
     _video_state.running = True
     _video_state.video_source = video_path
     _video_state.start_time = time.time()
-    
-    # Enable TTS
     set_tts_paused(False)
-    
+
     frame_idx = 0
-    frame_skip = 3
-    is_first_frame = True
-    log_interval = 100
-    
-    print("[WORKER] ▶️ Video processing loop started")
-    
+    log_interval = int(native_fps * 10)  # Log every ~10 seconds
+
+    print("[DISPLAY] ▶️ Display loop started (full resolution, no YOLO)")
+
     try:
         while not _stop_event.is_set():
             loop_start = time.time()
-            
-            # Skip frames for performance
-            if frame_skip > 1:
-                current_pos = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
-                cap.set(cv2.CAP_PROP_POS_FRAMES, current_pos + frame_skip - 1)
-            
+
+            # Apply pending seek request (set by API thread) in display thread only.
+            with _video_capture_lock:
+                if _seek_target_frame is not None:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, _seek_target_frame)
+                    frame_idx = _seek_target_frame
+                    _seek_target_frame = None
+
             ret, frame = cap.read()
             if not ret:
-                # Loop video
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 frame_idx = 0
                 continue
-            
-            frame_idx += frame_skip
-            
-            # Capture clean snapshot BEFORE drawing any boxes (for Zone Editor)
-            # IMPORTANT: Capture at FULL resolution to match zone coordinates
+
+            frame_idx += 1
+
+            # ── Publish frame for analysis thread ────────────────────
+            with _analysis_lock:
+                _analysis_frame = frame.copy()
+                _analysis_frame_id = frame_idx
+
+            # ── Snapshot: capture one clean full-res frame ───────────
             raw_snapshot_bytes = None
             if not _video_state.raw_frame_captured:
-                # Encode clean frame at FULL resolution (no scaling)
-                # Zone coordinates are stored in original resolution, so snapshot must match
-                _, raw_buffer = cv2.imencode('.jpg', frame.copy(), [cv2.IMWRITE_JPEG_QUALITY, 90])
-                raw_snapshot_bytes = raw_buffer.tobytes()
-            
-            # Run YOLO detection
+                _, raw_buf = cv2.imencode('.jpg', frame,
+                                          [cv2.IMWRITE_JPEG_QUALITY, SNAPSHOT_JPEG_QUALITY])
+                raw_snapshot_bytes = raw_buf.tobytes()
+
+            # ── Draw cached detection overlays ───────────────────────
+            with _result_lock:
+                last_result = _cached_result
+                vcount = _cached_vehicle_count
+                pcount = _cached_plate_count
+
+            display_frame = frame  # No copy needed — we draw on it directly
+            if last_result is not None:
+                display_frame = draw_detections(display_frame, last_result)
+                display_frame = draw_frame_info(display_frame, last_result)
+
+            # ── Encode JPEG at full resolution ───────────────────────
+            _, buffer = cv2.imencode('.jpg', display_frame,
+                                     [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+            frame_bytes = buffer.tobytes()
+
+            _video_state.update_frame(
+                frame_bytes=frame_bytes,
+                vehicle_count=vcount,
+                plates=pcount,
+                raw_snapshot=raw_snapshot_bytes,
+            )
+
+            if log_interval > 0 and frame_idx % log_interval == 0:
+                print(f"[DISPLAY] Frame {frame_idx}: {vcount} vehicles, {pcount} plates")
+
+            # ── Sleep to match native FPS ────────────────────────────
+            elapsed = time.time() - loop_start
+            sleep_time = max(0.001, frame_interval - elapsed)
+            time.sleep(sleep_time)
+
+    except Exception as e:
+        print(f"[DISPLAY] ❌ Error: {e}")
+        import traceback; traceback.print_exc()
+    finally:
+        cap.release()
+        # Clear global video capture
+        with _video_capture_lock:
+            _video_capture = None
+            _video_total_frames = 0
+            _seek_target_frame = None
+        _video_state.running = False
+        set_tts_paused(True)
+        print("[DISPLAY] 🛑 Display thread stopped")
+
+
+# ============================================================================
+# THREAD 2 — ANALYSIS (runs YOLO independently at 3 FPS)
+# ============================================================================
+
+def video_analysis_loop():
+    """
+    Analysis thread: grabs the latest raw frame from the shared buffer,
+    runs the full YOLO pipeline at ANALYSIS_FPS.
+    Results are stored in _cached_result for the display thread to draw.
+    """
+    global _cached_result, _cached_vehicle_count, _cached_plate_count
+
+    ANALYSIS_FPS = 3
+    analysis_interval = 1.0 / ANALYSIS_FPS
+
+    print("[ANALYSIS] 🚀 Analysis thread starting...")
+
+    # Get traffic controller
+    try:
+        from app.fuzzy.traffic_controller import get_four_way_controller
+        traffic_controller = get_four_way_controller()
+        print("[ANALYSIS] ✅ Traffic controller connected")
+    except Exception as e:
+        print(f"[ANALYSIS] ⚠️ Traffic controller not available: {e}")
+        traffic_controller = None
+
+    # Load zones
+    load_zones_from_db_sync()
+
+    # Load YOLO models
+    print("[ANALYSIS] 🔄 Loading YOLO models...")
+    vehicle_model = load_vehicle_model("cpu")
+    plate_model = load_plate_model("cpu")
+    print("[ANALYSIS] ✅ Models loaded")
+
+    last_processed_id = 0
+
+    print(f"[ANALYSIS] ▶️ Analysis loop started (YOLO at {ANALYSIS_FPS} FPS)")
+
+    try:
+        while not _stop_event.is_set():
+            loop_start = time.time()
+
+            # Grab the latest frame from shared buffer
+            with _analysis_lock:
+                frame = _analysis_frame
+                fid = _analysis_frame_id
+
+            if frame is None or fid == last_processed_id:
+                # No new frame yet — wait briefly
+                time.sleep(0.01)
+                continue
+
+            last_processed_id = fid
+
+            # Run full YOLO pipeline on FULL RESOLUTION frame
             result = detect_and_track(
                 vehicle_model=vehicle_model,
                 frame=frame,
-                frame_id=frame_idx,
+                frame_id=fid,
                 confidence=0.5,
                 plate_model=plate_model,
                 run_plate_detection=True,
             )
-            
-            vehicle_count = len(result.detections)
-            plate_count = len(result.plate_boxes)
-            
-            # CRITICAL: Update traffic controller with real vehicle count
+
+            vc = len(result.detections)
+            pc = len(result.plate_boxes)
+
+            # Publish result for display thread
+            with _result_lock:
+                _cached_result = result
+                _cached_vehicle_count = vc
+                _cached_plate_count = pc
+
+            # Update traffic controller
             if traffic_controller:
-                traffic_controller.update_north_count(vehicle_count)
+                traffic_controller.update_north_count(vc)
                 traffic_controller.auto_tick()
-            
-            # Draw detections and info
-            frame = draw_detections(frame, result)
-            frame = draw_frame_info(frame, result)
-            
-            # Resize for streaming
-            scale = 0.75
-            frame = cv2.resize(frame, None, fx=scale, fy=scale)
-            
-            # Encode to JPEG
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-            frame_bytes = buffer.tobytes()
-            
-            # Update thread-safe state
-            _video_state.update_frame(
-                frame_bytes=frame_bytes,
-                vehicle_count=vehicle_count,
-                plates=plate_count,
-                raw_snapshot=raw_snapshot_bytes
-            )
-            
-            # Log progress periodically
-            if frame_idx % log_interval == 0:
-                print(f"[WORKER] Frame {frame_idx}: {vehicle_count} vehicles, {plate_count} plates")
-            
-            # CRITICAL: Sleep to yield CPU to main API thread
+
+            # Throttle to ANALYSIS_FPS
             elapsed = time.time() - loop_start
-            sleep_time = max(0.01, 0.033 - elapsed)  # Target ~30 FPS, min 10ms yield
+            sleep_time = max(0.001, analysis_interval - elapsed)
             time.sleep(sleep_time)
-            
+
     except Exception as e:
-        print(f"[WORKER] ❌ Error in worker loop: {e}")
-        import traceback
-        traceback.print_exc()
-        
+        print(f"[ANALYSIS] ❌ Error: {e}")
+        import traceback; traceback.print_exc()
     finally:
-        cap.release()
-        _video_state.running = False
-        set_tts_paused(True)
-        print("[WORKER] 🛑 Video worker thread stopped")
+        print("[ANALYSIS] 🛑 Analysis thread stopped")
 
 
 def start_video_worker():
-    """Start the background video worker thread."""
-    global _worker_thread, _stop_event
-    
-    if _worker_thread and _worker_thread.is_alive():
+    """Start both display and analysis threads."""
+    global _display_thread, _analysis_thread, _stop_event
+    global _analysis_frame, _cached_result, _cached_vehicle_count, _cached_plate_count
+    global _seek_target_frame
+
+    if _display_thread and _display_thread.is_alive():
         print("[WORKER] Already running")
         return
-    
-    # Re-enable traffic controller auto-tick before starting
+
+    # Re-enable traffic controller auto-tick
     try:
         from app.fuzzy.traffic_controller import get_four_way_controller
         controller = get_four_way_controller()
@@ -368,23 +474,63 @@ def start_video_worker():
         print("[WORKER] ✅ Traffic controller auto-tick enabled")
     except Exception as e:
         print(f"[WORKER] ⚠️ Could not enable traffic controller: {e}")
-    
+
+    # Clear shared state
+    _analysis_frame = None
+    _cached_result = None
+    _cached_vehicle_count = 0
+    _cached_plate_count = 0
+    _seek_target_frame = None
+
     _stop_event.clear()
-    _worker_thread = threading.Thread(target=video_worker_loop, daemon=True)
-    _worker_thread.start()
-    print("[WORKER] ✅ Worker thread started")
+
+    _display_thread = threading.Thread(target=video_display_loop, daemon=True, name="display")
+    _analysis_thread = threading.Thread(target=video_analysis_loop, daemon=True, name="analysis")
+
+    _display_thread.start()
+    _analysis_thread.start()
+    print("[WORKER] ✅ Display + Analysis threads started")
 
 
 def stop_video_worker():
-    """Stop the background video worker thread and all associated services."""
-    global _worker_thread, _stop_event
-    
+    """Stop both threads and ALL associated services.
+
+    CRITICAL: When user disconnects, this must:
+    1. Stop display + analysis threads
+    2. Reset ALL detection state (tracking, speed, parking, penalties)
+    3. Disable traffic controller auto-tick
+    4. Pause TTS and clean cache
+    """
+    global _display_thread, _analysis_thread, _stop_event
+    global _analysis_frame, _cached_result, _cached_vehicle_count, _cached_plate_count
+    global _seek_target_frame
+
+    print("[WORKER] ⏹️ Stopping ALL threads and detection pipelines...")
+
     _stop_event.set()
-    if _worker_thread:
-        _worker_thread.join(timeout=5.0)
+
+    if _display_thread:
+        _display_thread.join(timeout=5.0)
+    if _analysis_thread:
+        _analysis_thread.join(timeout=5.0)
+
     _video_state.reset()
+    _analysis_frame = None
+    _cached_result = None
+    _cached_vehicle_count = 0
+    _cached_plate_count = 0
+    _seek_target_frame = None
     
-    # CRITICAL: Stop traffic controller auto-tick to prevent continued updates
+    # CRITICAL: Reset ALL YOLO detection state
+    # Without this, stale tracking/speed/parking data persists across sessions
+    try:
+        from app.detection.yolo_detector import reset_state as reset_detection_state
+        reset_detection_state()
+        print("[WORKER] 🔄 Detection state fully reset (tracking, speed, parking, penalties)")
+    except Exception as e:
+        print(f"[WORKER] ⚠️ Could not reset detection state: {e}")
+    
+    # Stop traffic controller auto-tick to prevent continued updates
     try:
         from app.fuzzy.traffic_controller import get_four_way_controller
         controller = get_four_way_controller()
@@ -397,12 +543,12 @@ def stop_video_worker():
     try:
         from app.tts.tts_service import get_tts_service
         tts = get_tts_service()
-        tts.cleanup_old_warnings(max_files=20)  # Keep only 20 recent files
+        tts.cleanup_old_warnings(max_files=20)
         print("[WORKER] 🧹 TTS cache cleaned")
     except Exception as e:
         print(f"[WORKER] ⚠️ Could not clean TTS: {e}")
     
-    print("[WORKER] ⏹️ Worker thread stopped")
+    print("[WORKER] ⏹️ Worker thread stopped — all detections halted")
 
 
 # ============================================================================
@@ -480,6 +626,33 @@ async def start_stream():
     """Start the video worker thread."""
     start_video_worker()
     return {"status": "started", "message": "Video worker started"}
+
+
+@router.post("/seek")
+async def seek_video(data: dict):
+    """Seek video to a position (0.0 to 1.0)."""
+    global _video_total_frames, _video_capture_lock, _seek_target_frame
+    
+    position = data.get("position", 0.0)
+    position = max(0.0, min(1.0, position))  # Clamp to 0-1
+
+    if not _video_state.running or _video_total_frames <= 0:
+        return {"status": "error", "message": "Video not ready"}
+
+    target_frame = int(position * max(_video_total_frames - 1, 0))
+
+    # Queue seek request; display thread applies it before next read.
+    with _video_capture_lock:
+        _seek_target_frame = target_frame
+
+    print(f"[SEEK] ⏩ Queued seek to {(position * 100):.1f}% (frame {target_frame}/{_video_total_frames})")
+
+    return {
+        "status": "success",
+        "position": position,
+        "frame": target_frame,
+        "total_frames": _video_total_frames,
+    }
 
 
 @router.get("/list")

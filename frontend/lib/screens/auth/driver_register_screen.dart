@@ -18,6 +18,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _plateController = TextEditingController();
   final _licenseController = TextEditingController();
   
@@ -55,6 +56,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
     _nameController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _plateController.dispose();
     _licenseController.dispose();
     super.dispose();
@@ -122,37 +124,61 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
 
   void _nextStep() {
     if (_currentStep < 1) {
-      // Validate current step
+      // Validate Step 0 fields only
       if (_currentStep == 0) {
-        if (_nameController.text.isEmpty || _phoneController.text.isEmpty || _passwordController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Please fill in all fields'),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
+        final name = _nameController.text.trim();
+        final phone = _phoneController.text.trim();
+        final password = _passwordController.text;
+        final confirmPassword = _confirmPasswordController.text;
+        
+        if (name.isEmpty) {
+          _showStepError('Please enter your name');
           return;
         }
-        if (_passwordController.text.length < 6) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Password must be at least 6 characters'),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
+        if (name.length < 2) {
+          _showStepError('Name must be at least 2 characters');
+          return;
+        }
+        if (phone.isEmpty) {
+          _showStepError('Please enter your phone number');
+          return;
+        }
+        if (phone.length < 10) {
+          _showStepError('Phone number must be at least 10 digits');
+          return;
+        }
+        if (!RegExp(r'^[\+]?[0-9\s\-]{10,15}$').hasMatch(phone)) {
+          _showStepError('Invalid phone number format');
+          return;
+        }
+        if (password.isEmpty) {
+          _showStepError('Please enter a password');
+          return;
+        }
+        if (password.length < 6) {
+          _showStepError('Password must be at least 6 characters');
+          return;
+        }
+        if (confirmPassword != password) {
+          _showStepError('Passwords do not match');
           return;
         }
       }
       setState(() => _currentStep++);
     }
+  }
+
+  void _showStepError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
   }
 
   void _previousStep() {
@@ -469,8 +495,14 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
           prefixIcon: Icons.person_outline,
           textInputAction: TextInputAction.next,
           validator: (value) {
-            if (value == null || value.isEmpty) {
+            if (value == null || value.trim().isEmpty) {
               return 'Please enter your name';
+            }
+            if (value.trim().length < 2) {
+              return 'Name must be at least 2 characters';
+            }
+            if (value.trim().length > 100) {
+              return 'Name must be at most 100 characters';
             }
             return null;
           },
@@ -486,11 +518,15 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
           validator: (value) {
-            if (value == null || value.isEmpty) {
+            if (value == null || value.trim().isEmpty) {
               return 'Please enter your phone number';
             }
-            if (value.length < 10) {
-              return 'Please enter a valid phone number';
+            final phone = value.trim();
+            if (phone.length < 10) {
+              return 'Phone number must be at least 10 digits';
+            }
+            if (!RegExp(r'^[\+]?[0-9\s\-]{10,15}\$').hasMatch(phone)) {
+              return 'Invalid phone number format';
             }
             return null;
           },
@@ -504,13 +540,36 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
           controller: _passwordController,
           prefixIcon: Icons.lock_outline,
           obscureText: true,
-          textInputAction: TextInputAction.done,
+          textInputAction: TextInputAction.next,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter a password';
             }
             if (value.length < 6) {
               return 'Password must be at least 6 characters';
+            }
+            if (value.length > 128) {
+              return 'Password is too long';
+            }
+            return null;
+          },
+        ),
+
+        const SizedBox(height: 20),
+
+        AppTextField(
+          label: 'Confirm Password',
+          hint: '••••••••',
+          controller: _confirmPasswordController,
+          prefixIcon: Icons.lock_outline,
+          obscureText: true,
+          textInputAction: TextInputAction.done,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please confirm your password';
+            }
+            if (value != _passwordController.text) {
+              return 'Passwords do not match';
             }
             return null;
           },
@@ -530,8 +589,14 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
           prefixIcon: Icons.credit_card_outlined,
           textInputAction: TextInputAction.next,
           validator: (value) {
-            if (value == null || value.isEmpty) {
+            if (value == null || value.trim().isEmpty) {
               return 'Please enter your license plate';
+            }
+            if (value.trim().length < 3) {
+              return 'Plate number must be at least 3 characters';
+            }
+            if (value.trim().length > 20) {
+              return 'Plate number must be at most 20 characters';
             }
             return null;
           },
@@ -546,8 +611,14 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen>
           prefixIcon: Icons.badge_outlined,
           textInputAction: TextInputAction.done,
           validator: (value) {
-            if (value == null || value.isEmpty) {
+            if (value == null || value.trim().isEmpty) {
               return 'Please enter your license number';
+            }
+            if (value.trim().length < 3) {
+              return 'License number must be at least 3 characters';
+            }
+            if (value.trim().length > 20) {
+              return 'License number must be at most 20 characters';
             }
             return null;
           },

@@ -13,10 +13,11 @@ enum AuthState { initial, loading, authenticated, unauthenticated, error }
 
 /// User model
 class User {
-  final int id;
+  final String id;
   final String phone;
   final String? name;
   final String? plateNumber;
+  final String? licenseNumber;
   final UserType userType;
 
   User({
@@ -24,15 +25,17 @@ class User {
     required this.phone,
     this.name,
     this.plateNumber,
+    this.licenseNumber,
     required this.userType,
   });
 
   factory User.fromJson(Map<String, dynamic> json, UserType type) {
     return User(
-      id: json['user_id'] ?? json['id'] ?? 0,
+      id: (json['user_id'] ?? json['id'] ?? '').toString(),
       phone: json['phone'] ?? json['username'] ?? '',
       name: json['name'],
       plateNumber: json['plate_number'],
+      licenseNumber: json['license_number'],
       userType: type,
     );
   }
@@ -43,6 +46,7 @@ class User {
       'phone': phone,
       'name': name,
       'plate_number': plateNumber,
+      'license_number': licenseNumber,
       'user_type': userType.name,
     };
   }
@@ -110,7 +114,7 @@ class AuthProvider with ChangeNotifier {
             final respData = validateResponse.data!;
             final respUserType = respData['user_type'] == 'admin' ? UserType.admin : UserType.driver;
             _user = User(
-              id: respData['user_id'] ?? 0,
+              id: (respData['user_id'] ?? '').toString(),
               phone: respData['identifier'] ?? '',
               userType: respUserType,
             );
@@ -167,7 +171,7 @@ class AuthProvider with ChangeNotifier {
         
         // Create admin user from response
         _user = User(
-          id: response.data!['user_id'] ?? 0,
+          id: (response.data!['user_id'] ?? '').toString(),
           phone: username,
           name: 'Administrator',
           userType: UserType.admin,
@@ -215,7 +219,7 @@ class AuthProvider with ChangeNotifier {
         
         // Create driver user from response
         _user = User(
-          id: response.data!['user_id'] ?? 0,
+          id: (response.data!['user_id'] ?? '').toString(),
           phone: phone,
           name: response.data!['name'],
           plateNumber: response.data!['plate_number'],
@@ -254,8 +258,20 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     // Frontend validation
-    if (phone.length < 10) {
-      _error = 'Phone number must be at least 10 characters';
+    final phoneClean = phone.trim();
+    final plateClean = plateNumber.trim().toUpperCase();
+    final nameClean = name?.trim();
+    final licenseClean = licenseNumber?.trim().toUpperCase();
+
+    if (phoneClean.length < 10) {
+      _error = 'Phone number must be at least 10 digits';
+      _state = AuthState.error;
+      notifyListeners();
+      return false;
+    }
+
+    if (!RegExp(r'^[\+]?[0-9\s\-]{10,15}$').hasMatch(phoneClean)) {
+      _error = 'Invalid phone number format';
       _state = AuthState.error;
       notifyListeners();
       return false;
@@ -268,8 +284,29 @@ class AuthProvider with ChangeNotifier {
       return false;
     }
     
-    if (plateNumber.isEmpty) {
-      _error = 'License plate number is required';
+    if (plateClean.isEmpty) {
+      _error = 'Vehicle plate number is required';
+      _state = AuthState.error;
+      notifyListeners();
+      return false;
+    }
+
+    if (plateClean.length < 3) {
+      _error = 'Plate number must be at least 3 characters';
+      _state = AuthState.error;
+      notifyListeners();
+      return false;
+    }
+
+    if (nameClean != null && nameClean.isNotEmpty && nameClean.length < 2) {
+      _error = 'Name must be at least 2 characters';
+      _state = AuthState.error;
+      notifyListeners();
+      return false;
+    }
+
+    if (licenseClean != null && licenseClean.isNotEmpty && licenseClean.length < 3) {
+      _error = 'License number must be at least 3 characters';
       _state = AuthState.error;
       notifyListeners();
       return false;
@@ -279,11 +316,11 @@ class AuthProvider with ChangeNotifier {
       final response = await _apiClient.post(
         ApiEndpoints.driverRegister,
         body: {
-          'phone': phone,
+          'phone': phoneClean,
           'password': password,
-          'plate_number': plateNumber,
-          if (name != null) 'name': name,
-          if (licenseNumber != null) 'license_number': licenseNumber,
+          'plate_number': plateClean,
+          if (nameClean != null && nameClean.isNotEmpty) 'name': nameClean,
+          if (licenseClean != null && licenseClean.isNotEmpty) 'license_number': licenseClean,
         },
         requiresAuth: false,
       );
@@ -295,10 +332,10 @@ class AuthProvider with ChangeNotifier {
         await _apiClient.setUserType('driver');
         
         _user = User(
-          id: response.data!['user_id'] ?? 0,
-          phone: phone,
-          name: name,
-          plateNumber: plateNumber,
+          id: (response.data!['user_id'] ?? '').toString(),
+          phone: phoneClean,
+          name: nameClean,
+          plateNumber: plateClean,
           userType: UserType.driver,
         );
         
@@ -316,6 +353,51 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       _state = AuthState.error;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Update driver profile (name, phone)
+  Future<bool> updateProfile({String? name, String? phone}) async {
+    _error = null;
+
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name.trim();
+    if (phone != null) body['phone'] = phone.trim();
+
+    if (body.isEmpty) {
+      _error = 'No changes to save';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      final response = await _apiClient.put(
+        ApiEndpoints.driverProfile,
+        body: body,
+      );
+
+      if (response.success && response.data != null) {
+        // Update local user with returned profile data
+        _user = User(
+          id: _user?.id ?? '',
+          phone: response.data!['phone'] ?? _user?.phone ?? '',
+          name: response.data!['name'] ?? _user?.name,
+          plateNumber: response.data!['plate_number'] ?? _user?.plateNumber,
+          licenseNumber: response.data!['license_number'] ?? _user?.licenseNumber,
+          userType: UserType.driver,
+        );
+        await _apiClient.setUserData(_user!.toJson());
+        notifyListeners();
+        return true;
+      } else {
+        _error = response.error ?? 'Profile update failed';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
       notifyListeners();
       return false;
     }

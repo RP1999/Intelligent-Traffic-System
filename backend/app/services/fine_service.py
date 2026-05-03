@@ -13,14 +13,12 @@ Where:
 - Multiplier = 50 LKR per affected vehicle
 """
 
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Any
 from dataclasses import dataclass
 
-# Database path
-DB_PATH = Path(__file__).parent.parent.parent / "traffic.db"
+from app.db.firestore_client import get_sync_db, Collections
 
 
 # =============================================================================
@@ -122,43 +120,33 @@ def calculate_dynamic_fine(
     )
 
 
-def save_fine_to_database(fine: FineBreakdown) -> int:
+def save_fine_to_database(fine: FineBreakdown) -> str:
     """
-    Save the calculated fine to the dynamic_fines table.
+    Save the calculated fine to the dynamic_fines collection.
     
     Args:
         fine: FineBreakdown object with calculation details.
         
     Returns:
-        ID of the inserted record.
+        ID of the inserted document.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("""
-            INSERT INTO dynamic_fines (
-                violation_id, zone_type, base_penalty, duration_seconds,
-                duration_penalty, traffic_impact, impact_penalty, total_fine
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            fine.violation_id,
-            fine.zone_type,
-            fine.base_penalty,
-            fine.duration_seconds,
-            fine.duration_penalty,
-            fine.traffic_impact,
-            fine.impact_penalty,
-            fine.total_fine
-        ))
-        
-        conn.commit()
-        fine_id = cursor.lastrowid
-        print(f"[FINE] Saved fine #{fine_id}: {fine.total_fine} LKR (Zone: {fine.zone_type})")
-        return fine_id
-        
-    finally:
-        conn.close()
+    db = get_sync_db()
+    doc_ref = db.collection(Collections.DYNAMIC_FINES).add({
+        "violation_id": fine.violation_id,
+        "zone_type": fine.zone_type,
+        "base_penalty": fine.base_penalty,
+        "duration_seconds": fine.duration_seconds,
+        "duration_penalty": fine.duration_penalty,
+        "traffic_impact": fine.traffic_impact,
+        "impact_penalty": fine.impact_penalty,
+        "total_fine": fine.total_fine,
+        "payment_status": "unpaid",
+        "created_at": datetime.now().isoformat(),
+    })
+    # doc_ref is a tuple (update_time, doc_ref) for sync add
+    fine_id = doc_ref[1].id if isinstance(doc_ref, tuple) else doc_ref.id
+    print(f"[FINE] Saved fine #{fine_id}: {fine.total_fine} LKR (Zone: {fine.zone_type})")
+    return fine_id
 
 
 def get_fine_by_violation(violation_id: int) -> Optional[Dict]:
@@ -171,49 +159,36 @@ def get_fine_by_violation(violation_id: int) -> Optional[Dict]:
     Returns:
         Dict with fine breakdown or None if not found.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("""
-            SELECT * FROM dynamic_fines WHERE violation_id = ?
-        """, (violation_id,))
-        
-        row = cursor.fetchone()
-        if not row:
-            return None
-        
-        columns = [desc[0] for desc in cursor.description]
-        return dict(zip(columns, row))
-        
-    finally:
-        conn.close()
+    db = get_sync_db()
+    docs = db.collection(Collections.DYNAMIC_FINES).where(
+        "violation_id", "==", violation_id
+    ).limit(1).get()
+
+    for doc in docs:
+        result = doc.to_dict()
+        result["id"] = doc.id
+        return result
+    return None
 
 
-def update_payment_status(fine_id: int, status: str) -> bool:
+def update_payment_status(fine_id: str, status: str) -> bool:
     """
     Update the payment status of a fine.
     
     Args:
-        fine_id: ID of the fine record.
+        fine_id: ID of the fine document.
         status: New status ('unpaid', 'paid', 'disputed')
         
     Returns:
         True if updated, False if not found.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("""
-            UPDATE dynamic_fines SET payment_status = ? WHERE id = ?
-        """, (status, fine_id))
-        
-        conn.commit()
-        return cursor.rowcount > 0
-        
-    finally:
-        conn.close()
+    db = get_sync_db()
+    doc_ref = db.collection(Collections.DYNAMIC_FINES).document(fine_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        return False
+    doc_ref.update({"payment_status": status})
+    return True
 
 
 def get_unpaid_fines(limit: int = 50) -> list:
@@ -226,22 +201,20 @@ def get_unpaid_fines(limit: int = 50) -> list:
     Returns:
         List of fine records as dicts.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("""
-            SELECT * FROM dynamic_fines 
-            WHERE payment_status = 'unpaid' 
-            ORDER BY created_at DESC 
-            LIMIT ?
-        """, (limit,))
-        
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
-    finally:
-        conn.close()
+    db = get_sync_db()
+    docs = (
+        db.collection(Collections.DYNAMIC_FINES)
+        .where("payment_status", "==", "unpaid")
+        .order_by("created_at", direction="DESCENDING")
+        .limit(limit)
+        .get()
+    )
+    results = []
+    for doc in docs:
+        d = doc.to_dict()
+        d["id"] = doc.id
+        results.append(d)
+    return results
 
 
 def calculate_and_save_fine(

@@ -10,17 +10,15 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.responses import Response
 from pydantic import BaseModel
-import aiosqlite
+from google.cloud.firestore_v1 import FieldFilter
 
 from app.config import get_settings
+from app.db.firestore_client import get_db, Collections
 from app.routers.auth import get_current_admin, UserInfo
 from app.fuzzy.traffic_controller import get_four_way_controller
 
 settings = get_settings()
 router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
-
-# Database path
-DB_PATH = settings.db_path
 
 
 # =============================================================================
@@ -93,6 +91,7 @@ class DashboardStats(BaseModel):
     total_vehicles_today: int
     pending_fines: float
     emergency_mode: bool
+    total_drivers: int = 0
 
 
 class ViolationDetail(BaseModel):
@@ -136,95 +135,132 @@ async def get_dashboard_stats(user: UserInfo = Depends(get_current_admin)):
     - Traffic level estimation
     - Active junction count
     """
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        today = datetime.now().strftime("%Y-%m-%d")
-        week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-        
-        # Violations today (timestamp is REAL unix epoch)
-        cursor = await db.execute(
-            "SELECT COUNT(*) as count FROM driver_violations WHERE date(timestamp, 'unixepoch', 'localtime') >= ?",
-            (today,)
+    db = get_db()
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+
+    # Violations today
+    violations_today = 0
+    q = db.collection(Collections.VIOLATIONS).where(
+        filter=FieldFilter("timestamp", ">=", today)
+    )
+    async for _ in q.stream():
+        violations_today += 1
+
+    # Violations this week
+    violations_week = 0
+    q = db.collection(Collections.VIOLATIONS).where(
+        filter=FieldFilter("timestamp", ">=", week_ago)
+    )
+    async for _ in q.stream():
+        violations_week += 1
+
+    # Average risk score from drivers
+    scores = []
+    total_drivers = 0
+    async for doc in db.collection(Collections.DRIVERS).stream():
+        d = doc.to_dict()
+        scores.append(d.get("current_score", 100))
+        total_drivers += 1
+    avg_score = sum(scores) / len(scores) if scores else 100.0
+
+    # Compute average risk score from actual RISK_SCORES collection
+    # (uses the real formula: Speed_Factor × 0.6 + History_Factor × 0.4)
+    real_risk_scores = []
+    try:
+        seen_vehicles = set()
+        rq = db.collection(Collections.RISK_SCORES).order_by(
+            "created_at", direction="DESCENDING"
+        ).limit(200)
+        async for rdoc in rq.stream():
+            rd = rdoc.to_dict()
+            vid = rd.get("vehicle_id") or rd.get("plate_number") or ""
+            if vid in seen_vehicles:
+                continue  # Keep only latest per vehicle
+            seen_vehicles.add(vid)
+            rs = rd.get("risk_score")
+            if rs is not None:
+                real_risk_scores.append(float(rs))
+    except Exception as e:
+        print(f"[ADMIN] Failed to fetch risk scores: {e}")
+
+    if real_risk_scores:
+        avg_risk = round(sum(real_risk_scores) / len(real_risk_scores), 2)
+    else:
+        # Fallback: derive from driver safety scores only if no real risk data
+        avg_risk = round(100 - avg_score, 2)
+
+    # Get junction safety score
+    # Get junction safety score and derive traffic level
+    traffic_level = "normal"
+    q = db.collection(Collections.JUNCTION_SAFETY).order_by(
+        "updated_at", direction="DESCENDING"
+    ).limit(1)
+    async for doc in q.stream():
+        js = doc.to_dict()
+        safety_score = js.get("safety_score", 50)
+        # Use safety score directly (not inverted) with proposal thresholds
+        if safety_score < 40:
+            traffic_level = "high"       # RED zone = high risk
+        elif safety_score < 70:
+            traffic_level = "moderate"   # YELLOW zone
+        else:
+            traffic_level = "low"        # GREEN zone
+
+    # Pending fines (only sum unpaid violations)
+    pending_fines = 0.0
+    try:
+        q = db.collection(Collections.VIOLATIONS).where(
+            filter=FieldFilter("status", "in", ["pending", "unpaid", None])
         )
-        violations_today = (await cursor.fetchone())["count"]
-        
-        # Violations this week
-        cursor = await db.execute(
-            "SELECT COUNT(*) as count FROM driver_violations WHERE date(timestamp, 'unixepoch', 'localtime') >= ?",
-            (week_ago,)
-        )
-        violations_week = (await cursor.fetchone())["count"]
-        
-        # Average risk score (from drivers table)
-        cursor = await db.execute(
-            "SELECT AVG(current_score) as avg_score FROM drivers"
-        )
-        avg_score_row = await cursor.fetchone()
-        avg_score = avg_score_row["avg_score"] if avg_score_row["avg_score"] else 100.0
-        
-        # Get junction safety score (kept as is)
-        cursor = await db.execute(
-            """SELECT name FROM sqlite_master 
-               WHERE type='table' AND name='junction_safety'"""
-        )
-        junction_table_exists = await cursor.fetchone()
-        
-        traffic_level = "normal"
-        current_risk = 50.0
-        
-        if junction_table_exists:
-            cursor = await db.execute(
-                """SELECT safety_score FROM junction_safety 
-                   ORDER BY updated_at DESC LIMIT 1"""
-            )
-            junction = await cursor.fetchone()
-            if junction:
-                current_risk = 100 - junction["safety_score"]
-                if current_risk > 70:
-                    traffic_level = "high"
-                elif current_risk > 40:
-                    traffic_level = "moderate"
-                else:
-                    traffic_level = "low"
-        
-        # Count pending fines
-        cursor = await db.execute(
-            "SELECT SUM(fine_amount) as total FROM driver_violations WHERE fine_amount > 0"
-        )
-        pending_fines_row = await cursor.fetchone()
-        pending_fines = pending_fines_row["total"] if pending_fines_row["total"] else 0.0
-        
-        # Check emergency mode (kept as is)
-        cursor = await db.execute(
-            """SELECT name FROM sqlite_master 
-               WHERE type='table' AND name='emergency_status'"""
-        )
-        emergency_table_exists = await cursor.fetchone()
-        emergency_mode = False
-        
-        if emergency_table_exists:
-            cursor = await db.execute(
-                "SELECT active FROM emergency_status ORDER BY id DESC LIMIT 1"
-            )
-            status = await cursor.fetchone()
-            emergency_mode = bool(status["active"]) if status else False
-        
-        return DashboardStats(
-            violations_today=violations_today,
-            violations_this_week=violations_week,
-            average_risk_score=round(100 - avg_score, 2),  # Convert to risk percentage
-            current_traffic_level=traffic_level,
-            active_junctions=1,  # TODO: Count from junction_safety table
-            total_vehicles_today=violations_today * 10,  # Estimate
-            pending_fines=pending_fines,
-            emergency_mode=emergency_mode,
-        )
+        async for doc in q.stream():
+            v = doc.to_dict()
+            fa = v.get("fine_amount", 0)
+            if fa and fa > 0:
+                pending_fines += fa
+    except Exception:
+        # Fallback: sum all violations if status field doesn't exist
+        async for doc in db.collection(Collections.VIOLATIONS).stream():
+            v = doc.to_dict()
+            status = v.get("status", "pending")
+            if status in ["pending", "unpaid", None]:
+                fa = v.get("fine_amount", 0)
+                if fa and fa > 0:
+                    pending_fines += fa
+
+    # Check emergency mode
+    emergency_mode = False
+    eq = db.collection(Collections.EMERGENCY_STATUS).order_by(
+        "triggered_at", direction="DESCENDING"
+    ).limit(1)
+    async for doc in eq.stream():
+        emergency_mode = bool(doc.to_dict().get("active", False))
+
+    return DashboardStats(
+        violations_today=violations_today,
+        violations_this_week=violations_week,
+        average_risk_score=avg_risk,
+        current_traffic_level=traffic_level,
+        active_junctions=1,
+        total_vehicles_today=violations_today * 10,
+        pending_fines=pending_fines,
+        emergency_mode=emergency_mode,
+        total_drivers=total_drivers,
+    )
 
 
 # =============================================================================
 # VIOLATION MANAGEMENT
 # =============================================================================
+
+# Type categories that match multiple violation types
+VIOLATION_TYPE_CATEGORIES = {
+    "parking": ["parking_no_parking", "parking_no_stopping", "parking_overtime", 
+                "parking_handicap", "parking_loading"],
+    "lane_weaving": ["lane_weaving"],
+}
+
 
 @router.get("/violations", summary="Get all violations")
 async def get_all_violations(
@@ -232,76 +268,102 @@ async def get_all_violations(
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
     violation_type: Optional[str] = Query(default=None),
+    status: Optional[str] = Query(default=None, description="Filter by status: pending, verified, paid, dismissed"),
     date_from: Optional[str] = Query(default=None),
     date_to: Optional[str] = Query(default=None),
 ):
     """
     Get paginated list of all violations with optional filters.
     Admin only endpoint.
+    
+    violation_type can be:
+    - An exact type like 'red_light', 'speeding'
+    - A category like 'parking' (matches all parking_* types)
+    - A category like 'lane_weaving' (matches lane_weaving)
+    
+    status can be: pending, verified, paid, dismissed
     """
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
+    db = get_db()
+
+    # Build query - avoid composite index by fetching all and filtering in Python
+    q = db.collection(Collections.VIOLATIONS)
+    
+    # Check if violation_type is a category or exact match
+    category_types = None
+    filter_type = None
+    if violation_type:
+        if violation_type in VIOLATION_TYPE_CATEGORIES:
+            # It's a category, we'll filter in-memory
+            category_types = VIOLATION_TYPE_CATEGORIES[violation_type]
+        else:
+            # Exact match - filter in-memory (avoids composite index)
+            filter_type = violation_type
+    
+    # Only apply date filters if no violation_type filter (to avoid composite index)
+    # For simplicity, fetch all and filter in Python
+    
+    # Collect all docs (filter and sort in Python to avoid composite index)
+    all_docs = []
+    async for doc in q.stream():
+        doc_dict = doc.to_dict()
         
-        # Build query with filters
-        # driver_violations columns: violation_id, driver_id, violation_type, timestamp, location, points_deducted, fine_amount, license_plate, snapshot_path, notes
-        query = """SELECT violation_id, driver_id, violation_type, fine_amount,
-                          timestamp, location, snapshot_path, notes, points_deducted
-                   FROM driver_violations WHERE 1=1"""
-        params = []
+        # Filter by violation_type in Python
+        if filter_type:
+            if doc_dict.get("violation_type") != filter_type:
+                continue
+        if category_types:
+            if doc_dict.get("violation_type") not in category_types:
+                continue
         
-        if violation_type:
-            query += " AND violation_type = ?"
-            params.append(violation_type)
+        # Filter by date in Python
+        ts = doc_dict.get("timestamp", "")
+        if date_from and ts < date_from:
+            continue
+        if date_to and ts > date_to + " 23:59:59":
+            continue
         
-        if date_from:
-            query += " AND date(timestamp, 'unixepoch', 'localtime') >= ?"
-            params.append(date_from)
+        # Filter by status in Python
+        if status:
+            doc_status = doc_dict.get("status") or "pending"
+            if doc_status.lower() != status.lower():
+                continue
         
-        if date_to:
-            query += " AND date(timestamp, 'unixepoch', 'localtime') <= ?"
-            params.append(date_to)
-        
-        # Get total count
-        count_query = f"SELECT COUNT(*) as count FROM driver_violations WHERE 1=1"
-        if violation_type:
-            count_query += f" AND violation_type = '{violation_type}'"
-        
-        cursor = await db.execute(count_query)
-        total = (await cursor.fetchone())["count"]
-        
-        # Add pagination
-        query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
-        
-        cursor = await db.execute(query, params)
-        violations = await cursor.fetchall()
-        
-        return {
-            "violations": [
-                {
-                    "violation_id": str(v["violation_id"]),
-                    "driver_id": v["driver_id"],
-                    "license_plate": v["driver_id"],  # Use driver_id as license plate
-                    "violation_type": v["violation_type"],
-                    "timestamp": datetime.fromtimestamp(v["timestamp"]).strftime("%Y-%m-%d %H:%M:%S"),
-                    "location": v["location"] or "Unknown",
-                    "fine_amount": v["fine_amount"] or 0,
-                    "points_deducted": v["points_deducted"] or 0,
-                    "evidence_path": v["snapshot_path"],
-                    "notes": v["notes"] or "",
-                    "status": "pending", # driver_violations table does not have a status column
-                }
-                for v in violations
-            ],
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-            "filters_applied": {
-                "violation_type": violation_type,
-                "date_from": date_from,
-                "date_to": date_to,
+        all_docs.append((doc.id, doc_dict))
+    
+    # Sort by timestamp descending in Python
+    all_docs.sort(key=lambda x: x[1].get("timestamp", ""), reverse=True)
+
+    total = len(all_docs)
+    page = all_docs[offset: offset + limit]
+
+    return {
+        "violations": [
+            {
+                "violation_id": doc_id,
+                "driver_id": v.get("driver_id", ""),
+                "license_plate": v.get("license_plate", v.get("driver_id", "")),
+                "violation_type": v.get("violation_type", ""),
+                "timestamp": v.get("timestamp", ""),
+                "location": v.get("location") or "Unknown",
+                "fine_amount": v.get("fine_amount", 0) or 0,
+                "points_deducted": v.get("points_deducted", 0),
+                "evidence_path": v.get("evidence_path") or v.get("snapshot_path"),
+                "notes": f"Severity: {v['severity']}" if v.get("severity") else None,
+                "status": v.get("status") or "pending",
+                "fine_breakdown": v.get("fine_breakdown"),
             }
+            for doc_id, v in page
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "filters_applied": {
+            "violation_type": violation_type,
+            "status": status,
+            "date_from": date_from,
+            "date_to": date_to,
         }
+    }
 
 
 @router.get("/violations/{violation_id}", summary="Get violation details")
@@ -310,33 +372,27 @@ async def get_violation_details(
     user: UserInfo = Depends(get_current_admin),
 ):  
     """Get detailed information about a specific violation."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        cursor = await db.execute(
-            """SELECT * FROM driver_violations WHERE violation_id = ?""",
-            (violation_id,)
-        )
-        violation = await cursor.fetchone()
-        
-        if not violation:
-            raise HTTPException(status_code=404, detail="Violation not found")
-        
-        # Return formatted response matching the driver_violations schema
-        return {
-            "violation_id": str(violation["violation_id"]),
-            "driver_id": violation["driver_id"],
-            "license_plate": violation["driver_id"],
-            "violation_type": violation["violation_type"],
-            "timestamp": datetime.fromtimestamp(violation["timestamp"]).strftime("%Y-%m-%d %H:%M:%S"),
-            "location": violation["location"] or "Unknown",
-            "fine_amount": violation["fine_amount"] or 0,
-            "points_deducted": violation["points_deducted"] or 0,
-            "severity": "medium",  # Calculated or static, as driver_violations table does not have a severity column
-            "status": "pending", # driver_violations table does not have a status column
-            "evidence_path": violation["snapshot_path"],
-            "notes": violation["notes"]
-        }
+    db = get_db()
+    doc = await db.collection(Collections.VIOLATIONS).document(violation_id).get()
+
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Violation not found")
+
+    v = doc.to_dict()
+    return {
+        "violation_id": doc.id,
+        "driver_id": v.get("driver_id", ""),
+        "license_plate": v.get("license_plate", v.get("driver_id", "")),
+        "violation_type": v.get("violation_type", ""),
+        "timestamp": v.get("timestamp", ""),
+        "location": v.get("location") or "Unknown",
+        "fine_amount": v.get("fine_amount", 0) or 0,
+        "points_deducted": v.get("points_deducted", 0) or 0,
+        "severity": v.get("severity"),
+        "status": v.get("status") or "pending",
+        "evidence_path": v.get("evidence_path") or v.get("snapshot_path"),
+        "fine_breakdown": v.get("fine_breakdown"),
+    }
 
 
 @router.delete("/violations/{violation_id}", summary="Delete a violation")
@@ -345,17 +401,43 @@ async def delete_violation(
     user: UserInfo = Depends(get_current_admin),
 ):
     """Delete a violation record (admin only)."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        cursor = await db.execute(
-            "DELETE FROM driver_violations WHERE violation_id = ?",
-            (violation_id,)
-        )
-        await db.commit()
-        
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Violation not found")
-    
+    db = get_db()
+    doc = await db.collection(Collections.VIOLATIONS).document(violation_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Violation not found")
+
+    await db.collection(Collections.VIOLATIONS).document(violation_id).delete()
     return {"status": "deleted", "violation_id": violation_id}
+
+
+@router.patch("/violations/{violation_id}/status", summary="Update violation status")
+async def update_violation_status(
+    violation_id: str,
+    new_status: str = Query(..., description="New status: pending, verified, dismissed, paid"),
+    user: UserInfo = Depends(get_current_admin),
+):
+    """Update the status of a violation (admin only)."""
+    db = get_db()
+    
+    # Validate status
+    valid_statuses = ["pending", "verified", "dismissed", "paid"]
+    if new_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+    
+    doc = await db.collection(Collections.VIOLATIONS).document(violation_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Violation not found")
+    
+    # Update status
+    await db.collection(Collections.VIOLATIONS).document(violation_id).update({
+        "status": new_status,
+        "status_updated_at": datetime.now().isoformat(),
+        "status_updated_by": user.identifier,
+    })
+    
+    print(f"[ADMIN] Violation {violation_id} status updated to '{new_status}' by {user.identifier}")
+    
+    return {"status": "updated", "violation_id": violation_id, "new_status": new_status}
 
 
 # =============================================================================
@@ -369,63 +451,112 @@ async def get_all_drivers(
     offset: int = Query(default=0, ge=0),
     sort_by: str = Query(default="current_score", description="Sort by: current_score, total_violations, total_fines"),
     order: str = Query(default="asc", description="Order: asc, desc"),
+    search: Optional[str] = Query(default=None, description="Search by plate, name, phone"),
+    risk_level: Optional[str] = Query(default=None, description="Filter by: excellent, good, fair, poor, critical"),
+    registered_only: bool = Query(default=False, description="Only include drivers linked to registered driver users"),
 ):
-    """Get paginated list of all drivers with their scores."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        # Validate sort_by
-        valid_sorts = ["current_score", "total_violations", "total_fines", "driver_id"]
-        if sort_by not in valid_sorts:
-            sort_by = "current_score"
-        
-        order_dir = "DESC" if order.lower() == "desc" else "ASC"
-        
-        # Join with driver_users to get name and phone
-        # Note: driver_users table is not defined in database.py, proceeding with assumption it exists or optional
-        # Using LEFT JOIN assuming driver_users might not exist or match
-        try:
-            cursor = await db.execute(f"""
-                SELECT d.driver_id, d.current_score, d.total_violations, d.total_fines, d.updated_at,
-                       du.name, du.phone
-                FROM drivers d
-                LEFT JOIN driver_users du ON d.driver_id = du.plate_number
-                ORDER BY d.{sort_by} {order_dir}
-                LIMIT ? OFFSET ?
-            """, (limit, offset))
-            drivers = await cursor.fetchall()
-        except aiosqlite.OperationalError:
-             # Fallback if driver_users table is missing
-            cursor = await db.execute(f"""
-                SELECT d.driver_id, d.current_score, d.total_violations, d.total_fines, d.updated_at,
-                       'Unknown Driver' as name, 'N/A' as phone
-                FROM drivers d
-                ORDER BY d.{sort_by} {order_dir}
-                LIMIT ? OFFSET ?
-            """, (limit, offset))
-            drivers = await cursor.fetchall()
-        
-        cursor = await db.execute("SELECT COUNT(*) as count FROM drivers")
-        total = (await cursor.fetchone())["count"]
-        
-        return {
-            "drivers": [
-                {
-                    "driver_id": d["driver_id"],
-                    "name": d["name"] or "Unknown Driver",
-                    "phone": d["phone"],
-                    "current_score": d["current_score"],
-                    "total_violations": d["total_violations"],
-                    "total_fines": d["total_fines"],
-                    "last_violation": datetime.fromtimestamp(d["updated_at"]).strftime("%Y-%m-%d %H:%M:%S") if d["updated_at"] else None,
-                    "risk_level": get_risk_level(d["current_score"]),
-                }
-                for d in drivers
-            ],
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-        }
+    """Get paginated list of drivers with profile-enriched metadata."""
+    db = get_db()
+    from app.utils.plate_utils import normalize_plate
+
+    valid_sorts = ["current_score", "total_violations", "total_fines", "driver_id"]
+    if sort_by not in valid_sorts:
+        sort_by = "current_score"
+
+    direction = "DESCENDING" if order.lower() == "desc" else "ASCENDING"
+
+    # Get all drivers sorted
+    all_drivers = []
+    q = db.collection(Collections.DRIVERS).order_by(sort_by, direction=direction)
+    async for doc in q.stream():
+        d = doc.to_dict()
+        d["_driver_id"] = doc.id
+        all_drivers.append(d)
+
+    # Build a plate-indexed lookup map for registered users once.
+    users_by_plate = {}
+    users_by_plate_norm = {}
+    async for udoc in db.collection(Collections.DRIVER_USERS).stream():
+        u = udoc.to_dict()
+        plate = str(u.get("plate_number") or "").strip().upper()
+        plate_norm = str(u.get("plate_number_normalized") or "").strip().upper()
+        if not plate_norm and plate:
+            plate_norm = normalize_plate(plate)
+        if plate:
+            users_by_plate[plate] = u
+        if plate_norm:
+            users_by_plate_norm[plate_norm] = u
+
+    requested_risk = (risk_level or "").strip().lower()
+    if requested_risk == "all":
+        requested_risk = ""
+    valid_risks = {"excellent", "good", "fair", "poor", "critical"}
+    if requested_risk and requested_risk not in valid_risks:
+        requested_risk = ""
+
+    search_query = (search or "").strip().lower()
+
+    merged = []
+    for d in all_drivers:
+        driver_id = str(d.get("driver_id") or d.get("_driver_id") or "").strip()
+        if not driver_id:
+            continue
+
+        normalized_driver_id = normalize_plate(driver_id)
+        user_doc = (
+            users_by_plate.get(driver_id.upper())
+            or (users_by_plate_norm.get(normalized_driver_id) if normalized_driver_id else None)
+        )
+
+        if registered_only and not user_doc:
+            continue
+
+        score = d.get("current_score", 100)
+        score_risk = get_risk_level(score)
+        if requested_risk and score_risk != requested_risk:
+            continue
+
+        plate_number = (
+            (user_doc or {}).get("plate_number")
+            or d.get("plate_number_display")
+            or driver_id
+        )
+        name = (user_doc or {}).get("name") or "Unknown Driver"
+        phone = (user_doc or {}).get("phone")
+
+        if search_query:
+            haystacks = [
+                driver_id,
+                normalized_driver_id,
+                plate_number,
+                name,
+                phone or "",
+            ]
+            if not any(search_query in str(v).lower() for v in haystacks if v):
+                continue
+
+        merged.append({
+            "driver_id": driver_id,
+            "plate_number": plate_number,
+            "name": name,
+            "phone": phone,
+            "is_registered": user_doc is not None,
+            "current_score": score,
+            "total_violations": d.get("total_violations", 0),
+            "total_fines": d.get("total_fines", 0.0),
+            "last_violation": d.get("updated_at"),
+            "risk_level": score_risk,
+        })
+
+    total = len(merged)
+    page = merged[offset: offset + limit]
+
+    return {
+        "drivers": page,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get("/drivers/{driver_id}", summary="Get driver details")
@@ -434,59 +565,164 @@ async def get_driver_details(
     user: UserInfo = Depends(get_current_admin),
 ):
     """Get detailed information about a specific driver."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        # Get driver info with user details
-        try:
-            cursor = await db.execute(
-                """SELECT d.*, du.name, du.phone
-                   FROM drivers d
-                   LEFT JOIN driver_users du ON d.driver_id = du.plate_number
-                   WHERE d.driver_id = ?""",
-                (driver_id,)
-            )
-            driver = await cursor.fetchone()
-        except aiosqlite.OperationalError:
-            cursor = await db.execute(
-                """SELECT d.*, 'Unknown Driver' as name, 'N/A' as phone
-                   FROM drivers d
-                   WHERE d.driver_id = ?""",
-                (driver_id,)
-            )
-            driver = await cursor.fetchone()
-        
-        if not driver:
-            raise HTTPException(status_code=404, detail="Driver not found")
-        
-        # Get violations
-        cursor = await db.execute(
-            """SELECT violation_id, violation_type, timestamp, fine_amount, location
-               FROM driver_violations WHERE driver_id = ?
-               ORDER BY timestamp DESC LIMIT 20""",
-            (driver_id,)
-        )
-        violations = await cursor.fetchall()
-        
-        return {
-            "driver_id": driver["driver_id"],
-            "name": driver["name"] or "Unknown Driver",
-            "phone": driver["phone"],
-            "current_score": driver["current_score"],
-            "total_violations": driver["total_violations"],
-            "total_fines": driver["total_fines"],
-            "last_violation": datetime.fromtimestamp(driver["updated_at"]).strftime("%Y-%m-%d %H:%M:%S") if driver["updated_at"] else None,
-            "recent_violations": [
-                {
-                    "violation_id": str(v["violation_id"]),
-                    "violation_type": v["violation_type"],
-                    "timestamp": datetime.fromtimestamp(v["timestamp"]).strftime("%Y-%m-%d %H:%M:%S"),
-                    "fine_amount": v["fine_amount"] or 0,
-                    "location": v["location"],
-                }
-                for v in violations
-            ],
+    db = get_db()
+
+    doc = await db.collection(Collections.DRIVERS).document(driver_id).get()
+    
+    # Initialize driver data - either from document or defaults
+    if doc.exists:
+        driver = doc.to_dict()
+    else:
+        driver = {
+            "driver_id": driver_id,
+            "current_score": 100,
+            "total_violations": 0,
+            "total_fines": 0.0,
         }
+
+    # Get user details
+    name = "Unknown Driver"
+    phone = None
+    plate_number = driver.get("plate_number_display") or driver_id
+    
+    from app.utils.plate_utils import normalize_plate
+    norm_driver_id = normalize_plate(driver_id)
+    
+    uq = db.collection(Collections.DRIVER_USERS).where(
+        filter=FieldFilter("plate_number", "==", driver_id)
+    ).limit(1)
+    found_user = False
+    async for udoc in uq.stream():
+        u = udoc.to_dict()
+        name = u.get("name") or "Unknown Driver"
+        phone = u.get("phone")
+        plate_number = u.get("plate_number") or plate_number
+        found_user = True
+    
+    # Fallback: try normalized plate match
+    if not found_user and norm_driver_id:
+        uq2 = db.collection(Collections.DRIVER_USERS).where(
+            filter=FieldFilter("plate_number_normalized", "==", norm_driver_id)
+        ).limit(1)
+        async for udoc in uq2.stream():
+            u = udoc.to_dict()
+            name = u.get("name") or "Unknown Driver"
+            phone = u.get("phone")
+            plate_number = u.get("plate_number") or plate_number
+
+    # Get all violations for this driver and calculate stats
+    # Search by both original and normalized plate to catch all matches
+    seen_vio_ids = set()
+    violations_raw = []
+    for search_id in set(filter(None, [driver_id, norm_driver_id])):
+        for field_name in ("driver_id", "license_plate"):
+            vq = db.collection(Collections.VIOLATIONS).where(
+                filter=FieldFilter(field_name, "==", search_id)
+            )
+            async for vdoc in vq.stream():
+                if vdoc.id not in seen_vio_ids:
+                    seen_vio_ids.add(vdoc.id)
+                    violations_raw.append((vdoc.id, vdoc.to_dict()))
+    
+    # Sort by timestamp descending in Python
+    violations_raw.sort(key=lambda x: x[1].get("timestamp", ""), reverse=True)
+    
+    violations = []
+    total_fines = 0.0
+    total_points_deducted = 0
+    last_violation_time = None
+    for vdoc_id, v in violations_raw:
+        fine_amount = v.get("fine_amount", 0) or 0
+        points = v.get("points_deducted", 0) or 0
+        total_fines += fine_amount
+        total_points_deducted += points
+        if not last_violation_time:
+            last_violation_time = v.get("timestamp")
+        violations.append({
+            "violation_id": vdoc_id,
+            "violation_type": v.get("violation_type", ""),
+            "timestamp": v.get("timestamp", ""),
+            "fine_amount": fine_amount,
+            "location": v.get("location"),
+        })
+
+    # Calculate score: sum of actual points_deducted from violations
+    total_violations = len(violations)
+    calculated_score = max(0, 100 - total_points_deducted)
+
+    # Fetch latest risk score for this driver
+    # RISK_SCORES stores vehicle_id as tracking int (e.g. "5") and plate_number
+    # as the detected plate. We search by plate_number and plate_number_normalized
+    # since driver_id is a plate string, not a tracking ID.
+    risk_score = None
+    risk_level_pred = None
+
+    # Try by plate_number (exact match)
+    try:
+        rq = db.collection(Collections.RISK_SCORES).where(
+            filter=FieldFilter("plate_number", "==", driver_id)
+        ).limit(5)
+        best_doc = None
+        async for rdoc in rq.stream():
+            rd = rdoc.to_dict()
+            # Pick the most recent by created_at
+            if best_doc is None or (rd.get("created_at", "") > best_doc.get("created_at", "")):
+                best_doc = rd
+        if best_doc:
+            risk_score = best_doc.get("risk_score")
+            risk_level_pred = best_doc.get("risk_level")
+    except Exception as e:
+        print(f"[ADMIN] Risk score query by plate_number failed: {e}")
+
+    # Fallback: try by normalized plate
+    if risk_score is None and norm_driver_id:
+        try:
+            rq2 = db.collection(Collections.RISK_SCORES).where(
+                filter=FieldFilter("plate_number_normalized", "==", norm_driver_id)
+            ).limit(5)
+            best_doc = None
+            async for rdoc in rq2.stream():
+                rd = rdoc.to_dict()
+                if best_doc is None or (rd.get("created_at", "") > best_doc.get("created_at", "")):
+                    best_doc = rd
+            if best_doc:
+                risk_score = best_doc.get("risk_score")
+                risk_level_pred = best_doc.get("risk_level")
+        except Exception as e:
+            print(f"[ADMIN] Risk score query by normalized plate failed: {e}")
+
+    # Fallback: calculate from driver's violation history factor
+    # (uses History_Factor × 0.4 since we have no live speed data)
+    if risk_score is None:
+        # Count recent violations for this driver
+        fallback_violation_count = total_violations  # already counted above
+        # History factor: each violation adds points (weighted or 10 per violation)
+        history_factor = min(100, fallback_violation_count * 10)
+        # Without live speed, assume moderate speed factor of 20 (just under limit)
+        speed_factor_fallback = 20.0
+        risk_score = round((speed_factor_fallback * 0.6) + (history_factor * 0.4), 1)
+        if risk_score >= 80:
+            risk_level_pred = "CRITICAL"
+        elif risk_score >= 60:
+            risk_level_pred = "HIGH"
+        elif risk_score >= 30:
+            risk_level_pred = "MEDIUM"
+        else:
+            risk_level_pred = "LOW"
+
+    return {
+        "driver_id": driver_id,
+        "plate_number": plate_number,
+        "name": name,
+        "phone": phone,
+        "current_score": driver.get("current_score", calculated_score),
+        "risk_score": risk_score,
+        "risk_level_prediction": risk_level_pred,
+        "total_violations": total_violations,
+        "total_fines": total_fines,
+        "last_violation": last_violation_time or driver.get("updated_at"),
+        "recent_violations": violations[:20],  # Limit to 20 most recent
+    }
 
 
 # =============================================================================
@@ -504,41 +740,29 @@ async def trigger_emergency(
     This simulates an ambulance/emergency vehicle approach.
     All signals will be set to allow emergency vehicle passage.
     """
-    # Activate emergency mode on the traffic controller
     controller = get_four_way_controller()
     if controller:
         controller.activate_emergency_mode(lane=lane)
         print(f"[ADMIN] 🚑 Emergency mode activated - Lane: {lane}")
     else:
         print(f"[ADMIN] ⚠️ Traffic controller not available for emergency mode")
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        # Create emergency_status table if not exists
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS emergency_status (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                junction_id TEXT NOT NULL,
-                emergency_type TEXT NOT NULL,
-                active INTEGER DEFAULT 1,
-                triggered_by TEXT,
-                triggered_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                resolved_at TEXT
-            )
-        """)
-        
-        # Insert new emergency
-        await db.execute(
-            """INSERT INTO emergency_status (junction_id, emergency_type, triggered_by)
-               VALUES (?, ?, ?)""",
-            (junction_id, emergency_type, "admin")
-        )
-        await db.commit()
-    
+
+    db = get_db()
+    now = datetime.now().isoformat()
+    await db.collection(Collections.EMERGENCY_STATUS).add({
+        "junction_id": junction_id,
+        "emergency_type": emergency_type,
+        "active": True,
+        "triggered_by": "admin",
+        "triggered_at": now,
+        "resolved_at": None,
+    })
+
     return EmergencyResponse(
         status="triggered",
         message=f"Emergency mode activated for {emergency_type} at junction {junction_id}",
         affected_junctions=[junction_id],
-        timestamp=datetime.now().isoformat(),
+        timestamp=now,
     )
 
 
@@ -548,25 +772,24 @@ async def clear_emergency(
     junction_id: str = Query(default="main"),
 ):
     """Clear emergency mode and return to normal operation."""
-    # Deactivate emergency mode on the traffic controller
     controller = get_four_way_controller()
     if controller:
         controller.deactivate_emergency_mode()
         print(f"[ADMIN] ✅ Emergency mode deactivated by {user.identifier}")
-    
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        await db.execute(
-            """UPDATE emergency_status 
-               SET active = 0, resolved_at = CURRENT_TIMESTAMP
-               WHERE junction_id = ? AND active = 1""",
-            (junction_id,)
-        )
-        await db.commit()
-    
+
+    db = get_db()
+    now = datetime.now().isoformat()
+    # Find active emergencies for this junction and deactivate
+    q = db.collection(Collections.EMERGENCY_STATUS).where(
+        filter=FieldFilter("junction_id", "==", junction_id)
+    ).where(filter=FieldFilter("active", "==", True))
+    async for doc in q.stream():
+        await doc.reference.update({"active": False, "resolved_at": now})
+
     return {
         "status": "cleared",
         "message": f"Emergency mode cleared for junction {junction_id}",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": now,
     }
 
 
@@ -580,36 +803,41 @@ async def get_violation_trends(
     days: int = Query(default=7, le=30),
 ):
     """Get violation trends over the specified number of days."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-        
-        # Get daily counts by type
-        cursor = await db.execute(
-            """SELECT DATE(timestamp) as date, violation_type, COUNT(*) as count
-               FROM violations
-               WHERE timestamp >= ?
-               GROUP BY DATE(timestamp), violation_type
-               ORDER BY date""",
-            (start_date,)
-        )
-        daily_counts = await cursor.fetchall()
-        
-        # Organize by date
-        trends = {}
-        for row in daily_counts:
-            date = row["date"]
-            if date not in trends:
-                trends[date] = {"date": date, "total": 0, "by_type": {}}
-            trends[date]["by_type"][row["violation_type"]] = row["count"]
-            trends[date]["total"] += row["count"]
-        
-        return {
-            "period_days": days,
-            "start_date": start_date,
-            "trends": list(trends.values()),
-        }
+    db = get_db()
+    start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+    # Get violations since start_date
+    q = db.collection(Collections.VIOLATIONS).where(
+        filter=FieldFilter("timestamp", ">=", start_date)
+    ).order_by("timestamp")
+
+    # Normalise raw violation_type → display category for the pie chart
+    def _normalise_vtype(raw: str) -> str:
+        raw_l = raw.lower()
+        if raw_l.startswith("parking"):
+            return "parking_no_parking"   # group all parking sub-types
+        if raw_l in ("lane_violation", "lane_weaving", "lane_drift"):
+            return "lane_weaving"
+        if raw_l == "reckless_driving":
+            return "speeding"              # fold legacy reckless into speeding
+        return raw_l
+
+    trends = {}
+    async for doc in q.stream():
+        v = doc.to_dict()
+        ts = v.get("timestamp", "")
+        date = ts[:10] if len(ts) >= 10 else ts  # Extract YYYY-MM-DD
+        vtype = _normalise_vtype(v.get("violation_type", "unknown"))
+        if date not in trends:
+            trends[date] = {"date": date, "total": 0, "by_type": {}}
+        trends[date]["by_type"][vtype] = trends[date]["by_type"].get(vtype, 0) + 1
+        trends[date]["total"] += 1
+
+    return {
+        "period_days": days,
+        "start_date": start_date,
+        "trends": list(trends.values()),
+    }
 
 
 @router.get("/analytics/hotspots", summary="Get violation hotspots")
@@ -617,30 +845,26 @@ async def get_violation_hotspots(
     user: UserInfo = Depends(get_current_admin),
 ):
     """Get locations with highest violation counts."""
-    async with aiosqlite.connect(str(DB_PATH)) as db:
-        db.row_factory = aiosqlite.Row
-        
-        cursor = await db.execute(
-            """SELECT location, COUNT(*) as violation_count,
-                      SUM(fine_amount) as total_fines
-               FROM violations
-               WHERE location IS NOT NULL
-               GROUP BY location
-               ORDER BY violation_count DESC
-               LIMIT 10"""
-        )
-        hotspots = await cursor.fetchall()
-        
-        return {
-            "hotspots": [
-                {
-                    "location": h["location"],
-                    "violation_count": h["violation_count"],
-                    "total_fines": h["total_fines"],
-                }
-                for h in hotspots
-            ]
-        }
+    db = get_db()
+
+    location_stats = {}
+    async for doc in db.collection(Collections.VIOLATIONS).stream():
+        v = doc.to_dict()
+        loc = v.get("location")
+        if loc:
+            if loc not in location_stats:
+                location_stats[loc] = {"violation_count": 0, "total_fines": 0.0}
+            location_stats[loc]["violation_count"] += 1
+            location_stats[loc]["total_fines"] += v.get("fine_amount", 0) or 0
+
+    # Sort by violation count desc, take top 10
+    hotspots = sorted(
+        [{"location": k, **v} for k, v in location_stats.items()],
+        key=lambda x: x["violation_count"],
+        reverse=True,
+    )[:10]
+
+    return {"hotspots": hotspots}
 
 
 def get_risk_level(score: int) -> str:

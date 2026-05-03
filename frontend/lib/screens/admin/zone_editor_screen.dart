@@ -18,7 +18,7 @@ class ZoneEditorScreen extends StatefulWidget {
   State<ZoneEditorScreen> createState() => _ZoneEditorScreenState();
 }
 
-class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
+class _ZoneEditorScreenState extends State<ZoneEditorScreen> with SingleTickerProviderStateMixin {
   final ApiClient _apiClient = ApiClient();
   
   List<ParkingZone> _zones = [];
@@ -39,12 +39,81 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
   
   // Actual image display area (accounting for BoxFit.contain letterboxing)
   Rect _imageRect = Rect.zero;
+  
+  // Tab controller for Zone/Stop Line tabs
+  late TabController _tabController;
+  
+  // Stop line configuration
+  double _stopLineY = 0.6;      // Y position ratio (0-1)
+  double _stopLineXStart = 0.0; // Left boundary ratio (0-1)
+  double _stopLineXEnd = 1.0;   // Right boundary ratio (0-1) - full width by default
+  bool _stopLineActive = true;
+  bool _isEditingStopLine = false;
+  String? _dragHandle; // 'line', 'left', 'right'
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      // Rebuild when tab changes to show/hide stop line overlay
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     _loadZones();
     _loadVideoSnapshot();
+    _loadStopLineConfig();
+  }
+  
+  @override
+  void dispose() {
+    _tabController.removeListener(() {});
+    _tabController.dispose();
+    _labelController.dispose();
+    super.dispose();
+  }
+  
+  /// Load stop line configuration from backend
+  Future<void> _loadStopLineConfig() async {
+    try {
+      final response = await _apiClient.get(ApiEndpoints.stopLineConfig);
+      if (response.success && response.data != null) {
+        setState(() {
+          _stopLineY = (response.data!['y_position'] ?? 0.6).toDouble();
+          _stopLineXStart = (response.data!['x_start'] ?? 0.0).toDouble();
+          _stopLineXEnd = (response.data!['x_end'] ?? 1.0).toDouble();
+          _stopLineActive = response.data!['active'] ?? true;
+        });
+      }
+    } catch (e) {
+      debugPrint('[ZoneEditor] Error loading stop line config: $e');
+    }
+  }
+  
+  /// Save stop line configuration to backend
+  Future<void> _saveStopLineConfig() async {
+    try {
+      final response = await _apiClient.put(
+        ApiEndpoints.stopLineConfig,
+        body: {
+          'y_position': _stopLineY,
+          'x_start': _stopLineXStart,
+          'x_end': _stopLineXEnd,
+          'active': _stopLineActive,
+        },
+      );
+      
+      if (response.success) {
+        _showSuccess('Stop line configuration saved');
+      } else {
+        _showError(response.error ?? 'Failed to save stop line');
+      }
+    } on UnauthorizedException {
+      _handleUnauthorized();
+    } catch (e) {
+      _showError('Failed to save stop line: $e');
+    }
   }
   
   /// Handle unauthorized access - redirect to login
@@ -285,6 +354,27 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
     _imageRect = Rect.fromLTWH(offsetX, offsetY, displayedWidth, displayedHeight);
   }
   
+  /// Read actual image dimensions from snapshot bytes for accurate coordinate mapping
+  void _resolveImageSize(Uint8List bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final w = frame.image.width.toDouble();
+      final h = frame.image.height.toDouble();
+      frame.image.dispose();
+      codec.dispose();
+      if (w > 0 && h > 0 && (w != _imageSize.width || h != _imageSize.height)) {
+        debugPrint('[ZoneEditor] Image size: ${w.toInt()}x${h.toInt()}');
+        setState(() {
+          _imageSize = Size(w, h);
+          _calculateImageRect();
+        });
+      }
+    } catch (e) {
+      debugPrint('[ZoneEditor] Could not resolve image size: $e');
+    }
+  }
+  
   /// Convert image coordinates to screen coordinates
   Offset _imageToScreen(double imageX, double imageY) {
     return Offset(
@@ -355,14 +445,23 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
       case 2: // Violations
         Navigator.of(context).pushReplacementNamed('/admin/violations');
         break;
-      case 3: // Audit Logs
+      case 3: // Drivers
+        Navigator.of(context).pushReplacementNamed('/admin/drivers');
+        break;
+      case 4: // Analytics
+        Navigator.of(context).pushReplacementNamed('/admin/analytics');
+        break;
+      case 5: // Audit Logs
         Navigator.of(context).pushReplacementNamed('/admin/logs');
         break;
-      case 4: // Settings
+      case 6: // Risk Analytics
+        Navigator.of(context).pushReplacementNamed('/admin/risk');
+        break;
+      case 7: // Settings
         Navigator.of(context).pushReplacementNamed('/admin/settings');
         break;
-      case 5: // Logout
-        _handleLogout();
+      case 8: // IoT Junction
+        Navigator.of(context).pushReplacementNamed('/admin/iot-junction');
         break;
     }
   }
@@ -515,111 +614,132 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
   }
 
   Widget _buildCanvas() {
-    return Container(
-      margin: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            _displaySize = Size(constraints.maxWidth, constraints.maxHeight);
-            _calculateImageRect(); // Calculate actual image display area
-            
-            return GestureDetector(
-              onTapDown: _isDrawing ? _handleTap : null,
-              child: Stack(
-                children: [
-                  // Background - video snapshot for zone drawing
-                  _isLoadingSnapshot
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(color: AppColors.primary),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Loading video frame...',
-                                style: AppTypography.bodySmall.copyWith(color: Colors.white54),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _buildSnapshotImage(),
-                  
-                  // Existing zones
-                  ..._buildExistingZones(),
-                  
-                  // Current drawing
-                  if (_isDrawing)
-                    CustomPaint(
-                      size: Size.infinite,
-                      painter: ZonePainter(
-                        points: _currentPoints,
-                        color: _getZoneColor(_selectedZoneType),
-                        isComplete: false,
-                      ),
-                    ),
-                  
-                  // Points
-                  ..._buildPoints(),
-                  
-                  // Instructions overlay
-                  if (_isDrawing)
-                    Positioned(
-                      bottom: 16,
-                      left: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black87,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.info_outline,
-                              color: Colors.white70,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Points: ${_currentPoints.length} • Minimum: 3',
-                              style: AppTypography.bodySmall.copyWith(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            if (_currentPoints.isNotEmpty) ...[
-                              const SizedBox(width: 16),
-                              TextButton.icon(
-                                onPressed: _undoLastPoint,
-                                icon: const Icon(Icons.undo, size: 16),
-                                label: const Text('Undo'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.white70,
-                                  padding: EdgeInsets.zero,
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: _imageSize.width / _imageSize.height,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  _displaySize = Size(constraints.maxWidth, constraints.maxHeight);
+                  _calculateImageRect(); // Calculate actual image display area
+
+                  return GestureDetector(
+                    onTapDown: _isDrawing ? _handleTap : null,
+                    child: Stack(
+                      children: [
+                        // Background - video snapshot for zone drawing
+                        _isLoadingSnapshot
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(color: AppColors.primary),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Loading video frame...',
+                                      style: AppTypography.bodySmall.copyWith(color: Colors.white54),
+                                    ),
+                                  ],
                                 ),
+                              )
+                            : _buildSnapshotImage(),
+
+                        // Existing zones
+                        ..._buildExistingZones(),
+
+                        // Stop line overlay (when on stop line tab and stop line is active)
+                        if (_tabController.index == 1 && _stopLineActive)
+                          CustomPaint(
+                            size: Size.infinite,
+                            painter: StopLinePainter(
+                              yPosition: _stopLineY,
+                              xStart: _stopLineXStart,
+                              xEnd: _stopLineXEnd,
+                              isActive: _stopLineActive,
+                              displaySize: _displaySize,
+                              imageRect: _imageRect,
+                            ),
+                          ),
+
+                        // Current drawing
+                        if (_isDrawing)
+                          CustomPaint(
+                            size: Size.infinite,
+                            painter: ZonePainter(
+                              points: _currentPoints,
+                              color: _getZoneColor(_selectedZoneType),
+                              isComplete: false,
+                            ),
+                          ),
+
+                        // Points
+                        ..._buildPoints(),
+
+                        // Instructions overlay
+                        if (_isDrawing)
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
                               ),
-                            ],
-                          ],
-                        ),
-                      ),
+                              decoration: BoxDecoration(
+                                color: Colors.black87,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.info_outline,
+                                    color: Colors.white70,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Points: ${_currentPoints.length} • Minimum: 3',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  if (_currentPoints.isNotEmpty) ...[
+                                    const SizedBox(width: 16),
+                                    TextButton.icon(
+                                      onPressed: _undoLastPoint,
+                                      icon: const Icon(Icons.undo, size: 16),
+                                      label: const Text('Undo'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white70,
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                ],
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -701,8 +821,14 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
           return _buildPlaceholderBackground();
         }
         
+        // Decode image to get actual dimensions for coordinate mapping
+        final imageBytes = snapshot.data!;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _resolveImageSize(imageBytes);
+        });
+        
         return Image.memory(
-          snapshot.data!,
+          imageBytes,
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) => _buildPlaceholderBackground(),
         );
@@ -748,7 +874,10 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
   }
 
   List<Widget> _buildExistingZones() {
-    return _zones.map((zone) {
+    // Only show active zones
+    final activeZones = _zones.where((zone) => zone.active).toList();
+    
+    return activeZones.map((zone) {
       final points = zone.coordinates.map((coord) {
         // Use proper coordinate conversion accounting for letterboxing
         return _imageToScreen(coord[0], coord[1]);
@@ -822,6 +951,40 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
   Widget _buildZonePanel() {
     return Column(
       children: [
+        // Tab bar for Zone / Stop Line
+        Container(
+          color: AppColors.background,
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondary,
+            tabs: const [
+              Tab(text: 'Parking Zones', icon: Icon(Icons.crop_square, size: 18)),
+              Tab(text: 'Stop Line', icon: Icon(Icons.horizontal_rule, size: 18)),
+            ],
+          ),
+        ),
+        
+        // Tab content
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Tab 1: Zone editing
+              _buildZonesTab(),
+              // Tab 2: Stop Line editing
+              _buildStopLineTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildZonesTab() {
+    return Column(
+      children: [
         // Zone form (when drawing)
         if (_isDrawing) _buildZoneForm(),
         
@@ -832,6 +995,196 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
               : _buildZoneList(),
         ),
       ],
+    );
+  }
+  
+  Widget _buildStopLineTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Stop Line Configuration', style: AppTypography.h4),
+          const SizedBox(height: 8),
+          Text(
+            'Configure the red light stop line position and monitored lane boundaries.',
+            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 24),
+          
+          // Active toggle
+          SwitchListTile(
+            title: const Text('Red Light Detection'),
+            subtitle: const Text('Enable/disable red light violation detection'),
+            value: _stopLineActive,
+            onChanged: (value) => setState(() => _stopLineActive = value),
+            activeColor: AppColors.primary,
+          ),
+          
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          
+          // Y Position slider
+          Text('Stop Line Position (Vertical)', style: AppTypography.labelLarge),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('Top'),
+              Expanded(
+                child: Slider(
+                  value: _stopLineY,
+                  min: 0.1,
+                  max: 0.9,
+                  divisions: 80,
+                  label: '${(_stopLineY * 100).toInt()}%',
+                  onChanged: (value) => setState(() => _stopLineY = value),
+                  activeColor: AppColors.primary,
+                ),
+              ),
+              const Text('Bottom'),
+            ],
+          ),
+          Text(
+            'Position: ${(_stopLineY * 100).toInt()}% from top',
+            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // X Start slider
+          Text('Left Boundary (Monitored Lane)', style: AppTypography.labelLarge),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('Left'),
+              Expanded(
+                child: Slider(
+                  value: _stopLineXStart,
+                  min: 0.0,
+                  max: _stopLineXEnd - 0.05,
+                  divisions: 40,
+                  label: '${(_stopLineXStart * 100).toInt()}%',
+                  onChanged: (value) => setState(() => _stopLineXStart = value),
+                  activeColor: Colors.green,
+                ),
+              ),
+              const Text('Right'),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // X End slider
+          Text('Right Boundary (Monitored Lane)', style: AppTypography.labelLarge),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('Left'),
+              Expanded(
+                child: Slider(
+                  value: _stopLineXEnd,
+                  min: _stopLineXStart + 0.05,
+                  max: 1.0,
+                  divisions: 40,
+                  label: '${(_stopLineXEnd * 100).toInt()}%',
+                  onChanged: (value) => setState(() => _stopLineXEnd = value),
+                  activeColor: Colors.orange,
+                ),
+              ),
+              const Text('Right'),
+            ],
+          ),
+          Text(
+            'Monitored width: ${((_stopLineXEnd - _stopLineXStart) * 100).toInt()}% of frame',
+            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Info card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.info),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Only vehicles within the monitored lane (green to orange boundaries) will be checked for red light violations.',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.info),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Preview info
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Current Configuration', style: AppTypography.labelLarge),
+                const SizedBox(height: 12),
+                _buildConfigRow('Y Position', '${(_stopLineY * 100).toInt()}% from top'),
+                _buildConfigRow('Left Boundary', '${(_stopLineXStart * 100).toInt()}% from left'),
+                _buildConfigRow('Right Boundary', '${(_stopLineXEnd * 100).toInt()}% from left'),
+                _buildConfigRow('Lane Width', '${((_stopLineXEnd - _stopLineXStart) * 100).toInt()}% of frame'),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Save button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _saveStopLineConfig,
+              icon: const Icon(Icons.save),
+              label: const Text('Save Stop Line'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.all(16),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Tip
+          Text(
+            'Tip: The stop line will be shown on the video feed. Adjust until it aligns with the actual stop line on the road.',
+            style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildConfigRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+          Text(value, style: AppTypography.bodyMedium),
+        ],
+      ),
     );
   }
 
@@ -1062,7 +1415,7 @@ class _ZoneEditorScreenState extends State<ZoneEditorScreen> {
 }
 
 class ParkingZone {
-  final int id;
+  final String id;
   final String zoneType;
   final String label;
   final List<List<double>> coordinates;
@@ -1078,7 +1431,7 @@ class ParkingZone {
   
   factory ParkingZone.fromJson(Map<String, dynamic> json) {
     return ParkingZone(
-      id: json['id'],
+      id: json['id'].toString(),
       zoneType: json['zone_type'] ?? 'no_parking',
       label: json['label'] ?? 'Zone',
       coordinates: (json['coordinates'] as List)
@@ -1176,5 +1529,129 @@ class ZonePainter extends CustomPainter {
     return points != oldDelegate.points || 
            isSelected != oldDelegate.isSelected ||
            isComplete != oldDelegate.isComplete;
+  }
+}
+
+class StopLinePainter extends CustomPainter {
+  final double yPosition;
+  final double xStart;
+  final double xEnd;
+  final bool isActive;
+  final Size displaySize;
+  final Rect imageRect;
+  
+  StopLinePainter({
+    required this.yPosition,
+    required this.xStart,
+    required this.xEnd,
+    required this.isActive,
+    required this.displaySize,
+    required this.imageRect,
+  });
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!isActive) return;
+    
+    // Calculate positions within the image rect
+    final lineY = imageRect.top + (imageRect.height * yPosition);
+    final lineXStart = imageRect.left + (imageRect.width * xStart);
+    final lineXEnd = imageRect.left + (imageRect.width * xEnd);
+    
+    // Draw the stop line (red)
+    final linePaint = Paint()
+      ..color = Colors.red
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+    
+    canvas.drawLine(
+      Offset(lineXStart, lineY),
+      Offset(lineXEnd, lineY),
+      linePaint,
+    );
+    
+    // Draw left boundary marker (green)
+    final leftPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawLine(
+      Offset(lineXStart, imageRect.top),
+      Offset(lineXStart, imageRect.bottom),
+      leftPaint,
+    );
+    
+    // Draw right boundary marker (orange)
+    final rightPaint = Paint()
+      ..color = Colors.orange
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawLine(
+      Offset(lineXEnd, imageRect.top),
+      Offset(lineXEnd, imageRect.bottom),
+      rightPaint,
+    );
+    
+    // Draw filled zone area (monitored lane)
+    final zonePaint = Paint()
+      ..color = Colors.red.withOpacity(0.1)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTRB(lineXStart, lineY - 3, lineXEnd, lineY + 3),
+      zonePaint,
+    );
+    
+    // Draw labels
+    final textStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 11,
+      fontWeight: FontWeight.bold,
+      shadows: [
+        Shadow(color: Colors.black, blurRadius: 4),
+      ],
+    );
+    
+    // Draw "STOP LINE" label
+    final stopTextPainter = TextPainter(
+      text: TextSpan(text: 'STOP LINE', style: textStyle),
+      textDirection: ui.TextDirection.ltr,
+    );
+    stopTextPainter.layout();
+    stopTextPainter.paint(
+      canvas,
+      Offset((lineXStart + lineXEnd) / 2 - stopTextPainter.width / 2, lineY - 20),
+    );
+    
+    // Draw handles at endpoints
+    final handlePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    final handleBorderPaint = Paint()
+      ..color = Colors.red
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    
+    // Left handle
+    canvas.drawCircle(Offset(lineXStart, lineY), 8, handlePaint);
+    canvas.drawCircle(Offset(lineXStart, lineY), 8, handleBorderPaint);
+    
+    // Right handle
+    canvas.drawCircle(Offset(lineXEnd, lineY), 8, handlePaint);
+    canvas.drawCircle(Offset(lineXEnd, lineY), 8, handleBorderPaint);
+    
+    // Center handle (for Y position)
+    final centerX = (lineXStart + lineXEnd) / 2;
+    canvas.drawCircle(Offset(centerX, lineY), 8, handlePaint);
+    canvas.drawCircle(Offset(centerX, lineY), 8, handleBorderPaint);
+  }
+  
+  @override
+  bool shouldRepaint(covariant StopLinePainter oldDelegate) {
+    return yPosition != oldDelegate.yPosition ||
+           xStart != oldDelegate.xStart ||
+           xEnd != oldDelegate.xEnd ||
+           isActive != oldDelegate.isActive ||
+           displaySize != oldDelegate.displaySize ||
+           imageRect != oldDelegate.imageRect;
   }
 }

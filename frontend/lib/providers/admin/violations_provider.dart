@@ -16,7 +16,7 @@ class ViolationsProvider extends ChangeNotifier {
   List<Violation> _violations = [];
   int _total = 0;
   int _currentPage = 1;
-  final int _pageSize = 20;
+  final int _pageSize = 50;
 
   // Filters
   String _searchQuery = '';
@@ -40,6 +40,8 @@ class ViolationsProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   String? get statusFilter => _statusFilter;
   String? get typeFilter => _typeFilter;
+  String? get dateFrom => _dateFrom;
+  String? get dateTo => _dateTo;
   Violation? get selectedViolation => _selectedViolation;
   LoadingState get detailState => _detailState;
 
@@ -62,6 +64,9 @@ class ViolationsProvider extends ChangeNotifier {
 
       if (_typeFilter != null && _typeFilter!.isNotEmpty) {
         queryParams['violation_type'] = _typeFilter!;
+      }
+      if (_statusFilter != null && _statusFilter!.isNotEmpty) {
+        queryParams['status'] = _statusFilter!;
       }
       if (_dateFrom != null) {
         queryParams['date_from'] = _dateFrom!;
@@ -89,12 +94,7 @@ class ViolationsProvider extends ChangeNotifier {
           }).toList();
         }
 
-        // Apply status filter client-side (if backend doesn't support it)
-        if (_statusFilter != null && _statusFilter!.isNotEmpty) {
-          filtered = filtered.where((v) => 
-            v.status.toLowerCase() == _statusFilter!.toLowerCase()
-          ).toList();
-        }
+        // Status is now filtered server-side
 
         if (refresh) {
           _violations = filtered;
@@ -124,6 +124,13 @@ class ViolationsProvider extends ChangeNotifier {
     if (!hasMore || _state == LoadingState.loading) return;
     _currentPage++;
     await loadViolations();
+  }
+
+  /// Go to a specific page (replaces current list)
+  Future<void> goToPage(int page) async {
+    if (page < 1 || _state == LoadingState.loading) return;
+    _currentPage = page;
+    await loadViolations(refresh: true);
   }
 
   /// Set search query and reload
@@ -207,6 +214,45 @@ class ViolationsProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       _errorMessage = 'Failed to delete violation: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Update violation status (verify/dismiss/paid)
+  Future<bool> updateViolationStatus(String violationId, String newStatus) async {
+    try {
+      final response = await _apiClient.patch(
+        '${ApiEndpoints.violationDetail(violationId)}/status?new_status=$newStatus',
+      );
+
+      if (response.success) {
+        // Update locally
+        final index = _violations.indexWhere((v) => v.violationId == violationId);
+        if (index != -1) {
+          // Create updated violation with new status
+          final old = _violations[index];
+          _violations[index] = Violation(
+            violationId: old.violationId,
+            driverId: old.driverId,
+            violationType: old.violationType,
+            licensePlate: old.licensePlate,
+            timestamp: old.timestamp,
+            location: old.location,
+            status: newStatus,
+            fineAmount: old.fineAmount,
+            pointsDeducted: old.pointsDeducted,
+            evidencePath: old.evidencePath,
+            snapshotPath: old.snapshotPath,
+            notes: old.notes,
+          );
+        }
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = 'Failed to update violation status: $e';
       notifyListeners();
       return false;
     }

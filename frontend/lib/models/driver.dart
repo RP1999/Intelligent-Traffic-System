@@ -1,31 +1,42 @@
-  /// Driver model representing registered drivers
+/// Driver model representing registered drivers
 class Driver {
   final String driverId;
+  final String? plateNumber;
   final int currentScore;
+  final double? riskScore;           // Accident risk prediction (0-100, higher = more dangerous)
+  final String? riskLevelPrediction; // LOW / MEDIUM / HIGH / CRITICAL
   final int totalViolations;
   final double totalFines;
   final DateTime? lastViolation;
   final String riskLevel;
   final String? phone;
   final String? name;
+  final bool isRegistered;
   final List<DriverViolation>? recentViolations;
 
   Driver({
     required this.driverId,
+    this.plateNumber,
     required this.currentScore,
+    this.riskScore,
+    this.riskLevelPrediction,
     required this.totalViolations,
     required this.totalFines,
     this.lastViolation,
     required this.riskLevel,
     this.phone,
     this.name,
+    this.isRegistered = false,
     this.recentViolations,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
     return Driver(
       driverId: json['driver_id'] ?? '',
+      plateNumber: json['plate_number'],
       currentScore: json['current_score'] ?? 100,
+      riskScore: json['risk_score'] != null ? (json['risk_score'] as num).toDouble() : null,
+      riskLevelPrediction: json['risk_level_prediction'],
       totalViolations: json['total_violations'] ?? 0,
       totalFines: (json['total_fines'] ?? 0).toDouble(),
       lastViolation: json['last_violation'] != null
@@ -34,6 +45,7 @@ class Driver {
       riskLevel: json['risk_level'] ?? _getRiskLevel(json['current_score'] ?? 100),
       phone: json['phone'],
       name: json['name'],
+        isRegistered: json['is_registered'] == true,
       recentViolations: json['recent_violations'] != null
           ? (json['recent_violations'] as List)
               .map((v) => DriverViolation.fromJson(v))
@@ -52,7 +64,8 @@ class Driver {
 
   Map<String, dynamic> toJson() {
     return {
-        'driver_id': driverId,
+      'driver_id': driverId,
+      'plate_number': plateNumber,
       'current_score': currentScore,
       'total_violations': totalViolations,
       'total_fines': totalFines,
@@ -60,6 +73,7 @@ class Driver {
       'risk_level': riskLevel,
       'phone': phone,
       'name': name,
+      'is_registered': isRegistered,
     };
   }
 

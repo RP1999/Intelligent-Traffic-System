@@ -15,14 +15,12 @@ Risk Levels:
 - CRITICAL: 80-100
 """
 
-import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Optional, List, Any
 from dataclasses import dataclass
 
-# Database path
-DB_PATH = Path(__file__).parent.parent.parent / "traffic.db"
+from app.db.firestore_client import get_sync_db, Collections
 
 
 # =============================================================================
@@ -224,115 +222,76 @@ def calculate_risk(
     )
 
 
-def save_risk_score_to_database(risk: RiskScore) -> int:
+def save_risk_score_to_database(risk: RiskScore) -> str:
     """
-    Save the calculated risk score to the risk_scores table.
+    Save the calculated risk score to Firestore.
     
     Args:
         risk: RiskScore object with calculation details.
         
     Returns:
-        ID of the inserted record.
+        ID of the inserted document.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("""
-            INSERT INTO risk_scores (
-                vehicle_id, plate_number, risk_score, speed_factor,
-                violation_history_factor, risk_level, current_speed, speed_limit
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            risk.vehicle_id,
-            risk.plate_number,
-            risk.risk_score,
-            risk.speed_factor,
-            risk.violation_history_factor,
-            risk.risk_level,
-            risk.current_speed,
-            risk.speed_limit
-        ))
-        
-        conn.commit()
-        risk_id = cursor.lastrowid
-        print(f"[RISK] Saved score #{risk_id}: {risk.risk_score:.1f} ({risk.risk_level}) for vehicle {risk.vehicle_id}")
-        return risk_id
-        
-    finally:
-        conn.close()
+    db = get_sync_db()
+    doc_ref = db.collection(Collections.RISK_SCORES).add({
+        "vehicle_id": risk.vehicle_id,
+        "plate_number": risk.plate_number,
+        "risk_score": risk.risk_score,
+        "speed_factor": risk.speed_factor,
+        "violation_history_factor": risk.violation_history_factor,
+        "risk_level": risk.risk_level,
+        "current_speed": risk.current_speed,
+        "speed_limit": risk.speed_limit,
+        "created_at": datetime.now().isoformat(),
+    })
+    risk_id = doc_ref[1].id if isinstance(doc_ref, tuple) else doc_ref.id
+    print(f"[RISK] Saved score #{risk_id}: {risk.risk_score:.1f} ({risk.risk_level}) for vehicle {risk.vehicle_id}")
+    return risk_id
 
 
 def get_recent_violations(vehicle_id: int = None, plate_number: str = None, days: int = 30) -> List[Dict]:
     """
-    Get recent violations for a vehicle from the database.
-    
-    Args:
-        vehicle_id: Track ID of the vehicle
-        plate_number: License plate number
-        days: Number of days to look back
-        
-    Returns:
-        List of violation dicts.
+    Get recent violations for a vehicle from Firestore.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
+    db = get_sync_db()
+    threshold = (datetime.now() - timedelta(days=days)).isoformat()
+
     try:
-        # Calculate date threshold
-        threshold = (datetime.now() - timedelta(days=days)).isoformat()
-        
         if plate_number:
-            cursor.execute("""
-                SELECT * FROM violations 
-                WHERE plate_text = ? AND timestamp > ?
-            """, (plate_number, threshold))
+            docs = (
+                db.collection(Collections.VIOLATIONS)
+                .where("plate_text", "==", plate_number)
+                .where("timestamp", ">", threshold)
+                .get()
+            )
         elif vehicle_id:
-            cursor.execute("""
-                SELECT * FROM violations 
-                WHERE track_id = ? AND timestamp > ?
-            """, (vehicle_id, threshold))
+            docs = (
+                db.collection(Collections.VIOLATIONS)
+                .where("track_id", "==", vehicle_id)
+                .where("timestamp", ">", threshold)
+                .get()
+            )
         else:
             return []
-        
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
-    except sqlite3.OperationalError:
-        # Table might not exist
+
+        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+    except Exception:
         return []
-        
-    finally:
-        conn.close()
 
 
 def get_high_risk_vehicles(threshold: float = 60.0, limit: int = 20) -> List[Dict]:
     """
     Get list of vehicles with risk scores above threshold.
-    
-    Args:
-        threshold: Minimum risk score
-        limit: Maximum number of records
-        
-    Returns:
-        List of high-risk vehicle records.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("""
-            SELECT * FROM risk_scores 
-            WHERE risk_score >= ? 
-            ORDER BY risk_score DESC 
-            LIMIT ?
-        """, (threshold, limit))
-        
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
-    finally:
-        conn.close()
+    db = get_sync_db()
+    docs = (
+        db.collection(Collections.RISK_SCORES)
+        .where("risk_score", ">=", threshold)
+        .order_by("risk_score", direction="DESCENDING")
+        .limit(limit)
+        .get()
+    )
+    return [{"id": doc.id, **doc.to_dict()} for doc in docs]
 
 
 def log_abnormal_behavior(
@@ -341,37 +300,22 @@ def log_abnormal_behavior(
     severity: str,
     details: str = None,
     plate_number: str = None
-) -> int:
+) -> str:
     """
-    Log an abnormal driving behavior to the database.
-    
-    Args:
-        vehicle_id: Track ID of the vehicle
-        behavior_type: Type of behavior ('sudden_stop', 'harsh_brake', 'lane_drift', 'wrong_way')
-        severity: Severity level ('warning', 'danger', 'critical')
-        details: Optional JSON or text details
-        plate_number: Optional license plate
-        
-    Returns:
-        ID of the inserted record.
+    Log an abnormal driving behavior to Firestore.
     """
-    conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("""
-            INSERT INTO abnormal_behavior_log (
-                vehicle_id, plate_number, behavior_type, severity, details
-            ) VALUES (?, ?, ?, ?, ?)
-        """, (vehicle_id, plate_number, behavior_type, severity, details))
-        
-        conn.commit()
-        log_id = cursor.lastrowid
-        print(f"[BEHAVIOR] Logged {behavior_type} ({severity}) for vehicle {vehicle_id}")
-        return log_id
-        
-    finally:
-        conn.close()
+    db = get_sync_db()
+    doc_ref = db.collection(Collections.ABNORMAL_BEHAVIOR).add({
+        "vehicle_id": vehicle_id,
+        "plate_number": plate_number,
+        "behavior_type": behavior_type,
+        "severity": severity,
+        "details": details,
+        "created_at": datetime.now().isoformat(),
+    })
+    log_id = doc_ref[1].id if isinstance(doc_ref, tuple) else doc_ref.id
+    print(f"[BEHAVIOR] Logged {behavior_type} ({severity}) for vehicle {vehicle_id}")
+    return log_id
 
 
 def calculate_and_save_risk(

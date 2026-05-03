@@ -156,15 +156,17 @@ class TTSService:
                                 filepath = loop.run_until_complete(
                                     service_ref.generate_warning_async(text, filename)
                                 )
-                                if filepath and filepath.exists():
-                                    # Play the edge-tts generated file
+                                # Check both existence AND meaningful size (>100 bytes)
+                                if filepath and filepath.exists() and filepath.stat().st_size > 100:
                                     service_ref.play_audio(filepath)
                                     spoken = True
                                     time.sleep(3.0)  # Wait for audio to finish
+                                else:
+                                    print(f"[TTS Worker] edge-tts produced no audio, falling back to pyttsx3")
                             finally:
                                 loop.close()
-                        except Exception:
-                            pass  # Silently fail, will use pyttsx3
+                        except Exception as edge_err:
+                            print(f"[TTS Worker] edge-tts error: {edge_err}, falling back to pyttsx3")
                     
                     # Fallback to pyttsx3 direct speech
                     if not spoken and play_immediately and service_ref._pyttsx3_available:
@@ -321,25 +323,23 @@ class TTSService:
             
             filepath = WARNINGS_DIR / filename
             
-            # Generate audio using subprocesses method for reliability
+            # Use save() for reliability (stream() can produce empty files in threads)
             communicate = edge_tts.Communicate(text, self.voice)
+            await communicate.save(str(filepath))
             
-            # Use iterate and write manually for more reliability
-            with open(str(filepath), "wb") as f:
-                async for chunk in communicate.stream():
-                    if chunk["type"] == "audio":
-                        f.write(chunk["data"])
-            
-            # Check if file was actually written
-            if filepath.exists() and filepath.stat().st_size > 0:
+            # Check if file was actually written with content
+            if filepath.exists() and filepath.stat().st_size > 100:
                 print(f"[TTS] ✅ Generated: {filepath.name} ({filepath.stat().st_size} bytes)")
                 return filepath
             else:
+                # Clean up empty/tiny file
+                if filepath.exists():
+                    filepath.unlink(missing_ok=True)
                 print(f"[TTS] ⚠️ File empty or not created")
                 return None
             
         except Exception as e:
-            # Silently fail - pyttsx3 fallback will handle it
+            print(f"[TTS] ⚠️ edge-tts generation failed: {e}")
             return None
     
     def generate_warning(
@@ -448,21 +448,33 @@ class TTSService:
             
             if sys.platform == "win32":
                 # Windows: Use PowerShell MediaPlayer which plays and exits cleanly
-                # This avoids the media player window staying open
+                # Escape backslashes and quotes for PowerShell
+                escaped_path = filepath_str.replace("\\", "\\\\").replace("'", "''")
                 ps_script = f'''
                 Add-Type -AssemblyName presentationCore
                 $player = New-Object System.Windows.Media.MediaPlayer
-                $player.Open([uri]"{filepath_str}")
+                $player.Open([uri]'{escaped_path}')
+                Start-Sleep -Milliseconds 200
                 $player.Play()
-                Start-Sleep -Milliseconds 100
-                while ($player.Position -lt $player.NaturalDuration.TimeSpan) {{
-                    Start-Sleep -Milliseconds 200
+                # Wait for playback with timeout
+                $timeout = 30
+                $waited = 0
+                while ($player.NaturalDuration.HasTimeSpan -eq $false -and $waited -lt $timeout) {{
+                    Start-Sleep -Milliseconds 100
+                    $waited += 0.1
+                }}
+                if ($player.NaturalDuration.HasTimeSpan) {{
+                    while ($player.Position -lt $player.NaturalDuration.TimeSpan) {{
+                        Start-Sleep -Milliseconds 200
+                    }}
+                }} else {{
+                    Start-Sleep -Milliseconds 3000
                 }}
                 $player.Close()
                 '''
                 CREATE_NO_WINDOW = 0x08000000
                 subprocess.Popen(
-                    ['powershell', '-WindowStyle', 'Hidden', '-Command', ps_script],
+                    ['powershell', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', ps_script],
                     creationflags=CREATE_NO_WINDOW,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL
