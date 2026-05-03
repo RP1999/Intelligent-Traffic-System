@@ -44,67 +44,7 @@ Sri Lanka's cities face severe traffic congestion from outdated signal systems u
 
 ## 🏗️ System Architecture
 
-```mermaid
-graph TB
-    subgraph "Data Input Layer"
-        A[Public CCTV Records]
-        B[Real-time Traffic Streams]
-        C[Open Datasets]
-    end
-   
-    subgraph "AI Processing Core"
-        D[YOLOv8 Vehicle Detection<br/>Custom-trained for SL vehicles]
-        E[Computer Vision Module<br/>Frame processing]
-        F[Machine Learning Engine<br/>Pattern analysis]
-    end
-   
-    subgraph "Intelligent Control Systems"
-        G[Fuzzy Logic Controller<br/>Adaptive signal timing]
-        H[Traffic Violation Detection<br/>Lane sorting/wrong-way]
-        I[Parking Behavior Analysis<br/>Duration & impact]
-        J[Accident Risk Prediction<br/>Real-time scoring]
-    end
-   
-    subgraph "Decision Making Layer"
-        K[Risk Assessment Engine]
-        L[Signal Timing Optimization]
-        M[Alert Generation System]
-        N[Traffic Flow Analysis]
-    end
-   
-    subgraph "Output Systems"
-        O[Arduino Traffic Lights<br/>Physical control]
-        P[LED/Buzzer Alerts<br/>Violation warnings]
-        Q[Streamlit Dashboard<br/>Monitoring interface]
-        R[Real-time Monitoring<br/>Data visualization]
-    end
-   
-    A --> E
-    B --> E
-    C --> E
-    E --> D
-    D --> F
-    F --> G
-    F --> H
-    F --> I
-    F --> J
-   
-    G --> L
-    H --> K
-    I --> N
-    J --> K
-   
-    K --> M
-    L --> O
-    M --> P
-    N --> Q
-    K --> R
-    L --> R
-   
-    style D fill:#FFD700,color:#000000,stroke:#333,stroke-width:2px
-    style G fill:#90EE90,color:#000000,stroke:#333,stroke-width:2px
-    style Q fill:#87CEEB,color:#000000,stroke:#333,stroke-width:2px
-```
+![System Architecture](system_architecture.png)
 
 ### Architecture Overview
 
@@ -262,25 +202,21 @@ pillow==10.1.0
 ## 📂 Project Structure
 
 ```
-Intelligent-Traffic-System/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                # API Entry point
-│   │   ├── detection/             # YOLO & DeepSORT logic
-│   │   ├── parking/               # Parking analysis module
-│   │   └── routers/               # API endpoints
-│   ├── requirements.txt           # Python dependencies
-│   └── check_db.py                # Database verification
-├── frontend/
-│   ├── lib/
-│   │   ├── main.dart              # App Entry point
-│   │   ├── screens/               # UI Screens (Dashboard, Login)
-│   │   ├── widgets/               # Reusable components
-│   │   └── providers/             # State management
-│   ├── pubspec.yaml               # Flutter dependencies
-│   └── web/                       # Web build artifacts
-├── data/                          # Models and sample footage
-└── README.md                      # This documentation
+Intelligent-Traffic-Management-System/
+├── .venv/                     # Python virtual environment
+├── backend/                   # FastAPI backend server
+├── data/                      # Training data, videos, snapshots
+├── Firmware/                  # IoT NodeMCU / ESP8266 Firmware
+├── frontend/                  # Flutter app (web + mobile)
+├── models/                    # Trained ML models (.pt files)
+├── runs/                      # Training runs/results
+├── tests/                     # Unit and integration tests
+├── wokwi/                     # Wokwi simulation files
+├── .gitignore                 # Git ignore file
+├── code_to_clipboard.py       # Helper script
+├── FIREBASE_SETUP.md          # Firebase setup guide
+├── README.md                  # This file
+└── yolov8n.pt                 # YOLOv8 base model
 ```
 
 ---
